@@ -39,18 +39,15 @@ export default function App() {
   const [hasDuesFilter, setHasDuesFilter] = useState(false);
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
 
-  // License & Software Security State
-  const [licenseStatus, setLicenseStatus] = useState(() => {
-    const isMaster = localStorage.getItem('MASTER_SUPER_ADMIN_SESSION') === 'ACTIVE';
-    return {
-      active: isMaster,
-      status: isMaster ? 'ACTIVE' : 'INACTIVE',
-      hwid: isMaster ? 'MASTER-SUPER-ADMIN' : '',
-      planType: isMaster ? 'MASTER_UNLIMITED' : 'MONTHLY',
-      expiresAt: null,
-      tampered: false,
-      reason: isMaster ? 'Master Admin Access' : 'Login required'
-    };
+  // License & Software Security State - Permanent Active for Web Admin Dashboard
+  const [licenseStatus, setLicenseStatus] = useState({
+    active: true,
+    status: 'ACTIVE',
+    hwid: 'MASTER-SUPER-ADMIN',
+    planType: 'MASTER_UNLIMITED',
+    expiresAt: null,
+    tampered: false,
+    reason: 'Master Admin Access'
   });
   const [checkingLicense, setCheckingLicense] = useState(false);
   const [inputLicenseKey, setInputLicenseKey] = useState('');
@@ -745,9 +742,8 @@ export default function App() {
     setCertItems(prev => prev.filter((_, i) => i !== index));
   };
 
-  // Load Data & Check License Security
+  // Load Data & Initial Setup
   useEffect(() => {
-    checkLicenseStatus();
     fetchStats();
     fetchCertificates();
     fetchMasters();
@@ -756,50 +752,13 @@ export default function App() {
     fetchPlans();
     fetchPaymentRequests();
 
-    // Periodic WhatsApp status, Payment Requests and License Activation check
+    // Periodic WhatsApp status and Payment Requests check
     const interval = setInterval(() => {
       fetchWaStatus();
       fetchPaymentRequests();
-      checkLicenseStatus();
     }, 5000);
     return () => clearInterval(interval);
   }, []);
-
-  const checkLicenseStatus = async () => {
-    // If logged in as Master Super Admin, license is always active
-    if (localStorage.getItem('MASTER_SUPER_ADMIN_SESSION') === 'ACTIVE') {
-      setLicenseStatus({
-        active: true,
-        status: 'ACTIVE',
-        hwid: 'MASTER-SUPER-ADMIN',
-        planType: 'MASTER_UNLIMITED',
-        expiresAt: null,
-        tampered: false,
-        reason: 'Master Admin Access'
-      });
-      return;
-    }
-
-    try {
-      setCheckingLicense(true);
-      const res = await axios.get(`${API_BASE}/license/status`);
-      if (res.data.success) {
-        setLicenseStatus({
-          active: res.data.active,
-          status: res.data.status,
-          hwid: res.data.hwid || '',
-          planType: res.data.planType || 'INACTIVE',
-          expiresAt: res.data.expiresAt || null,
-          tampered: res.data.tampered || false,
-          reason: res.data.reason || ''
-        });
-      }
-    } catch (e) {
-      console.error('Error checking license status:', e);
-    } finally {
-      setCheckingLicense(false);
-    }
-  };
 
   const handleActivateLicense = async (e) => {
     e.preventDefault();
