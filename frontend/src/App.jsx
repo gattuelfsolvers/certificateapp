@@ -1105,6 +1105,19 @@ export default function App() {
       // Primary: Fetch directly from Firebase Cloud Database
       const fbCerts = await fetchCertificatesFromFirebase();
       if (fbCerts && fbCerts.length > 0) {
+        // Calculate category counters directly from Firebase Cloud data
+        const computedStats = {
+          total: fbCerts.length,
+          income: fbCerts.filter(c => (c.certType || '').toUpperCase().includes('INC') || (c.certType || '').toUpperCase().includes('JHIC')).length,
+          caste: fbCerts.filter(c => (c.certType || '').toUpperCase().includes('CAST') || (c.certType || '').toUpperCase().includes('CBC') || (c.certType || '').toUpperCase().includes('CSC') || (c.certType || '').toUpperCase().includes('CST') || (c.certType || '').toUpperCase().includes('NBC')).length,
+          residential: fbCerts.filter(c => (c.certType || '').toUpperCase().includes('RES') || (c.certType || '').toUpperCase().includes('LRCO') || (c.certType || '').toUpperCase().includes('JHRC')).length,
+          obc: fbCerts.filter(c => (c.certType || '').toUpperCase().includes('OBC') || (c.certType || '').toUpperCase().includes('COB') || (c.certType || '').toUpperCase().includes('OBCH')).length,
+          ews: fbCerts.filter(c => (c.certType || '').toUpperCase().includes('EWS')).length,
+          marriage: fbCerts.filter(c => (c.certType || '').toUpperCase().includes('MARR') || (c.certType || '').toUpperCase().includes('HMGR')).length,
+          pan: fbCerts.filter(c => (c.certType || '').toUpperCase().includes('PAN')).length,
+        };
+        setStats(computedStats);
+
         let filtered = fbCerts;
         if (search) {
           const s = search.toLowerCase();
