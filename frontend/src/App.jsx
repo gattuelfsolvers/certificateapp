@@ -1568,10 +1568,13 @@ export default function App() {
   };
 
   // Grand totals calculation for modal summary
-  const grandTotalFees = certItems.reduce((acc, item) => acc + ((parseFloat(item.basePrice) || 0) + (parseFloat(item.additionalCharge) || 0)), 0);
-  const grandTotalPaid = certItems.reduce((acc, item) => acc + (parseFloat(item.paidAmount) || 0), 0);
+  const safeCertItems = Array.isArray(certItems) ? certItems : [];
+  const grandTotalFees = safeCertItems.reduce((acc, item) => acc + ((parseFloat(item?.basePrice) || 0) + (parseFloat(item?.additionalCharge) || 0)), 0);
+  const grandTotalPaid = safeCertItems.reduce((acc, item) => acc + (parseFloat(item?.paidAmount) || 0), 0);
+  
   // Filter logic for Jharsewa vs PAN Card tabs
   const isPanCard = (c) => {
+    if (!c) return false;
     const type = (c.certType || '').toUpperCase();
     const ref = (c.refNo || '').toUpperCase();
     return type.includes('PAN') || ref.startsWith('PAN');
