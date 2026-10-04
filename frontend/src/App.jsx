@@ -1104,41 +1104,10 @@ export default function App() {
       if (certTypeFilter !== 'ALL') params.certType = certTypeFilter;
       if (hasDuesFilter) params.hasDues = 'true';
 
-      let certsData = [];
-      try {
-        const res = await axios.get(`${API_BASE}/certificates`, { params });
-        if (res.data.success && res.data.data && res.data.data.length > 0) {
-          certsData = res.data.data;
-          setCertificates(certsData);
-          // Sync local data to Firebase Cloud automatically
-          syncBulkCertificatesToFirebase(certsData);
-          return;
-        }
-      } catch (err) {
-        console.warn('Backend server offline, fetching certificates directly from Firebase Cloud...');
+      const res = await axios.get(`${API_BASE}/certificates`, { params });
+      if (res.data.success) {
+        setCertificates(res.data.data);
       }
-
-      // Fallback: Fetch directly from Firebase Cloud
-      const fbCerts = await fetchCertificatesFromFirebase();
-      let filtered = fbCerts;
-      if (search) {
-        const s = search.toLowerCase();
-        filtered = filtered.filter(c => 
-          (c.refSuffix && String(c.refSuffix).toLowerCase().includes(s)) ||
-          (c.applicantName && String(c.applicantName).toLowerCase().includes(s)) ||
-          (c.mobile && String(c.mobile).toLowerCase().includes(s))
-        );
-      }
-      if (statusFilter !== 'ALL') {
-        filtered = filtered.filter(c => c.status === statusFilter);
-      }
-      if (certTypeFilter !== 'ALL') {
-        filtered = filtered.filter(c => c.certType === certTypeFilter);
-      }
-      if (hasDuesFilter) {
-        filtered = filtered.filter(c => (parseFloat(c.paidAmount) || 0) < ((parseFloat(c.basePrice) || 0) + (parseFloat(c.additionalCharge) || 0)));
-      }
-      setCertificates(filtered);
     } catch (e) {
       console.error('Error fetching certificates:', e);
     } finally {
@@ -1148,23 +1117,12 @@ export default function App() {
 
   const fetchMasters = async () => {
     try {
-      let mastersData = [];
-      try {
-        const res = await axios.get(`${API_BASE}/masters`);
-        if (res.data.success && res.data.data) {
-          mastersData = res.data.data;
+      const res = await axios.get(`${API_BASE}/masters`);
+      if (res.data.success) {
+        setMasters(res.data.data);
+        if (res.data.data && res.data.data.length > 0) {
+          setCurrentCertInput(buildDefaultCertItem(res.data.data));
         }
-      } catch (e) {
-        console.warn('Backend server offline, fetching master categories from Firebase Cloud...');
-      }
-
-      if (!mastersData || mastersData.length === 0) {
-        mastersData = await fetchMastersFromFirebase();
-      }
-
-      if (mastersData && mastersData.length > 0) {
-        setMasters(mastersData);
-        setCurrentCertInput(buildDefaultCertItem(mastersData));
       }
     } catch (e) {
       console.error('Error fetching masters:', e);
