@@ -1595,19 +1595,8 @@ export default function App() {
                 shape="pill"
                 size="large"
                 text="signin_with"
-                theme="outline"
               />
             </div>
-
-            <button
-              type="button"
-              disabled={loggingInMaster}
-              onClick={() => handleMasterLogin(null, true, "gattu.elfsolvers@gmail.com")}
-              className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white rounded-xl font-bold text-xs shadow-md transition active:scale-98 flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <Crown className="w-4 h-4 text-amber-400" />
-              <span>Or Direct 1-Click Master Unlock (gattu.elfsolvers@gmail.com)</span>
-            </button>
           </div>
 
           {/* Contact Line Footer */}
