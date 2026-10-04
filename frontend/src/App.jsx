@@ -1098,6 +1098,33 @@ export default function App() {
   const fetchCertificates = async () => {
     setLoading(true);
     try {
+      // Primary: Fetch directly from Firebase Cloud Database
+      const fbCerts = await fetchCertificatesFromFirebase();
+      if (fbCerts && fbCerts.length > 0) {
+        let filtered = fbCerts;
+        if (search) {
+          const s = search.toLowerCase();
+          filtered = filtered.filter(c => 
+            (c.refSuffix && String(c.refSuffix).toLowerCase().includes(s)) ||
+            (c.applicantName && String(c.applicantName).toLowerCase().includes(s)) ||
+            (c.mobile && String(c.mobile).toLowerCase().includes(s)) ||
+            (c.refNo && String(c.refNo).toLowerCase().includes(s))
+          );
+        }
+        if (statusFilter !== 'ALL') {
+          filtered = filtered.filter(c => (c.status || c.currentStatus) === statusFilter);
+        }
+        if (certTypeFilter !== 'ALL') {
+          filtered = filtered.filter(c => c.certType === certTypeFilter);
+        }
+        if (hasDuesFilter) {
+          filtered = filtered.filter(c => (parseFloat(c.paidAmount) || 0) < ((parseFloat(c.basePrice) || 0) + (parseFloat(c.additionalCharge) || 0)));
+        }
+        setCertificates(filtered);
+        return;
+      }
+
+      // Local API Fallback
       const params = {};
       if (search) params.search = search;
       if (statusFilter !== 'ALL') params.status = statusFilter;
@@ -1117,6 +1144,13 @@ export default function App() {
 
   const fetchMasters = async () => {
     try {
+      const fbMasters = await fetchMastersFromFirebase();
+      if (fbMasters && fbMasters.length > 0) {
+        setMasters(fbMasters);
+        setCurrentCertInput(buildDefaultCertItem(fbMasters));
+        return;
+      }
+
       const res = await axios.get(`${API_BASE}/masters`);
       if (res.data.success) {
         setMasters(res.data.data);
