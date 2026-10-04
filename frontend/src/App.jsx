@@ -4249,9 +4249,13 @@ export default function App() {
               <button onClick={() => setShowMasterAuthModal(false)} className="text-slate-400 hover:text-white text-lg">✕</button>
             </div>
 
-            <form onSubmit={(e) => handleMasterLogin(e, false)} className="p-6 space-y-4 text-slate-800">
-              {/* OFFICIAL GOOGLE OAUTH LOGIN BUTTON */}
-              <div className="flex justify-center w-full my-2">
+            <div className="p-8 space-y-6 text-slate-800 text-center">
+              <p className="text-xs font-semibold text-slate-600 leading-relaxed">
+                Security Policy Enforced: Only authorized Google Account (<span className="font-bold text-indigo-700">gattu.elfsolvers@gmail.com</span>) can unlock this Master Dashboard.
+              </p>
+
+              {/* OFFICIAL GOOGLE OAUTH LOGIN BUTTON ONLY */}
+              <div className="flex justify-center w-full my-4">
                 <GoogleLogin
                   onSuccess={handleGoogleOAuthSuccess}
                   onError={() => {
@@ -4263,52 +4267,16 @@ export default function App() {
                 />
               </div>
 
-              <div className="relative flex py-1 items-center">
-                <div className="flex-grow border-t border-slate-200"></div>
-                <span className="flex-shrink mx-3 text-xs text-slate-400 font-bold uppercase">Or Master Credentials</span>
-                <div className="flex-grow border-t border-slate-200"></div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-600 mb-1">Master Email Address</label>
-                <input
-                  type="email"
-                  required
-                  value={masterAuthData.email}
-                  onChange={(e) => setMasterAuthData({ ...masterAuthData, email: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold text-slate-900 focus:outline-none focus:border-indigo-600"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-600 mb-1">Master Password</label>
-                <input
-                  type="password"
-                  required
-                  placeholder="Master Password"
-                  value={masterAuthData.password}
-                  onChange={(e) => setMasterAuthData({ ...masterAuthData, password: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold text-slate-900 focus:outline-none focus:border-indigo-600"
-                />
-              </div>
-
-              <div className="pt-2 flex justify-end gap-2">
+              <div className="pt-2 border-t border-slate-100 flex justify-center">
                 <button
                   type="button"
                   onClick={() => setShowMasterAuthModal(false)}
-                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold"
+                  className="px-5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition cursor-pointer"
                 >
                   Cancel
                 </button>
-                <button
-                  type="submit"
-                  disabled={loggingInMaster}
-                  className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-md transition disabled:opacity-50"
-                >
-                  {loggingInMaster ? 'Authenticating...' : 'Login Master Admin'}
-                </button>
               </div>
-            </form>
+            </div>
           </div>
         </div>
       )}
