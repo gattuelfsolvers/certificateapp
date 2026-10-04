@@ -55,8 +55,12 @@ export default function App() {
   const [copiedHwid, setCopiedHwid] = useState(false);
 
   // Master Admin State
-  const [isMasterAdmin, setIsMasterAdmin] = useState(false);
-  const [showMasterAuthModal, setShowMasterAuthModal] = useState(true);
+  const [isMasterAdmin, setIsMasterAdmin] = useState(() => {
+    return localStorage.getItem('MASTER_SUPER_ADMIN_SESSION') === 'ACTIVE';
+  });
+  const [showMasterAuthModal, setShowMasterAuthModal] = useState(() => {
+    return localStorage.getItem('MASTER_SUPER_ADMIN_SESSION') !== 'ACTIVE';
+  });
   const [masterAuthData, setMasterAuthData] = useState({ email: 'gattu.elfsolvers@gmail.com', password: '' });
   const [loggingInMaster, setLoggingInMaster] = useState(false);
 
