@@ -1678,16 +1678,7 @@ export default function App() {
           <div className="flex flex-col items-center justify-center w-full space-y-4 pt-2">
             <div className="w-full flex justify-center scale-110 py-2">
               <GoogleLogin
-                onSuccess={(credentialResponse) => {
-                  try {
-                    const decoded = jwtDecode(credentialResponse.credential);
-                    if (decoded && decoded.email) {
-                      handleMasterLogin(null, true, decoded.email);
-                    }
-                  } catch (e) {
-                    showToastNotification('error', 'Google Auth Error', 'Failed to decode Google Token!');
-                  }
-                }}
+                onSuccess={handleGoogleOAuthSuccess}
                 onError={() => {
                   showToastNotification('error', 'Google Auth Failed', 'Google Sign In failed or popup blocked!');
                 }}
