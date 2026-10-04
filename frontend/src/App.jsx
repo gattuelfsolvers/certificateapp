@@ -1603,28 +1603,31 @@ export default function App() {
     }
   })();
 
-  const filteredCertificates = currentTabList.filter((c) => {
-    const query = search.toLowerCase().trim();
+  const safeTabList = Array.isArray(currentTabList) ? currentTabList : [];
+  const filteredCertificates = safeTabList.filter((c) => {
+    if (!c) return false;
+    const query = search ? search.toLowerCase().trim() : '';
     const matchesSearch =
       !query ||
-      c.refNo?.toLowerCase().includes(query) ||
-      c.applicantName?.toLowerCase().includes(query) ||
-      c.mobile?.includes(query);
+      (c.refNo && String(c.refNo).toLowerCase().includes(query)) ||
+      (c.applicantName && String(c.applicantName).toLowerCase().includes(query)) ||
+      (c.mobile && String(c.mobile).includes(query));
 
     let matchesStatus = false;
+    const statusVal = c.currentStatus || c.status || '';
     if (statusFilter === 'ALL') {
       matchesStatus = true;
     } else if (statusFilter === 'WAITING') {
-      matchesStatus = ['WAITING', 'CI_WAITING', 'CO_WAITING'].includes(c.currentStatus);
+      matchesStatus = ['WAITING', 'CI_WAITING', 'CO_WAITING'].includes(statusVal);
     } else if (statusFilter === 'UNDER_PROCESS') {
-      matchesStatus = ['UNDER_PROCESS', 'CI_UNDER_PROCESS', 'CO_UNDER_PROCESS', 'SDO_UNDER_PROCESS'].includes(c.currentStatus);
+      matchesStatus = ['UNDER_PROCESS', 'CI_UNDER_PROCESS', 'CO_UNDER_PROCESS', 'SDO_UNDER_PROCESS'].includes(statusVal);
     } else if (statusFilter === 'DELIVERED') {
-      matchesStatus = ['DELIVERED', 'CO_DELIVERED', 'SDO_DELIVERED'].includes(c.currentStatus);
+      matchesStatus = ['DELIVERED', 'CO_DELIVERED', 'SDO_DELIVERED'].includes(statusVal);
     } else {
-      matchesStatus = c.currentStatus === statusFilter;
+      matchesStatus = statusVal === statusFilter;
     }
 
-    const matchesDues = !hasDuesFilter || (c.duesAmount && c.duesAmount > 0);
+    const matchesDues = !hasDuesFilter || ((c.duesAmount && parseFloat(c.duesAmount) > 0) || ((parseFloat(c.paidAmount) || 0) < ((parseFloat(c.basePrice) || 0) + (parseFloat(c.additionalCharge) || 0))));
 
     return matchesSearch && matchesStatus && matchesDues;
   });
