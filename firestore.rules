@@ -1,0 +1,26 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Clients & License Collection: Allow Read/Write for Client Desktop App & Master Admin
+    match /clients/{clientId} {
+      allow read, write: if true;
+    }
+    
+    // Jharsewa Certificate Entries Collection
+    match /certificates/{certId} {
+      allow read, write: if true;
+    }
+    
+    // Master Categories Collection
+    match /masters/{masterId} {
+      allow read, write: if true;
+    }
+
+    // Default Fallback
+    match /{document=**} {
+      allow read, write: if true;
+    }
+
+  }
+}
