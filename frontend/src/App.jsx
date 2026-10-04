@@ -1614,14 +1614,15 @@ export default function App() {
     return type.includes('PAN') || ref.startsWith('PAN');
   };
 
-  const jharsewaCertificates = certificates.filter((c) => !isPanCard(c));
-  const panCertificates = certificates.filter((c) => isPanCard(c));
-  const incomeCertificates = certificates.filter(c => getCertPrefix(c.certType) === 'JHIC');
-  const casteCertificates = certificates.filter(c => ['JHCBC', 'JHNBC', 'JHCSC', 'JHCST'].includes(getCertPrefix(c.certType)));
-  const residentialCertificates = certificates.filter(c => ['JHLRCO', 'JHRC'].includes(getCertPrefix(c.certType)));
-  const obcCertificates = certificates.filter(c => ['JHCOB', 'JHOBCH'].includes(getCertPrefix(c.certType)));
-  const ewsCertificates = certificates.filter(c => ['JHEWS', 'JHEWSH'].includes(getCertPrefix(c.certType)));
-  const marriageCertificates = certificates.filter(c => getCertPrefix(c.certType) === 'JHMGR');
+  const safeCertificates = Array.isArray(certificates) ? certificates : [];
+  const jharsewaCertificates = safeCertificates.filter((c) => c && !isPanCard(c));
+  const panCertificates = safeCertificates.filter((c) => c && isPanCard(c));
+  const incomeCertificates = safeCertificates.filter(c => c && getCertPrefix(c.certType) === 'JHIC');
+  const casteCertificates = safeCertificates.filter(c => c && ['JHCBC', 'JHNBC', 'JHCSC', 'JHCST'].includes(getCertPrefix(c.certType)));
+  const residentialCertificates = safeCertificates.filter(c => c && ['JHLRCO', 'JHRC'].includes(getCertPrefix(c.certType)));
+  const obcCertificates = safeCertificates.filter(c => c && ['JHCOB', 'JHOBCH'].includes(getCertPrefix(c.certType)));
+  const ewsCertificates = safeCertificates.filter(c => c && ['JHEWS', 'JHEWSH'].includes(getCertPrefix(c.certType)));
+  const marriageCertificates = safeCertificates.filter(c => c && getCertPrefix(c.certType) === 'JHMGR');
 
   const currentTabList = (() => {
     switch (activeTab) {
