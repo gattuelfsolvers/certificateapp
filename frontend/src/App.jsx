@@ -850,14 +850,23 @@ export default function App() {
         localStorage.setItem('MASTER_SUPER_ADMIN_SESSION', 'ACTIVE');
         setIsMasterAdmin(true);
         setShowMasterAuthModal(false);
-        setLicenseStatus(prev => ({ ...prev, active: true, status: 'ACTIVE' }));
+        setLicenseStatus({
+          active: true,
+          status: 'ACTIVE',
+          hwid: 'MASTER-SUPER-ADMIN',
+          planType: 'MASTER_UNLIMITED',
+          expiresAt: null,
+          tampered: false,
+          reason: 'Master Admin Access'
+        });
         setActiveTab('jharsewa');
-        fetchClients();
         showToastNotification(
           'success',
           '👑 Welcome Back Gattu Ji!',
           '🎉 Master Super Admin System Unlocked Successfully!\nAuthorized Master Account: gattu.elfsolvers@gmail.com'
         );
+        fetchClients();
+        fetchCertificates();
         return;
       }
 
