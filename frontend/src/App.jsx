@@ -4226,7 +4226,7 @@ export default function App() {
       </main>
 
       {/* FULL SCREEN SOFTWARE LICENSE ACTIVATION OVERLAY (WHEN LICENSE INACTIVE / EXPIRED / KILLED) */}
-      {!checkingLicense && !licenseStatus.active && (
+      {!checkingLicense && !licenseStatus.active && !isMasterAdmin && (
         <div className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
           <div className="bg-white border border-slate-200 rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden">
             {/* Header */}
