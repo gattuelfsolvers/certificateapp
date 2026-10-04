@@ -40,14 +40,17 @@ export default function App() {
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
 
   // License & Software Security State
-  const [licenseStatus, setLicenseStatus] = useState({
-    active: false,
-    status: 'INACTIVE',
-    hwid: '',
-    planType: 'MONTHLY',
-    expiresAt: null,
-    tampered: false,
-    reason: 'Login required'
+  const [licenseStatus, setLicenseStatus] = useState(() => {
+    const isMaster = localStorage.getItem('MASTER_SUPER_ADMIN_SESSION') === 'ACTIVE';
+    return {
+      active: isMaster,
+      status: isMaster ? 'ACTIVE' : 'INACTIVE',
+      hwid: isMaster ? 'MASTER-SUPER-ADMIN' : '',
+      planType: isMaster ? 'MASTER_UNLIMITED' : 'MONTHLY',
+      expiresAt: null,
+      tampered: false,
+      reason: isMaster ? 'Master Admin Access' : 'Login required'
+    };
   });
   const [checkingLicense, setCheckingLicense] = useState(false);
   const [inputLicenseKey, setInputLicenseKey] = useState('');
