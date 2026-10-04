@@ -106,3 +106,89 @@ export function subscribeClientsFromFirebase(onUpdate) {
     console.error("Error in clients snapshot listener:", error);
   });
 }
+
+// -------------------------------------------------------------
+// JHARSEWA CERTIFICATES & MASTERS CLOUD FIREBASE FUNCTIONS
+// -------------------------------------------------------------
+
+// Fetch Certificates from Firebase Cloud
+export async function fetchCertificatesFromFirebase() {
+  try {
+    const certsRef = collection(db, "certificates");
+    const snapshot = await getDocs(certsRef);
+    const certs = [];
+    snapshot.forEach(docSnap => {
+      certs.push({ id: docSnap.id, ...docSnap.data() });
+    });
+    return certs;
+  } catch (error) {
+    console.error("Error fetching certificates from Firebase:", error);
+    return [];
+  }
+}
+
+// Save or Update Certificate in Firebase Cloud
+export async function saveCertificateToFirebase(certData) {
+  try {
+    const certId = certData.id ? String(certData.id) : String(Date.now());
+    const certRef = doc(db, "certificates", certId);
+    const payload = {
+      ...certData,
+      id: certId,
+      updatedAt: new Date().toISOString()
+    };
+    await setDoc(certRef, payload, { merge: true });
+    return payload;
+  } catch (error) {
+    console.error("Error saving certificate to Firebase:", error);
+  }
+}
+
+// Bulk Sync Certificates to Firebase Cloud
+export async function syncBulkCertificatesToFirebase(certList) {
+  try {
+    for (const cert of certList) {
+      const certId = cert.id ? String(cert.id) : String(Date.now() + Math.random());
+      const certRef = doc(db, "certificates", certId);
+      await setDoc(certRef, { ...cert, id: certId, updatedAt: new Date().toISOString() }, { merge: true });
+    }
+  } catch (error) {
+    console.error("Error syncing bulk certificates to Firebase:", error);
+  }
+}
+
+// Delete Certificate from Firebase Cloud
+export async function deleteCertificateFromFirebase(certId) {
+  try {
+    await deleteDoc(doc(db, "certificates", String(certId)));
+  } catch (error) {
+    console.error("Error deleting certificate from Firebase:", error);
+  }
+}
+
+// Fetch Master Service Categories from Firebase Cloud
+export async function fetchMastersFromFirebase() {
+  try {
+    const mastersRef = collection(db, "masters");
+    const snapshot = await getDocs(mastersRef);
+    const masters = [];
+    snapshot.forEach(docSnap => {
+      masters.push({ id: docSnap.id, ...docSnap.data() });
+    });
+    return masters;
+  } catch (error) {
+    console.error("Error fetching masters from Firebase:", error);
+    return [];
+  }
+}
+
+// Save Master Category to Firebase Cloud
+export async function saveMasterToFirebase(masterData) {
+  try {
+    const masterId = masterData.id ? String(masterData.id) : String(Date.now());
+    const masterRef = doc(db, "masters", masterId);
+    await setDoc(masterRef, { ...masterData, id: masterId, updatedAt: new Date().toISOString() }, { merge: true });
+  } catch (error) {
+    console.error("Error saving master to Firebase:", error);
+  }
+}
