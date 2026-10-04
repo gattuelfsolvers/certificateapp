@@ -4229,15 +4229,6 @@ export default function App() {
                 </button>
               </form>
 
-              {/* EMERGENCY MASTER LOGIN LINK */}
-              <div className="pt-2 border-t border-slate-100 text-center">
-                <button
-                  onClick={() => setShowMasterAuthModal(true)}
-                  className="text-xs text-indigo-600 font-bold hover:underline cursor-pointer"
-                >
-                  🔑 Master Admin Emergency Access (Email / Google Login)
-                </button>
-              </div>
             </div>
           </div>
         </div>
