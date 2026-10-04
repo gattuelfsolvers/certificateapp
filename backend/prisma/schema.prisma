@@ -1,0 +1,203 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  username  String   @unique
+  password  String
+  name      String
+  role      String   @default("ADMIN") // SUPER_ADMIN, ADMIN, OPERATOR
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Certificate {
+  id               String         @id @default(uuid())
+  refNo            String         @unique // Jharsewa Reference No (e.g. JHCC/2026/12345)
+  applicantName    String
+  mobile           String
+  address          String?
+  certType         String         // Income Certificate, Caste Certificate, Local Resident, EWS, etc.
+  entryDate        DateTime       @default(now())
+  currentStatus    String         @default("INITIATED") // INITIATED, PENDING, UNDER_PROCESS, DELIVERED, REJECTED, WAITING
+  additionalCharge Float          @default(0) // Extra charges
+  totalFee         Float          @default(0)
+  paidAmount       Float          @default(0)
+  duesAmount       Float          @default(0)
+  remarks          String?
+  lastSyncedAt     DateTime?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  statusLogs       StatusLog[]
+  whatsappLogs     WhatsAppLog[]
+}
+
+model CertTypeMaster {
+  id          String   @id @default(uuid())
+  name        String   // Certificate Type (e.g. Caste Certificate)
+  subCategory String?  // Sub Category / Code (e.g. JHCBC, JHNBC, JHCSC, JHCST)
+  prefix      String?  // Ref No Prefix (e.g. JHCBC, JHNBC, JHCSC)
+  price       Float    @default(0) // Price / Fee
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model StatusLog {
+  id            String      @id @default(uuid())
+  certificateId String
+  certificate   Certificate @relation(fields: [certificateId], references: [id], onDelete: Cascade)
+  oldStatus     String?
+  newStatus     String
+  remarks       String?
+  updatedAt     DateTime    @default(now())
+}
+
+model WhatsAppLog {
+  id            String      @id @default(uuid())
+  certificateId String
+  certificate   Certificate @relation(fields: [certificateId], references: [id], onDelete: Cascade)
+  mobile        String
+  messageType   String      // INITIAL_RECEIPT, STATUS_UPDATE, REMINDER
+  status        String      // SENT, FAILED
+  error         String?
+  sentAt        DateTime    @default(now())
+}
+
+model Setting {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+model WhatsAppTemplate {
+  id          String   @id @default(uuid())
+  templateKey String   @unique
+  title       String
+  category    String   @default("STATUS_UPDATE") // RECEIPT, STATUS_UPDATE, PDF_DISPATCH
+  messageText String
+  updatedAt   DateTime @updatedAt
+}
+
+model PanApplication {
+  id               String         @id @default(uuid())
+  ackNo            String         @unique // 15-digit NSDL/Protean Acknowledgment No
+  applicantName    String
+  mobile           String
+  dob              String?        // Date of birth (DD/MM/YYYY)
+  appType          String         @default("PAN_NEW") // PAN_NEW, PAN_CORRECTION
+  currentStatus    String         @default("INITIATED") // INITIATED, PENDING, UNDER_PROCESS, DISPATCHED, DELIVERED, REJECTED
+  statusDetails    String?
+  panNumber        String?        // Allocated PAN Number if generated
+  lastSyncedAt     DateTime?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  panLogs          PanStatusLog[]
+}
+
+model PanStatusLog {
+  id               String         @id @default(uuid())
+  panApplicationId String
+  panApplication   PanApplication @relation(fields: [panApplicationId], references: [id], onDelete: Cascade)
+  oldStatus        String?
+  newStatus        String
+  remarks          String?
+  updatedAt        DateTime       @default(now())
+}
+
+model LicenseRecord {
+  id          String   @id @default(uuid())
+  hwid        String   @unique
+  licenseKey  String?
+  planType    String   @default("MONTHLY") // MONTHLY, YEARLY, LIFETIME
+  status      String   @default("INACTIVE") // INACTIVE, ACTIVE, EXPIRED, KILLED
+  activatedAt DateTime?
+  expiresAt   DateTime?
+  lastClockCheck DateTime?
+  lastSyncedAt   DateTime?
+  updatedAt   DateTime @updatedAt
+}
+
+model ClientMaster {
+  id                String    @id @default(uuid())
+  clientName        String    // Shop / Center Name
+  ownerName         String?   // Owner / Contact Person Name
+  phone             String
+  hwid              String    @unique
+  licenseKey        String    @unique
+  planType          String    @default("MONTHLY")
+  status            String    @default("ACTIVE") // ACTIVE, EXPIRED, KILLED
+  expiresAt         DateTime
+  pausedRemainingMs Float?    // Saved unused validity in milliseconds when killed/paused
+  killedAt          DateTime? // Timestamp when killed/paused
+  keyGeneratedAt    DateTime  @default(now()) // Timestamp when license key was generated
+  isArchived        Boolean   @default(false)
+  archivedAt        DateTime?
+  deletionReason    String?
+  notes             String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
+
+model ClientBackup {
+  id            String   @id @default(uuid())
+  hwid          String
+  refNo         String
+  applicantName String
+  mobile        String
+  address       String?
+  certType      String
+  entryDate     DateTime @default(now())
+  currentStatus String   @default("INITIATED")
+  totalFee      Float    @default(0)
+  paidAmount    Float    @default(0)
+  duesAmount    Float    @default(0)
+  remarks       String?
+  backedUpAt    DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([hwid, refNo])
+}
+
+model PlanMaster {
+  id            String   @id @default(uuid())
+  planKey       String   @unique // MONTHLY, HALF_YEARLY, YEARLY, etc.
+  title         String   // e.g. Monthly Plan (30 Days)
+  subtitle      String?  // e.g. 30 Days Full Software Access
+  badgeText     String?  // Starter Plan, Most Popular, Best Value
+  durationDays  Int      @default(30)
+  price         Float    @default(0)
+  perDayCost    Float    @default(0)
+  featuresJson  String   @default("[]") // JSON string array of features
+  isPopular     Boolean  @default(false)
+  isBestValue   Boolean  @default(false)
+  isActive      Boolean  @default(true)
+  sortOrder     Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model PaymentRequest {
+  id            String   @id @default(uuid())
+  hwid          String
+  shopName      String
+  ownerName     String
+  phone         String
+  planName      String
+  planPrice     Float    @default(0)
+  status        String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  generatedKey  String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+
+
