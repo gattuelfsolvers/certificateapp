@@ -1542,9 +1542,13 @@ export default function App() {
   };
 
   const getCertPrefix = (certType) => {
-    if (!certType) return '';
-    const match = certType.match(/\(([^)]+)\)/);
-    return match ? match[1] : certType;
+    if (!certType || typeof certType !== 'string') return '';
+    try {
+      const match = certType.match(/\(([^)]+)\)/);
+      return match ? match[1] : certType;
+    } catch (e) {
+      return certType;
+    }
   };
 
   const getStatusBadge = (status, isNewUpdate = false) => {
