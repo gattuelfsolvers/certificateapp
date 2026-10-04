@@ -763,6 +763,20 @@ export default function App() {
   }, []);
 
   const checkLicenseStatus = async () => {
+    // If logged in as Master Super Admin, license is always active
+    if (localStorage.getItem('MASTER_SUPER_ADMIN_SESSION') === 'ACTIVE') {
+      setLicenseStatus({
+        active: true,
+        status: 'ACTIVE',
+        hwid: 'MASTER-SUPER-ADMIN',
+        planType: 'MASTER_UNLIMITED',
+        expiresAt: null,
+        tampered: false,
+        reason: 'Master Admin Access'
+      });
+      return;
+    }
+
     try {
       setCheckingLicense(true);
       const res = await axios.get(`${API_BASE}/license/status`);
