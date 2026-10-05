@@ -4,7 +4,7 @@ import {
   RefreshCw, CheckCircle2, Clock, XCircle, AlertTriangle, LogOut, 
   Copy, Check, Download, Upload, Trash2, Edit, Smartphone, Store,
   Building2, Calendar, Shield, Activity, Power, RefreshCcw, Bell,
-  ChevronRight, Layers, DollarSign, LayoutDashboard, Settings
+  ChevronRight, Layers, DollarSign, LayoutDashboard, Settings, Menu, PanelLeftClose, PanelLeft
 } from 'lucide-react';
 import { 
   fetchClientsFromFirebase, 
@@ -17,6 +17,7 @@ import {
 
 export default function AdminDashboard({ onLogout }) {
   const [activeTab, setActiveTab] = useState('clients'); // 'clients' | 'licenses' | 'plans'
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -263,107 +264,127 @@ export default function AdminDashboard({ onLogout }) {
         </div>
       )}
 
-      {/* LEFT SIDEBAR NAVIGATION BAR */}
-      <aside className="w-64 bg-slate-900 text-white shrink-0 hidden md:flex flex-col justify-between border-r border-slate-800 min-h-screen sticky top-0 h-screen z-50">
-        <div className="p-6 space-y-6">
-          {/* Logo & Admin Branding */}
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-extrabold shadow-lg">
-              <ShieldCheck className="w-6 h-6 text-yellow-300" />
+      {/* LEFT SIDEBAR NAVIGATION BAR (HIDE / SHOW SUPPORTED) */}
+      {isSidebarOpen && (
+        <aside className="w-64 bg-slate-900 text-white shrink-0 flex flex-col justify-between border-r border-slate-800 min-h-screen sticky top-0 h-screen z-50 transition-all duration-300">
+          <div className="p-6 space-y-6">
+            {/* Logo & Admin Branding */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-extrabold shadow-lg">
+                  <ShieldCheck className="w-6 h-6 text-yellow-300" />
+                </div>
+                <div>
+                  <h2 className="text-base font-extrabold text-white tracking-tight">Master Admin</h2>
+                  <p className="text-[11px] text-slate-400 font-medium">Apna Digital Hub</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsSidebarOpen(false)}
+                title="Hide Sidebar"
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition"
+              >
+                <PanelLeftClose className="w-5 h-5" />
+              </button>
             </div>
-            <div>
-              <h2 className="text-base font-extrabold text-white tracking-tight">Master Admin</h2>
-              <p className="text-[11px] text-slate-400 font-medium">Apna Digital Hub</p>
-            </div>
+
+            {/* Navigation Links */}
+            <nav className="space-y-1.5 pt-4 border-t border-slate-800">
+              <button
+                onClick={() => setActiveTab('clients')}
+                className={`w-full flex items-center justify-between px-4 py-3 rounded-xl font-bold text-xs transition ${
+                  activeTab === 'clients'
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
+                    : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <Users className="w-4 h-4" />
+                  <span>👥 Client Master</span>
+                </div>
+                <span className="px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 text-[10px]">{totalCount}</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('licenses')}
+                className={`w-full flex items-center justify-between px-4 py-3 rounded-xl font-bold text-xs transition ${
+                  activeTab === 'licenses'
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
+                    : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <KeyRound className="w-4 h-4" />
+                  <span>🔑 License Master</span>
+                </div>
+                <span className="px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 text-[10px]">{activeCount}</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('plans')}
+                className={`w-full flex items-center justify-between px-4 py-3 rounded-xl font-bold text-xs transition ${
+                  activeTab === 'plans'
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
+                    : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <DollarSign className="w-4 h-4" />
+                  <span>💎 Plan Master</span>
+                </div>
+                <span className="px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 text-[10px]">{plans.length}</span>
+              </button>
+            </nav>
           </div>
 
-          {/* Navigation Links */}
-          <nav className="space-y-1.5 pt-4 border-t border-slate-800">
-            <button
-              onClick={() => setActiveTab('clients')}
-              className={`w-full flex items-center justify-between px-4 py-3 rounded-xl font-bold text-xs transition ${
-                activeTab === 'clients'
-                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
-                  : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-              }`}
-            >
-              <div className="flex items-center gap-2.5">
-                <Users className="w-4 h-4" />
-                <span>👥 Client Master</span>
-              </div>
-              <span className="px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 text-[10px]">{totalCount}</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('licenses')}
-              className={`w-full flex items-center justify-between px-4 py-3 rounded-xl font-bold text-xs transition ${
-                activeTab === 'licenses'
-                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
-                  : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-              }`}
-            >
-              <div className="flex items-center gap-2.5">
-                <KeyRound className="w-4 h-4" />
-                <span>🔑 License Master</span>
-              </div>
-              <span className="px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 text-[10px]">{activeCount}</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('plans')}
-              className={`w-full flex items-center justify-between px-4 py-3 rounded-xl font-bold text-xs transition ${
-                activeTab === 'plans'
-                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
-                  : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-              }`}
-            >
-              <div className="flex items-center gap-2.5">
-                <DollarSign className="w-4 h-4" />
-                <span>💎 Plan Master</span>
-              </div>
-              <span className="px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 text-[10px]">{plans.length}</span>
-            </button>
-          </nav>
-        </div>
-
-        {/* Sidebar Footer Logout */}
-        <div className="p-4 border-t border-slate-800 space-y-3">
-          <button
-            onClick={handleOpenAddModal}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md transition"
-          >
-            <Plus className="w-4 h-4" />
-            Add New Client
-          </button>
-          <button
-            onClick={onLogout}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-rose-900/40 text-slate-300 hover:text-rose-400 border border-slate-700 text-xs font-semibold transition"
-          >
-            <LogOut className="w-4 h-4" />
-            Logout
-          </button>
-        </div>
-      </aside>
+          <div className="p-4 border-t border-slate-800 text-center">
+            <span className="text-[11px] text-slate-500 font-mono">Protected Master Admin</span>
+          </div>
+        </aside>
+      )}
 
       {/* RIGHT MAIN CONTENT AREA - FULL WIDTH */}
       <div className="flex-1 flex flex-col min-w-0">
         
-        {/* Header Bar */}
-        <header className="bg-white border-b border-slate-200 px-6 md:px-8 py-4 sticky top-0 z-40 flex items-center justify-between shadow-sm">
-          <div>
-            <h1 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
-              {activeTab === 'clients' && '👥 Client Master Management'}
-              {activeTab === 'licenses' && '🔑 License Master & Device Control'}
-              {activeTab === 'plans' && '💎 Plan Master & Pricing'}
-            </h1>
-            <p className="text-xs text-slate-500 font-medium">Multi-Tenant SaaS Licensing & Control Portal</p>
+        {/* Header Bar with Sidebar Toggle + Right Corner Action Buttons */}
+        <header className="bg-gradient-to-r from-blue-700 via-indigo-700 to-violet-700 text-white shadow-lg sticky top-0 z-40 px-6 md:px-8 py-4 w-full flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            {/* Sidebar Toggle Button */}
+            <button
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              title={isSidebarOpen ? "Hide Sidebar Menu" : "Show Sidebar Menu"}
+              className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/20 transition"
+            >
+              {isSidebarOpen ? <PanelLeftClose className="w-5 h-5" /> : <PanelLeft className="w-5 h-5" />}
+            </button>
+
+            <div>
+              <h1 className="text-xl font-extrabold tracking-tight flex items-center gap-2 text-white">
+                {activeTab === 'clients' && '👥 Client Master Management'}
+                {activeTab === 'licenses' && '🔑 License Master & Device Control'}
+                {activeTab === 'plans' && '💎 Plan Master & Pricing'}
+                <span className="px-2.5 py-0.5 rounded-full bg-yellow-400 text-slate-900 text-[11px] font-black tracking-wider uppercase shadow">PRO</span>
+              </h1>
+              <p className="text-xs text-blue-100 font-medium">Multi-Tenant SaaS Licensing & Client Control Engine</p>
+            </div>
           </div>
 
-          {/* Top Mobile Quick Links */}
-          <div className="flex items-center gap-2 md:hidden">
-            <button onClick={() => setActiveTab('clients')} className={`p-2 rounded-lg text-xs font-bold ${activeTab === 'clients' ? 'bg-blue-600 text-white' : 'bg-slate-100'}`}>Clients</button>
-            <button onClick={() => setActiveTab('licenses')} className={`p-2 rounded-lg text-xs font-bold ${activeTab === 'licenses' ? 'bg-blue-600 text-white' : 'bg-slate-100'}`}>Licenses</button>
-            <button onClick={() => setActiveTab('plans')} className={`p-2 rounded-lg text-xs font-bold ${activeTab === 'plans' ? 'bg-blue-600 text-white' : 'bg-slate-100'}`}>Plans</button>
+          {/* TOP RIGHT CORNER ACTION BUTTONS (+ Add New Client & Logout) */}
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleOpenAddModal}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white font-bold text-sm shadow-md transition"
+            >
+              <Plus className="w-4 h-4" />
+              Add New Client
+            </button>
+            <button
+              onClick={onLogout}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/20 text-sm font-semibold transition"
+            >
+              <LogOut className="w-4 h-4" />
+              Logout
+            </button>
           </div>
         </header>
 
@@ -372,7 +393,7 @@ export default function AdminDashboard({ onLogout }) {
           
           {/* KPI Summary Metric Cards */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-5 w-full">
-            <div className="bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-200/80 rounded-2xl p-5 shadow-sm flex items-center justify-between">
+            <div className="bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-200/80 rounded-2xl p-5 shadow-sm hover:shadow-md transition flex items-center justify-between">
               <div>
                 <p className="text-xs font-bold text-indigo-600 uppercase tracking-wider mb-1">Total Clients</p>
                 <h3 className="text-3xl font-extrabold text-indigo-950">{totalCount}</h3>
@@ -382,7 +403,7 @@ export default function AdminDashboard({ onLogout }) {
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200/80 rounded-2xl p-5 shadow-sm flex items-center justify-between">
+            <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200/80 rounded-2xl p-5 shadow-sm hover:shadow-md transition flex items-center justify-between">
               <div>
                 <p className="text-xs font-bold text-emerald-600 uppercase tracking-wider mb-1">Active Subscriptions</p>
                 <h3 className="text-3xl font-extrabold text-emerald-950">{activeCount}</h3>
@@ -392,7 +413,7 @@ export default function AdminDashboard({ onLogout }) {
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200/80 rounded-2xl p-5 shadow-sm flex items-center justify-between">
+            <div className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200/80 rounded-2xl p-5 shadow-sm hover:shadow-md transition flex items-center justify-between">
               <div>
                 <p className="text-xs font-bold text-amber-600 uppercase tracking-wider mb-1">Expired Accounts</p>
                 <h3 className="text-3xl font-extrabold text-amber-950">{expiredCount}</h3>
@@ -402,7 +423,7 @@ export default function AdminDashboard({ onLogout }) {
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-rose-50 to-pink-50 border border-rose-200/80 rounded-2xl p-5 shadow-sm flex items-center justify-between">
+            <div className="bg-gradient-to-br from-rose-50 to-pink-50 border border-rose-200/80 rounded-2xl p-5 shadow-sm hover:shadow-md transition flex items-center justify-between">
               <div>
                 <p className="text-xs font-bold text-rose-600 uppercase tracking-wider mb-1">Killed / Blocked</p>
                 <h3 className="text-3xl font-extrabold text-rose-950">{killedCount}</h3>
