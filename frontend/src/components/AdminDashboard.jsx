@@ -99,16 +99,21 @@ export default function AdminDashboard({ onLogout }) {
           } else {
             if (data.qrCodeData) {
               setBackendQrUri(data.qrCodeData);
+            } else {
+              // Fallback to static public QR image if file exists
+              setBackendQrUri(`/public/whatsapp-qr.png?t=${Date.now()}`);
             }
           }
         }
       } catch (e) {
-        // Fallback for offline API test mode
+        if (isMounted) {
+          setBackendQrUri(`/public/whatsapp-qr.png?t=${Date.now()}`);
+        }
       }
     };
 
     checkWaStatus();
-    const interval = setInterval(checkWaStatus, 5000);
+    const interval = setInterval(checkWaStatus, 2000);
     return () => {
       isMounted = false;
       clearInterval(interval);
@@ -1257,6 +1262,9 @@ export default function AdminDashboard({ onLogout }) {
                 <img 
                   src={backendQrUri} 
                   alt="WhatsApp Real-Time QR Code" 
+                  onError={(e) => {
+                    e.target.src = `/public/whatsapp-qr.png?t=${Date.now()}`;
+                  }}
                   className="w-full h-auto rounded-lg mx-auto"
                 />
               ) : (
