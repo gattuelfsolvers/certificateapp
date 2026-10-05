@@ -19,6 +19,21 @@ router.post('/reconnect', async (req, res) => {
   }
 });
 
+// Request WhatsApp 8-Digit Pairing Code
+router.post('/pair-code', async (req, res) => {
+  try {
+    const { requestPairingCode } = require('../services/whatsapp.service');
+    const { phoneNumber } = req.body;
+    if (!phoneNumber) {
+      return res.status(400).json({ success: false, error: 'Phone number is required' });
+    }
+    const result = await requestPairingCode(phoneNumber);
+    res.json(result);
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
 // Logout / Unlink WhatsApp Device
 router.post('/logout', async (req, res) => {
   try {

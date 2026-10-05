@@ -462,9 +462,25 @@ async function sendTestWhatsAppMessage(mobile, messageText) {
   }
 }
 
+async function requestPairingCode(phoneNumber) {
+  if (!sock) {
+    await initWhatsApp();
+  }
+  const cleanPhone = phoneNumber.replace(/\D/g, '');
+  const formattedPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
+  try {
+    const code = await sock.requestPairingCode(formattedPhone);
+    return { success: true, pairingCode: code };
+  } catch (err) {
+    console.error('Failed to request pairing code:', err);
+    return { success: false, error: err.message };
+  }
+}
+
 module.exports = {
   initWhatsApp,
   logoutWhatsApp,
+  requestPairingCode,
   sendAutomaticReceipt: (cert) => enqueueMessage(() => sendAutomaticReceipt(cert)),
   sendBulkAutomaticReceipt: (certList) => enqueueMessage(() => sendBulkAutomaticReceipt(certList)),
   sendStatusUpdateNotification: (cert, oldStatus, newStatus) => enqueueMessage(() => sendStatusUpdateNotification(cert, oldStatus, newStatus)),

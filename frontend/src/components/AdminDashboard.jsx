@@ -82,6 +82,37 @@ export default function AdminDashboard({ onLogout }) {
 
   const [qrModalOpen, setQrModalOpen] = useState(false);
   const [backendQrUri, setBackendQrUri] = useState(null);
+  const [linkMode, setLinkMode] = useState('qr'); // 'qr' | 'code'
+  const [pairingPhone, setPairingPhone] = useState('');
+  const [pairingCodeResult, setPairingCodeResult] = useState('');
+  const [loadingPairingCode, setLoadingPairingCode] = useState(false);
+
+  const handleRequestPairingCode = async () => {
+    if (!pairingPhone.trim()) {
+      showToast('error', 'Phone Required', 'Please enter your WhatsApp phone number.');
+      return;
+    }
+    setLoadingPairingCode(true);
+    setPairingCodeResult('');
+    try {
+      const res = await fetch('/api/whatsapp/pair-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phoneNumber: pairingPhone })
+      });
+      const data = await res.json();
+      if (data.success && data.pairingCode) {
+        setPairingCodeResult(data.pairingCode);
+        showToast('success', 'Pairing Code Generated', 'Enter this 8-digit code in WhatsApp app Linked Devices.');
+      } else {
+        showToast('error', 'Pairing Failed', data.error || 'Failed to get pairing code.');
+      }
+    } catch (e) {
+      showToast('error', 'Request Failed', e.message);
+    } finally {
+      setLoadingPairingCode(false);
+    }
+  };
 
   // Poll Backend Baileys Engine Status
   useEffect(() => {
@@ -1316,6 +1347,43 @@ export default function AdminDashboard({ onLogout }) {
                   <div className="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
                   <p className="text-xs text-slate-600 font-bold">Generating Fresh Live WhatsApp QR Code...</p>
                   <p className="text-[10px] text-slate-400">Please wait 2-3 seconds...</p>
+                </div>
+              )}
+            </div>
+
+            {/* OR LINK WITH 8-DIGIT PAIRING CODE (ALTERNATIVE) */}
+            <div className="pt-2 border-t border-slate-800 space-y-3 text-left">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                  <Smartphone className="w-4 h-4 text-emerald-400" />
+                  Link with 8-Digit Code (No QR Needed):
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <input 
+                  type="text" 
+                  placeholder="Enter Phone No (e.g. 9876543210)"
+                  value={pairingPhone}
+                  onChange={(e) => setPairingPhone(e.target.value)}
+                  className="flex-1 bg-slate-950 border border-slate-700 text-white placeholder-slate-500 text-xs rounded-xl px-3 py-2 font-mono focus:outline-none focus:border-emerald-500"
+                />
+                <button
+                  type="button"
+                  onClick={handleRequestPairingCode}
+                  disabled={loadingPairingCode}
+                  className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition shrink-0 disabled:opacity-50"
+                >
+                  {loadingPairingCode ? 'Getting...' : 'Get Code'}
+                </button>
+              </div>
+
+              {pairingCodeResult && (
+                <div className="p-3 bg-emerald-950/80 border border-emerald-500/50 rounded-xl text-center space-y-1">
+                  <p className="text-[10px] text-emerald-300 font-medium">WhatsApp Pairing Code:</p>
+                  <div className="text-xl font-black font-mono tracking-widest text-emerald-400 select-all">
+                    {pairingCodeResult}
+                  </div>
+                  <p className="text-[9px] text-slate-400">Open WhatsApp → Linked Devices → Link with phone number instead</p>
                 </div>
               )}
             </div>
