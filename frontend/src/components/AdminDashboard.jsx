@@ -392,7 +392,7 @@ export default function AdminDashboard({ onLogout }) {
         {/* Dashboard Body Container */}
         <main className="p-6 md:p-8 space-y-8 flex-1 w-full">
           
-          {/* KPI Summary Metric Cards (5 Cards Grid including Pending For Approval) */}
+          {/* KPI Summary Metric Cards (5 Cards Grid) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 w-full">
             {/* Total Clients Card */}
             <div 
@@ -450,7 +450,7 @@ export default function AdminDashboard({ onLogout }) {
               </div>
             </div>
 
-            {/* 5th Card: PENDING FOR APPROVAL */}
+            {/* Pending Approval Card */}
             <div 
               onClick={() => { setActiveTab('clients'); setStatusFilter('PENDING'); }}
               className="bg-gradient-to-br from-violet-50 to-purple-50 border border-violet-200/80 rounded-2xl p-5 shadow-sm hover:shadow-md transition flex items-center justify-between cursor-pointer relative"
@@ -536,7 +536,7 @@ export default function AdminDashboard({ onLogout }) {
                 </div>
               </div>
 
-              {/* Client Master Table */}
+              {/* Client Master Table (LICENSE KEY COLUMN REMOVED AS REQUESTED) */}
               <div className="bg-white border border-slate-200/80 rounded-2xl overflow-hidden shadow-sm w-full">
                 <div className="overflow-x-auto w-full">
                   <table className="w-full text-left border-collapse">
@@ -544,7 +544,6 @@ export default function AdminDashboard({ onLogout }) {
                       <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">
                         <th className="px-6 py-4">Shop & Owner Details</th>
                         <th className="px-6 py-4">Contact Phone</th>
-                        <th className="px-6 py-4">License Key</th>
                         <th className="px-6 py-4">Subscription Plan</th>
                         <th className="px-6 py-4">Status & Days Left</th>
                         <th className="px-6 py-4 text-right">Actions Suite</th>
@@ -553,13 +552,13 @@ export default function AdminDashboard({ onLogout }) {
                     <tbody className="divide-y divide-slate-100 text-xs font-medium">
                       {loading ? (
                         <tr>
-                          <td colSpan="6" className="px-6 py-12 text-center text-slate-400">
+                          <td colSpan="5" className="px-6 py-12 text-center text-slate-400">
                             Loading Client Licenses from Firebase Cloud...
                           </td>
                         </tr>
                       ) : filteredClients.length === 0 ? (
                         <tr>
-                          <td colSpan="6" className="px-6 py-12 text-center text-slate-400">
+                          <td colSpan="5" className="px-6 py-12 text-center text-slate-400">
                             No clients found.
                           </td>
                         </tr>
@@ -582,19 +581,6 @@ export default function AdminDashboard({ onLogout }) {
 
                               <td className="px-6 py-4 text-slate-700 font-mono font-semibold">
                                 {client.phone || 'N/A'}
-                              </td>
-
-                              <td className="px-6 py-4">
-                                <div className="flex items-center gap-1.5 font-mono text-[11px] text-blue-700 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200 max-w-xs truncate font-bold">
-                                  <span className="truncate">{client.licenseKey || 'NO-KEY'}</span>
-                                  <button
-                                    onClick={() => handleCopyKey(client.licenseKey)}
-                                    title="Copy License Key"
-                                    className="text-blue-500 hover:text-blue-800 shrink-0"
-                                  >
-                                    {copiedKey === client.licenseKey ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-                                  </button>
-                                </div>
                               </td>
 
                               <td className="px-6 py-4">
@@ -659,7 +645,12 @@ export default function AdminDashboard({ onLogout }) {
                         <span className="font-bold text-slate-900 text-sm">{client.clientName}</span>
                         <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-blue-100 text-blue-800">{client.planType}</span>
                       </div>
-                      <div className="font-mono text-xs font-bold text-blue-700 bg-white p-2 rounded border border-slate-200 break-all">{client.licenseKey}</div>
+                      <div className="font-mono text-xs font-bold text-blue-700 bg-white p-2 rounded border border-slate-200 break-all flex items-center justify-between">
+                        <span>{client.licenseKey}</span>
+                        <button onClick={() => handleCopyKey(client.licenseKey)} className="text-blue-500 hover:text-blue-800 ml-2">
+                          {copiedKey === client.licenseKey ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                        </button>
+                      </div>
                       <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1">
                         <span>HWID: {client.hwid ? client.hwid.substring(0, 12) + '...' : 'LOCKED'}</span>
                         <button onClick={() => handleResetHWID(client)} className="text-sky-600 font-bold hover:underline">Reset HWID</button>
