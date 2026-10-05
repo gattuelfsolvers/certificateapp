@@ -238,12 +238,15 @@ export default function AdminDashboard({ onLogout }) {
       let expiresAt = new Date();
       if (editingClient && editingClient.expiresAt) {
         expiresAt = new Date(editingClient.expiresAt);
+      } else {
+        expiresAt.setDate(expiresAt.getDate() + parseInt(formData.customDays || 30));
       }
-      expiresAt.setDate(expiresAt.getDate() + parseInt(formData.customDays || 30));
+
+      const primaryHwid = (formData.hwids && formData.hwids.length > 0 ? formData.hwids[0] : formData.hwid).trim().toUpperCase();
 
       const payload = {
-        hwid: formData.hwids[0] || formData.hwid.trim().toUpperCase(),
-        hwids: formData.hwids,
+        hwid: primaryHwid,
+        hwids: formData.hwids && formData.hwids.length > 0 ? formData.hwids : [primaryHwid],
         allowedPcs: parseInt(formData.allowedPcs || 2),
         clientName: formData.clientName.trim(),
         ownerName: formData.ownerName.trim(),
@@ -256,7 +259,7 @@ export default function AdminDashboard({ onLogout }) {
 
       await saveClientToFirebase(payload);
       setIsModalOpen(false);
-      showToast('success', 'Client Saved', `Client ${payload.clientName} updated with ${payload.hwids.length} Whitelisted HWID(s)!`);
+      showToast('success', 'Client Saved', `Client ${payload.clientName} saved successfully with ${payload.hwids.length} Whitelisted HWID(s)!`);
     } catch (err) {
       showToast('error', 'Error Saving Client', err.message);
     }
