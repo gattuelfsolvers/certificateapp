@@ -700,35 +700,35 @@ export default function AdminDashboard({ onLogout }) {
       {/* Add / Edit Client Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 rounded-3xl p-6 max-w-lg w-full shadow-2xl space-y-5">
+          <div className="bg-white border border-slate-200 rounded-3xl p-8 max-w-2xl w-full shadow-2xl space-y-6">
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-              <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                <Store className="w-5 h-5 text-blue-600" />
+              <h3 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
+                <Store className="w-6 h-6 text-blue-600" />
                 {editingClient ? 'Edit Client Account' : 'Add New Client & Generate License'}
               </h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-700 text-2xl font-bold">&times;</button>
+              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-700 text-3xl font-bold">&times;</button>
             </div>
 
-            <form onSubmit={handleSaveClient} className="space-y-4 text-xs font-medium">
-              <div className="grid grid-cols-2 gap-3">
+            <form onSubmit={handleSaveClient} className="space-y-5 text-sm font-medium">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-slate-700 font-bold mb-1">Shop / CSC Center Name *</label>
-                  <input type="text" required value={formData.clientName} onChange={(e) => setFormData(prev => ({ ...prev, clientName: e.target.value }))} placeholder="e.g. Gattu Jan Seva Kendra" className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-900 font-semibold" />
+                  <label className="block text-slate-700 font-bold mb-1.5 text-xs">Shop / CSC Center Name *</label>
+                  <input type="text" required value={formData.clientName} onChange={(e) => setFormData(prev => ({ ...prev, clientName: e.target.value }))} placeholder="e.g. Gattu Jan Seva Kendra" className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-slate-900 font-semibold" />
                 </div>
                 <div>
-                  <label className="block text-slate-700 font-bold mb-1">Owner Name *</label>
-                  <input type="text" required value={formData.ownerName} onChange={(e) => setFormData(prev => ({ ...prev, ownerName: e.target.value }))} placeholder="e.g. Nitish Nath" className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-900 font-semibold" />
+                  <label className="block text-slate-700 font-bold mb-1.5 text-xs">Owner Name *</label>
+                  <input type="text" required value={formData.ownerName} onChange={(e) => setFormData(prev => ({ ...prev, ownerName: e.target.value }))} placeholder="e.g. Nitish Nath" className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-slate-900 font-semibold" />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-slate-700 font-bold mb-1">WhatsApp Mobile No *</label>
-                  <input type="text" required value={formData.phone} onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))} placeholder="e.g. 9876543210" className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-900 font-mono font-semibold" />
+                  <label className="block text-slate-700 font-bold mb-1.5 text-xs">WhatsApp Mobile No *</label>
+                  <input type="text" required value={formData.phone} onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))} placeholder="e.g. 9876543210" className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-slate-900 font-mono font-semibold" />
                 </div>
                 <div>
-                  <label className="block text-slate-700 font-bold mb-1">Subscription Plan</label>
-                  <select value={formData.planType} onChange={(e) => handlePlanTypeChange(e.target.value)} className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-900 font-bold">
+                  <label className="block text-slate-700 font-bold mb-1.5 text-xs">Subscription Plan</label>
+                  <select value={formData.planType} onChange={(e) => handlePlanTypeChange(e.target.value)} className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-slate-900 font-bold">
                     <option value="FREE_TRIAL">Free Trial (7 Days)</option>
                     <option value="MONTHLY">Monthly (30 Days)</option>
                     <option value="HALF_YEARLY">Half-Yearly (180 Days)</option>
@@ -738,32 +738,26 @@ export default function AdminDashboard({ onLogout }) {
               </div>
 
               <div>
-                <label className="block text-slate-700 font-bold mb-1 flex items-center justify-between">
+                <label className="block text-slate-700 font-bold mb-1.5 text-xs flex items-center justify-between">
                   <span>Generated License Key</span>
-                  <button type="button" onClick={handleGenerateNewKey} className="text-blue-600 hover:underline text-[10px] font-bold">Generate Fresh Key</button>
+                  <button type="button" onClick={handleGenerateNewKey} className="text-blue-600 hover:underline text-xs font-bold">Generate Fresh Key</button>
                 </label>
-                <input type="text" readOnly value={formData.licenseKey} className="w-full bg-blue-50 border border-blue-200 rounded-xl px-3 py-2 text-blue-800 font-mono text-xs font-black" />
+                <input type="text" readOnly value={formData.licenseKey} className="w-full bg-blue-50 border border-blue-200 rounded-xl px-4 py-2.5 text-blue-800 font-mono text-sm font-black tracking-wide" />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-slate-700 font-bold mb-1">Account Status</label>
-                  <select value={formData.status} onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value }))} className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-900 font-bold">
-                    <option value="ACTIVE">ACTIVE</option>
-                    <option value="EXPIRED">EXPIRED</option>
-                    <option value="KILLED">KILLED / BLOCKED</option>
-                    <option value="PENDING">PENDING</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-slate-700 font-bold mb-1">Days to Add (+)</label>
-                  <input type="number" value={formData.customDays} onChange={(e) => setFormData(prev => ({ ...prev, customDays: e.target.value }))} className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-900 font-semibold" />
-                </div>
+              <div>
+                <label className="block text-slate-700 font-bold mb-1.5 text-xs">Account Status</label>
+                <select value={formData.status} onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value }))} className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-slate-900 font-bold">
+                  <option value="ACTIVE">ACTIVE</option>
+                  <option value="EXPIRED">EXPIRED</option>
+                  <option value="KILLED">KILLED / BLOCKED</option>
+                  <option value="PENDING">PENDING</option>
+                </select>
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs">Cancel</button>
-                <button type="submit" className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md">Save Client License</button>
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+                <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs">Cancel</button>
+                <button type="submit" className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md">Save Client License</button>
               </div>
             </form>
           </div>
