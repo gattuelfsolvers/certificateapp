@@ -1248,16 +1248,21 @@ export default function AdminDashboard({ onLogout }) {
               </p>
             </div>
 
-            {/* Live QR Image or Public Static Fallback */}
-            <div className="p-4 bg-white rounded-2xl border-4 border-emerald-500/30 max-w-[260px] mx-auto shadow-inner">
-              <img 
-                src={backendQrUri || '/public/whatsapp-qr.png'} 
-                alt="WhatsApp Real-Time QR Code" 
-                onError={(e) => {
-                  e.target.src = 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=CERTIFICATE_SOFTWARE_WA_GATEWAY_LINK';
-                }}
-                className="w-full h-auto rounded-lg mx-auto"
-              />
+            {/* Live QR Image Container */}
+            <div className="p-4 bg-white rounded-2xl border-4 border-emerald-500/30 max-w-[260px] mx-auto shadow-inner flex flex-col items-center justify-center min-h-[260px]">
+              {backendQrUri ? (
+                <img 
+                  src={backendQrUri} 
+                  alt="WhatsApp Real-Time QR Code" 
+                  className="w-full h-auto rounded-lg mx-auto"
+                />
+              ) : (
+                <div className="space-y-3 py-8 text-center">
+                  <div className="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+                  <p className="text-xs text-slate-600 font-bold">Generating Fresh Live WhatsApp QR Code...</p>
+                  <p className="text-[10px] text-slate-400">Please wait 2-3 seconds...</p>
+                </div>
+              )}
             </div>
 
             {/* Anti-Spam Compliance Note */}
