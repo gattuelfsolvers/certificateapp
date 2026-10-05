@@ -235,12 +235,15 @@ export default function AdminDashboard({ onLogout }) {
   const handleSaveClient = async (e) => {
     e.preventDefault();
     try {
+      let daysToAdd = 30;
+      if (formData.planType === 'FREE_TRIAL') daysToAdd = 7;
+      else if (formData.planType === 'MONTHLY') daysToAdd = 30;
+      else if (formData.planType === 'HALF_YEARLY') daysToAdd = 180;
+      else if (formData.planType === 'YEARLY') daysToAdd = 365;
+
+      // Always calculate fresh expiry from Today when saving/updating plan
       let expiresAt = new Date();
-      if (editingClient && editingClient.expiresAt) {
-        expiresAt = new Date(editingClient.expiresAt);
-      } else {
-        expiresAt.setDate(expiresAt.getDate() + parseInt(formData.customDays || 30));
-      }
+      expiresAt.setDate(expiresAt.getDate() + daysToAdd);
 
       const primaryHwid = (formData.hwids && formData.hwids.length > 0 ? formData.hwids[0] : formData.hwid).trim().toUpperCase();
 
