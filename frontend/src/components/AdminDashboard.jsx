@@ -24,21 +24,23 @@ export default function AdminDashboard({ onLogout }) {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   
-  // Plans Master State
+  // Plans Master State with Max Allowed PCs
   const [plans, setPlans] = useState([
-    { id: 'FREE_TRIAL', name: 'Free Trial', days: 7, price: 0, status: 'ACTIVE' },
-    { id: 'MONTHLY', name: 'Monthly Plan', days: 30, price: 299, status: 'ACTIVE' },
-    { id: 'HALF_YEARLY', name: 'Half-Yearly Plan', days: 180, price: 1499, status: 'ACTIVE' },
-    { id: 'YEARLY', name: 'Yearly Plan', days: 365, price: 2499, status: 'ACTIVE' }
+    { id: 'FREE_TRIAL', name: 'Free Trial', days: 7, price: 0, status: 'ACTIVE', maxPcs: 1 },
+    { id: 'MONTHLY', name: 'Monthly Plan', days: 30, price: 299, status: 'ACTIVE', maxPcs: 2 },
+    { id: 'HALF_YEARLY', name: 'Half-Yearly Plan', days: 180, price: 1499, status: 'ACTIVE', maxPcs: 5 },
+    { id: 'YEARLY', name: 'Yearly Plan', days: 365, price: 2499, status: 'ACTIVE', maxPcs: 10 }
   ]);
 
   // Modal States
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingClient, setEditingClient] = useState(null);
   
-  // Form State
+  // Form State with Multi-HWID & Max PCs Support
   const [formData, setFormData] = useState({
     hwid: '',
+    hwids: [],
+    allowedPcs: 2,
     clientName: '',
     ownerName: '',
     phone: '',
@@ -47,6 +49,8 @@ export default function AdminDashboard({ onLogout }) {
     licenseKey: '',
     status: 'ACTIVE'
   });
+
+  const [newHwidInput, setNewHwidInput] = useState('');
 
   // Admin Password Change State
   const [passForm, setPassForm] = useState({
@@ -98,11 +102,13 @@ export default function AdminDashboard({ onLogout }) {
   };
 
   const handleOpenAddModal = () => {
-    const defaultHwid = `HWID-SHOP-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+    const defaultHwid = `HWID-WIN-${Math.random().toString(36).substring(2, 6).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
     const generated = generateLicenseKey(defaultHwid, 'MONTHLY');
     setEditingClient(null);
     setFormData({
       hwid: defaultHwid,
+      hwids: [defaultHwid],
+      allowedPcs: 2,
       clientName: '',
       ownerName: '',
       phone: '',
@@ -111,13 +117,20 @@ export default function AdminDashboard({ onLogout }) {
       licenseKey: generated.licenseKey,
       status: 'ACTIVE'
     });
+    setNewHwidInput('');
     setIsModalOpen(true);
   };
 
   const handleOpenEditModal = (client) => {
     setEditingClient(client);
+    const existingHwids = Array.isArray(client.hwids) && client.hwids.length > 0 
+      ? client.hwids 
+      : [client.hwid || client.id];
+      
     setFormData({
       hwid: client.hwid || client.id,
+      hwids: existingHwids,
+      allowedPcs: client.allowedPcs || 2,
       clientName: client.clientName || '',
       ownerName: client.ownerName || '',
       phone: client.phone || '',
@@ -126,20 +139,53 @@ export default function AdminDashboard({ onLogout }) {
       licenseKey: client.licenseKey || '',
       status: client.status || 'ACTIVE'
     });
+    setNewHwidInput('');
     setIsModalOpen(true);
+  };
+
+  const handleAddHwidTag = () => {
+    if (!newHwidInput.trim()) return;
+    const clean = newHwidInput.trim().toUpperCase();
+    if (formData.hwids.includes(clean)) {
+      showToast('info', 'Duplicate HWID', 'This Hardware ID is already added to the list.');
+      return;
+    }
+    if (formData.hwids.length >= formData.allowedPcs) {
+      showToast('error', 'PC Limit Exceeded', `Plan limit allows maximum ${formData.allowedPcs} PCs. Increase Allowed PCs limit first.`);
+      return;
+    }
+    setFormData(prev => ({
+      ...prev,
+      hwids: [...prev.hwids, clean]
+    }));
+    setNewHwidInput('');
+  };
+
+  const handleRemoveHwidTag = (targetHwid) => {
+    if (formData.hwids.length <= 1) {
+      showToast('error', 'Action Restricted', 'Client must have at least 1 primary Hardware ID.');
+      return;
+    }
+    setFormData(prev => ({
+      ...prev,
+      hwids: prev.hwids.filter(h => h !== targetHwid)
+    }));
   };
 
   const handlePlanTypeChange = (plan) => {
     let days = 30;
-    if (plan === 'FREE_TRIAL') days = 7;
-    if (plan === 'HALF_YEARLY') days = 180;
-    if (plan === 'YEARLY') days = 365;
+    let pcs = 2;
+    if (plan === 'FREE_TRIAL') { days = 7; pcs = 1; }
+    if (plan === 'MONTHLY') { days = 30; pcs = 2; }
+    if (plan === 'HALF_YEARLY') { days = 180; pcs = 5; }
+    if (plan === 'YEARLY') { days = 365; pcs = 10; }
 
     const generated = generateLicenseKey(formData.hwid || 'DEFAULT', plan);
     setFormData(prev => ({
       ...prev,
       planType: plan,
       customDays: days,
+      allowedPcs: pcs,
       licenseKey: generated.licenseKey
     }));
   };
@@ -160,7 +206,9 @@ export default function AdminDashboard({ onLogout }) {
       expiresAt.setDate(expiresAt.getDate() + parseInt(formData.customDays || 30));
 
       const payload = {
-        hwid: formData.hwid.trim().toUpperCase(),
+        hwid: formData.hwids[0] || formData.hwid.trim().toUpperCase(),
+        hwids: formData.hwids,
+        allowedPcs: parseInt(formData.allowedPcs || 2),
         clientName: formData.clientName.trim(),
         ownerName: formData.ownerName.trim(),
         phone: formData.phone.trim(),
@@ -172,7 +220,7 @@ export default function AdminDashboard({ onLogout }) {
 
       await saveClientToFirebase(payload);
       setIsModalOpen(false);
-      showToast('success', 'Client Saved', `Client ${payload.clientName} updated successfully!`);
+      showToast('success', 'Client Saved', `Client ${payload.clientName} updated with ${payload.hwids.length} Whitelisted HWID(s)!`);
     } catch (err) {
       showToast('error', 'Error Saving Client', err.message);
     }
@@ -1055,15 +1103,18 @@ export default function AdminDashboard({ onLogout }) {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-slate-700 font-bold mb-1.5 text-xs">Hardware ID (HWID) *</label>
-                  <input 
-                    type="text" 
-                    required 
-                    value={formData.hwid} 
-                    onChange={(e) => setFormData(prev => ({ ...prev, hwid: e.target.value }))} 
-                    placeholder="e.g. HWID-WIN-A7B2-99C1" 
-                    className="w-full bg-amber-50/60 border border-amber-300 rounded-xl px-4 py-2.5 text-amber-900 font-mono text-xs font-bold" 
-                  />
+                  <label className="block text-slate-700 font-bold mb-1.5 text-xs">Allowed Multi-PC Limit *</label>
+                  <select 
+                    value={formData.allowedPcs} 
+                    onChange={(e) => setFormData(prev => ({ ...prev, allowedPcs: parseInt(e.target.value) }))} 
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-slate-900 font-bold"
+                  >
+                    <option value={1}>1 PC (Single System)</option>
+                    <option value={2}>2 PCs (Dual Systems)</option>
+                    <option value={3}>3 PCs (Standard Shop)</option>
+                    <option value={5}>5 PCs (Multi-System Hub)</option>
+                    <option value={10}>10 PCs (Enterprise Enterprise)</option>
+                  </select>
                 </div>
                 <div>
                   <label className="block text-slate-700 font-bold mb-1.5 text-xs">Account Status</label>
@@ -1073,6 +1124,53 @@ export default function AdminDashboard({ onLogout }) {
                     <option value="KILLED">KILLED / BLOCKED</option>
                     <option value="PENDING">PENDING</option>
                   </select>
+                </div>
+              </div>
+
+              {/* Multi-HWID Whitelist Management Box */}
+              <div className="space-y-2.5 p-4 rounded-2xl bg-amber-50/50 border border-amber-200">
+                <div className="flex items-center justify-between">
+                  <label className="block text-amber-900 font-extrabold text-xs">
+                    Authorized Hardware IDs ({formData.hwids.length} / {formData.allowedPcs} Allowed PCs)
+                  </label>
+                  <span className="text-[10px] font-bold text-amber-700">Whitelisted Systems</span>
+                </div>
+
+                {/* Tag Chips */}
+                <div className="flex flex-wrap gap-2">
+                  {formData.hwids.map((h, idx) => (
+                    <div key={idx} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-100 border border-amber-300 text-amber-900 font-mono text-xs font-bold shadow-sm">
+                      <span>{h}</span>
+                      {formData.hwids.length > 1 && (
+                        <button 
+                          type="button" 
+                          onClick={() => handleRemoveHwidTag(h)} 
+                          className="text-amber-700 hover:text-rose-600 font-black ml-1 text-sm"
+                          title="Remove HWID"
+                        >
+                          &times;
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Add HWID Input & Add Button */}
+                <div className="flex items-center gap-2 pt-1">
+                  <input 
+                    type="text" 
+                    value={newHwidInput} 
+                    onChange={(e) => setNewHwidInput(e.target.value)} 
+                    placeholder="Enter additional HWID (e.g. HWID-WIN-9812-AA4B)" 
+                    className="flex-1 bg-white border border-amber-300 rounded-xl px-3 py-2 text-amber-900 font-mono text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-amber-500/30"
+                  />
+                  <button 
+                    type="button" 
+                    onClick={handleAddHwidTag}
+                    className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-extrabold text-xs rounded-xl shadow-sm transition shrink-0"
+                  >
+                    + Add PC HWID
+                  </button>
                 </div>
               </div>
 

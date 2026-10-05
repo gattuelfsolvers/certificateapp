@@ -37,14 +37,18 @@ export default function UniversalLogin({ onLoginSuccess }) {
       return;
     }
 
-    // 2. Check Client License Key or Mobile in Firebase Cloud
+    // 2. Check Client License Key or Mobile in Firebase Cloud with Multi-HWID Whitelisting
     try {
       const clients = await fetchClientsFromFirebase();
-      const matchedClient = (clients || []).find(c => 
-        (c.licenseKey && c.licenseKey.trim().toUpperCase() === cleanUser.toUpperCase()) ||
-        (c.phone && c.phone.trim() === cleanUser) ||
-        (c.hwid && c.hwid.trim().toUpperCase() === cleanUser.toUpperCase())
-      );
+      const currentSystemHwid = localStorage.getItem('CLIENT_SYSTEM_HWID') || '';
+      
+      const matchedClient = (clients || []).find(c => {
+        const keyMatch = c.licenseKey && c.licenseKey.trim().toUpperCase() === cleanUser.toUpperCase();
+        const phoneMatch = c.phone && c.phone.trim() === cleanUser;
+        const primaryHwidMatch = c.hwid && c.hwid.trim().toUpperCase() === cleanUser.toUpperCase();
+        const arrayHwidMatch = Array.isArray(c.hwids) && c.hwids.some(h => h.trim().toUpperCase() === cleanUser.toUpperCase());
+        return keyMatch || phoneMatch || primaryHwidMatch || arrayHwidMatch;
+      });
 
       if (matchedClient) {
         if (matchedClient.status === 'KILLED' || matchedClient.status === 'INACTIVE') {
@@ -58,6 +62,24 @@ export default function UniversalLogin({ onLoginSuccess }) {
           setError('Your subscription license has expired. Please contact Admin to renew.');
           setLoading(false);
           return;
+        }
+
+        // Multi-HWID Whitelisting Enforcement
+        const whitelistedHwids = Array.isArray(matchedClient.hwids) && matchedClient.hwids.length > 0 
+          ? matchedClient.hwids.map(h => h.toUpperCase())
+          : [(matchedClient.hwid || '').toUpperCase()];
+          
+        const maxPcs = matchedClient.allowedPcs || 2;
+
+        if (currentSystemHwid) {
+          const cleanCurrentHwid = currentSystemHwid.toUpperCase();
+          const isWhitelisted = whitelistedHwids.includes(cleanCurrentHwid);
+
+          if (!isWhitelisted && whitelistedHwids.length >= maxPcs) {
+            setError(`Login Blocked: This System Hardware ID (${cleanCurrentHwid}) is not Whitelisted! Plan allows maximum ${maxPcs} PC(s). Please contact Admin.`);
+            setLoading(false);
+            return;
+          }
         }
 
         localStorage.setItem('AUTH_ROLE', 'CLIENT');
