@@ -1,11 +1,30 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import AdminLogin from './components/AdminLogin';
+import AdminDashboard from './components/AdminDashboard';
+import { ShieldCheck, LogIn } from 'lucide-react';
 
 export default function App() {
-  return (
-    <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center font-sans">
-      <div className="text-center p-8">
-        <h1 className="text-2xl font-bold text-slate-300">Blank Page - Ready for Step-by-Step Building</h1>
-      </div>
-    </div>
-  );
+  const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
+
+  useEffect(() => {
+    const session = localStorage.getItem('IS_ADMIN_LOGGED_IN');
+    if (session === 'true') {
+      setIsAdminLoggedIn(true);
+    }
+  }, []);
+
+  const handleAdminLoginSuccess = () => {
+    setIsAdminLoggedIn(true);
+  };
+
+  const handleAdminLogout = () => {
+    localStorage.removeItem('IS_ADMIN_LOGGED_IN');
+    setIsAdminLoggedIn(false);
+  };
+
+  if (isAdminLoggedIn) {
+    return <AdminDashboard onLogout={handleAdminLogout} />;
+  }
+
+  return <AdminLogin onLoginSuccess={handleAdminLoginSuccess} />;
 }
