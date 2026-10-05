@@ -89,6 +89,7 @@ export default function AdminDashboard({ onLogout }) {
     const checkWaStatus = async () => {
       try {
         const res = await fetch('/api/whatsapp/status');
+        if (!res.ok) throw new Error('API offline');
         const data = await res.json();
         if (data.success && isMounted) {
           if (data.isConnected) {
@@ -98,17 +99,16 @@ export default function AdminDashboard({ onLogout }) {
               connectedPhone: data.connectedPhone || prev.connectedPhone || '919876543210'
             }));
           } else {
-            if (data.qrCodeData) {
+            if (data.qrCodeData && data.qrCodeData.startsWith('data:image')) {
               setBackendQrUri(data.qrCodeData);
             } else {
-              // Fallback to static public QR image if file exists
-              setBackendQrUri(`/public/whatsapp-qr.png?t=${Date.now()}`);
+              setBackendQrUri('/public/whatsapp-qr.png');
             }
           }
         }
       } catch (e) {
         if (isMounted) {
-          setBackendQrUri(`/public/whatsapp-qr.png?t=${Date.now()}`);
+          setBackendQrUri('/public/whatsapp-qr.png');
         }
       }
     };
