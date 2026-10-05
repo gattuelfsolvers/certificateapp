@@ -440,6 +440,23 @@ router.post('/:id/sync-jharsewa', async (req, res) => {
       } catch (e) {
         console.error('WhatsApp notification error:', e);
       }
+      // Also update Firebase Cloud Firestore so live website reflects updated status immediately
+      try {
+        const firestoreUrl = `https://firestore.googleapis.com/v1/projects/certificate-master-db/databases/(default)/documents/certificates/${cert.id}?updateMask.fieldPaths=currentStatus&updateMask.fieldPaths=status&updateMask.fieldPaths=lastSyncedAt`;
+        await fetch(firestoreUrl, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            fields: {
+              currentStatus: { stringValue: newStatus },
+              status: { stringValue: newStatus },
+              lastSyncedAt: { stringValue: new Date().toISOString() }
+            }
+          })
+        });
+      } catch (fbErr) {
+        console.error('Firebase sync error during single status sync:', fbErr);
+      }
     } else {
       updatedCert = await prisma.certificate.update({
         where: { id: cert.id },
