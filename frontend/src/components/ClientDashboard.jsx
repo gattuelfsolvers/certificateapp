@@ -61,7 +61,6 @@ export default function ClientDashboard({ clientData, onLogout }) {
     setLoading(true);
     try {
       const data = await fetchCertificatesFromFirebase();
-      // Filter by clientId / hwid if scoped
       setCertificates(data || []);
     } catch (err) {
       console.error('Error loading certificates:', err);
@@ -156,7 +155,6 @@ export default function ClientDashboard({ clientData, onLogout }) {
         loadCertificates();
       }
     } catch (err) {
-      // Refresh from cloud
       loadCertificates();
       showToast('info', 'Status Checked', `Refreshed records from Cloud Firestore.`);
     } finally {
@@ -200,7 +198,7 @@ export default function ClientDashboard({ clientData, onLogout }) {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-800 flex flex-col font-sans">
+    <div className="min-h-screen bg-slate-100 text-slate-800 flex flex-col font-sans w-full">
       {/* Toast Notification */}
       {toast && (
         <div className={`fixed bottom-6 right-6 z-50 p-4 rounded-2xl border shadow-2xl flex items-center gap-3 max-w-md animate-bounce ${
@@ -212,9 +210,9 @@ export default function ClientDashboard({ clientData, onLogout }) {
         </div>
       )}
 
-      {/* Client Header */}
-      <header className="bg-gradient-to-r from-blue-700 via-indigo-700 to-violet-700 text-white shadow-lg sticky top-0 z-40 px-6 py-4">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+      {/* Client Header - FULL PAGE WIDTH */}
+      <header className="bg-gradient-to-r from-blue-700 via-indigo-700 to-violet-700 text-white shadow-lg sticky top-0 z-40 px-6 md:px-10 py-4 w-full">
+        <div className="w-full flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 rounded-2xl bg-white/10 backdrop-blur border border-white/20 flex items-center justify-center text-white font-extrabold shadow-inner">
               <Store className="w-6 h-6 text-yellow-300" />
@@ -251,11 +249,11 @@ export default function ClientDashboard({ clientData, onLogout }) {
         </div>
       </header>
 
-      {/* Main Dashboard Content */}
-      <main className="max-w-7xl mx-auto w-full px-6 py-8 flex-1 space-y-8">
+      {/* Main Dashboard Content - FULL PAGE WIDTH */}
+      <main className="w-full px-6 md:px-10 py-8 flex-1 space-y-8">
         
-        {/* KPI Metric Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        {/* KPI Metric Summary Cards - FULL PAGE WIDTH */}
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 w-full">
           <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex items-center justify-between">
             <div>
               <p className="text-xs font-bold text-slate-500 mb-1">Total Records</p>
@@ -307,13 +305,13 @@ export default function ClientDashboard({ clientData, onLogout }) {
           </div>
         </div>
 
-        {/* Sub-Services Quick Launch Cards */}
-        <section className="space-y-3">
+        {/* Sub-Services Quick Launch Cards - FULL PAGE WIDTH */}
+        <section className="space-y-3 w-full">
           <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
             <Layers className="w-5 h-5 text-blue-600" />
             Direct Service Quick Launch Cards
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
             {CERTIFICATE_CATEGORIES.map((cat) => (
               <div key={cat.id} className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-3">
                 <div className="flex items-center justify-between">
@@ -340,9 +338,9 @@ export default function ClientDashboard({ clientData, onLogout }) {
           </div>
         </section>
 
-        {/* Certificate Table Section */}
-        <section className="space-y-4">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+        {/* Certificate Table Section - FULL PAGE WIDTH */}
+        <section className="space-y-4 w-full">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm w-full">
             <div className="relative w-full md:w-96">
               <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
@@ -365,8 +363,8 @@ export default function ClientDashboard({ clientData, onLogout }) {
             </div>
           </div>
 
-          <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-            <div className="overflow-x-auto">
+          <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm w-full">
+            <div className="overflow-x-auto w-full">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">

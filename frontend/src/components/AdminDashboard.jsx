@@ -241,7 +241,7 @@ export default function AdminDashboard({ onLogout }) {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-800 flex flex-col font-sans">
+    <div className="min-h-screen bg-slate-100 text-slate-800 flex flex-col font-sans w-full">
       {/* Toast Notification */}
       {toast && (
         <div className={`fixed bottom-6 right-6 z-50 p-4 rounded-2xl border shadow-2xl flex items-center gap-3 max-w-md animate-bounce ${
@@ -253,9 +253,9 @@ export default function AdminDashboard({ onLogout }) {
         </div>
       )}
 
-      {/* Admin Navigation Header */}
-      <header className="bg-gradient-to-r from-blue-700 via-indigo-700 to-violet-700 text-white shadow-lg sticky top-0 z-40 px-6 py-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
+      {/* Admin Navigation Header - FULL PAGE WIDTH */}
+      <header className="bg-gradient-to-r from-blue-700 via-indigo-700 to-violet-700 text-white shadow-lg sticky top-0 z-40 px-6 md:px-10 py-4 w-full">
+        <div className="w-full flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 rounded-2xl bg-white/10 backdrop-blur border border-white/20 flex items-center justify-center text-white font-extrabold shadow-inner">
               <ShieldCheck className="w-6 h-6 text-yellow-300" />
@@ -288,11 +288,11 @@ export default function AdminDashboard({ onLogout }) {
         </div>
       </header>
 
-      {/* Main Admin Dashboard Body */}
-      <main className="max-w-7xl mx-auto w-full px-6 py-8 flex-1 space-y-8">
+      {/* Main Admin Dashboard Body - FULL PAGE WIDTH */}
+      <main className="w-full px-6 md:px-10 py-8 flex-1 space-y-8">
         
         {/* KPI Metric Colorful Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-5 w-full">
           {/* Total Clients Card */}
           <div className="bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-200/80 rounded-2xl p-5 shadow-sm hover:shadow-md transition flex items-center justify-between">
             <div>
@@ -340,12 +340,12 @@ export default function AdminDashboard({ onLogout }) {
 
         {/* Pending Requests Notification Banner */}
         {pendingRequests.length > 0 && (
-          <div className="p-5 rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-white shadow-lg space-y-3">
+          <div className="p-5 rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-white shadow-lg space-y-3 w-full">
             <div className="flex items-center gap-2 font-extrabold text-base">
               <Bell className="w-5 h-5 animate-bounce" />
               New Client Access Requests Pending Approval ({pendingRequests.length})
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 w-full">
               {pendingRequests.map(req => (
                 <div key={req.id} className="bg-white/95 text-slate-800 p-4 rounded-xl shadow flex items-center justify-between">
                   <div>
@@ -372,8 +372,8 @@ export default function AdminDashboard({ onLogout }) {
           </div>
         )}
 
-        {/* Search & Filter Bar */}
-        <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm">
+        {/* Search & Filter Bar - FULL PAGE WIDTH */}
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm w-full">
           <div className="relative w-full md:w-96">
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
@@ -401,9 +401,9 @@ export default function AdminDashboard({ onLogout }) {
           </div>
         </div>
 
-        {/* Client Management Table Card */}
-        <div className="bg-white border border-slate-200/80 rounded-2xl overflow-hidden shadow-sm">
-          <div className="overflow-x-auto">
+        {/* Client Management Table Card - FULL PAGE WIDTH */}
+        <div className="bg-white border border-slate-200/80 rounded-2xl overflow-hidden shadow-sm w-full">
+          <div className="overflow-x-auto w-full">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">
