@@ -1,30 +1,51 @@
 import React, { useState, useEffect } from 'react';
-import AdminLogin from './components/AdminLogin';
+import UniversalLogin from './components/UniversalLogin';
 import AdminDashboard from './components/AdminDashboard';
-import { ShieldCheck, LogIn } from 'lucide-react';
+import ClientDashboard from './components/ClientDashboard';
 
 export default function App() {
-  const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
+  const [authRole, setAuthRole] = useState(null); // 'ADMIN' | 'CLIENT' | null
+  const [clientData, setClientData] = useState(null);
 
   useEffect(() => {
-    const session = localStorage.getItem('IS_ADMIN_LOGGED_IN');
-    if (session === 'true') {
-      setIsAdminLoggedIn(true);
+    const role = localStorage.getItem('AUTH_ROLE');
+    if (role === 'ADMIN') {
+      setAuthRole('ADMIN');
+    } else if (role === 'CLIENT') {
+      const storedClient = localStorage.getItem('ACTIVE_CLIENT_DATA');
+      if (storedClient) {
+        try {
+          setClientData(JSON.parse(storedClient));
+          setAuthRole('CLIENT');
+        } catch (e) {
+          localStorage.removeItem('AUTH_ROLE');
+        }
+      }
     }
   }, []);
 
-  const handleAdminLoginSuccess = () => {
-    setIsAdminLoggedIn(true);
+  const handleLoginSuccess = (role, data) => {
+    setAuthRole(role);
+    if (role === 'CLIENT') {
+      setClientData(data);
+    }
   };
 
-  const handleAdminLogout = () => {
+  const handleLogout = () => {
+    localStorage.removeItem('AUTH_ROLE');
     localStorage.removeItem('IS_ADMIN_LOGGED_IN');
-    setIsAdminLoggedIn(false);
+    localStorage.removeItem('ACTIVE_CLIENT_DATA');
+    setAuthRole(null);
+    setClientData(null);
   };
 
-  if (isAdminLoggedIn) {
-    return <AdminDashboard onLogout={handleAdminLogout} />;
+  if (authRole === 'ADMIN') {
+    return <AdminDashboard onLogout={handleLogout} />;
   }
 
-  return <AdminLogin onLoginSuccess={handleAdminLoginSuccess} />;
+  if (authRole === 'CLIENT') {
+    return <ClientDashboard clientData={clientData} onLogout={handleLogout} />;
+  }
+
+  return <UniversalLogin onLoginSuccess={handleLoginSuccess} />;
 }
