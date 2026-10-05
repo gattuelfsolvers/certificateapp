@@ -1497,12 +1497,15 @@ export default function App() {
         fetchStats();
       }
     } catch (err) {
-      // Re-fetch latest record from Cloud DB without opening any Edit Modal!
-      await fetchCertificates();
-      await fetchStats();
-      const certObj = certificates.find((c) => c.id === id);
+      // Re-fetch latest records directly from Cloud DB
+      const fbCerts = await fetchCertificatesFromFirebase();
+      if (fbCerts && fbCerts.length > 0) {
+        setCertificates(fbCerts);
+      }
+      const certObj = (fbCerts || []).find((c) => c.id === id || (c.refNo && c.refNo.trim() === refNo.trim()));
       const currentSt = certObj ? (certObj.currentStatus || certObj.status || 'Initiated') : 'Initiated';
       showToastNotification('info', 'Status Refreshed', `Status for ${refNo}: ${currentSt}`);
+      fetchStats();
     } finally {
       setSyncSingleId(null);
     }
