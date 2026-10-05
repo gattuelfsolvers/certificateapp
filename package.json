@@ -4,7 +4,7 @@
   "description": "Unified Certificate Entry Management App & Jharsewa Sync Engine",
   "main": "backend/src/server.js",
   "scripts": {
-    "build": "npm --prefix frontend install && npm --prefix frontend run build && npm --prefix backend install && npx --prefix backend prisma db push",
+    "build": "npm --prefix frontend install && npm --prefix frontend run build && npm --prefix backend install && npx prisma db push --schema=backend/prisma/schema.prisma",
     "start": "node backend/src/server.js"
   }
 }
