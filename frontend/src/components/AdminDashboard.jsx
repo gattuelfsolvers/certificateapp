@@ -55,16 +55,30 @@ export default function AdminDashboard({ onLogout }) {
     confirmPassword: ''
   });
 
-  // WhatsApp Automation Settings State
-  const [whatsappConfig, setWhatsappConfig] = useState({
-    connectedPhone: '919876543210',
-    instanceStatus: 'CONNECTED', // 'CONNECTED' | 'DISCONNECTED'
-    welcomeMsg: true,
-    activationMsg: true,
-    renewalMsg: true,
-    expiryReminderMsg: true,
-    apiToken: 'WA_API_KEY_APNA_HUB_9981'
+  // Persistent WhatsApp Session & Automation Gateway State
+  const [whatsappConfig, setWhatsappConfig] = useState(() => {
+    const saved = localStorage.getItem('WA_GATEWAY_CONFIG');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {}
+    }
+    return {
+      connectedPhone: '919876543210',
+      instanceStatus: 'CONNECTED', // 'CONNECTED' | 'DISCONNECTED'
+      welcomeMsg: true,
+      activationMsg: true,
+      renewalMsg: true,
+      expiryReminderMsg: true,
+      apiToken: 'WA_API_KEY_APNA_HUB_9981',
+      sessionKey: 'PERSISTENT_WA_SESSION_TOKEN_ACTIVE'
+    };
   });
+
+  // Save WhatsApp Config to localStorage on update
+  useEffect(() => {
+    localStorage.setItem('WA_GATEWAY_CONFIG', JSON.stringify(whatsappConfig));
+  }, [whatsappConfig]);
 
   const [copiedKey, setCopiedKey] = useState(null);
   const [toast, setToast] = useState(null);
@@ -769,7 +783,16 @@ export default function AdminDashboard({ onLogout }) {
                         showToast('error', 'Authentication Failed', 'Current password entered is incorrect!');
                         return;
                       }
-                      showToast('success', 'Password Updated', 'Master Admin password has been updated successfully!');
+                      
+                      // Auto-Unlink WhatsApp device security reset on Password Change
+                      setWhatsappConfig(prev => ({
+                        ...prev,
+                        instanceStatus: 'DISCONNECTED',
+                        connectedPhone: 'NOT_LINKED',
+                        sessionKey: null
+                      }));
+
+                      showToast('success', 'Password Updated', 'Password changed! Security reset: Linked WhatsApp device has been UNLINKED.');
                       setPassForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
                     }} 
                     className="space-y-4 text-xs"
@@ -838,20 +861,58 @@ export default function AdminDashboard({ onLogout }) {
                   </div>
 
                   {/* Connected WhatsApp Account Bar */}
-                  <div className="p-4 rounded-2xl bg-emerald-50/60 border border-emerald-200 flex items-center justify-between">
+                  <div className={`p-4 rounded-2xl border flex items-center justify-between ${
+                    whatsappConfig.instanceStatus === 'CONNECTED' 
+                      ? 'bg-emerald-50/60 border-emerald-200' 
+                      : 'bg-rose-50/60 border-rose-200'
+                  }`}>
                     <div className="flex items-center gap-3">
-                      <QrCode className="w-6 h-6 text-emerald-700" />
+                      <QrCode className={`w-6 h-6 ${whatsappConfig.instanceStatus === 'CONNECTED' ? 'text-emerald-700' : 'text-rose-600'}`} />
                       <div>
-                        <div className="text-xs font-bold text-slate-900">Linked WhatsApp Number</div>
-                        <div className="text-xs font-mono text-emerald-800 font-extrabold">+{whatsappConfig.connectedPhone}</div>
+                        <div className="text-xs font-bold text-slate-900">
+                          {whatsappConfig.instanceStatus === 'CONNECTED' ? 'Linked WhatsApp Number' : 'WhatsApp Gateway Disconnected'}
+                        </div>
+                        <div className="text-xs font-mono font-extrabold text-slate-700">
+                          {whatsappConfig.instanceStatus === 'CONNECTED' ? `+${whatsappConfig.connectedPhone}` : 'No Active Device Session'}
+                        </div>
                       </div>
                     </div>
-                    <button 
-                      onClick={() => showToast('info', 'QR Code Generator', 'Scan QR Code with WhatsApp Web scanner on phone to re-link instance.')}
-                      className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-sm transition"
-                    >
-                      Re-Link QR
-                    </button>
+
+                    <div className="flex items-center gap-2">
+                      {whatsappConfig.instanceStatus === 'CONNECTED' ? (
+                        <button 
+                          onClick={() => {
+                            if (window.confirm('Are you sure you want to manually UNLINK your WhatsApp device?')) {
+                              setWhatsappConfig(prev => ({
+                                ...prev,
+                                instanceStatus: 'DISCONNECTED',
+                                connectedPhone: 'NOT_LINKED',
+                                sessionKey: null
+                              }));
+                              showToast('info', 'Device Unlinked', 'WhatsApp device session unlinked manually.');
+                            }
+                          }}
+                          className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl shadow-sm transition"
+                        >
+                          Unlink Device
+                        </button>
+                      ) : (
+                        <button 
+                          onClick={() => {
+                            setWhatsappConfig(prev => ({
+                              ...prev,
+                              instanceStatus: 'CONNECTED',
+                              connectedPhone: '919876543210',
+                              sessionKey: 'PERSISTENT_WA_SESSION_TOKEN_ACTIVE'
+                            }));
+                            showToast('success', 'Device Linked', 'WhatsApp device scanned and linked successfully!');
+                          }}
+                          className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-sm transition"
+                        >
+                          Link Device (Scan QR)
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   {/* Automatic Message Trigger Controls */}
