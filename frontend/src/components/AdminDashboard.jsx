@@ -419,10 +419,7 @@ export default function AdminDashboard({ onLogout }) {
                     : 'text-slate-400 hover:bg-slate-800 hover:text-white'
                 }`}
               >
-                <div className="flex items-center gap-2.5">
-                  <LayoutDashboard className="w-4 h-4 text-yellow-400" />
-                  <span>📊 Dashboard</span>
-                </div>
+                <span className="text-sm font-bold">📊 Dashboard</span>
                 <span className="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 font-extrabold text-[10px]">Overview</span>
               </button>
 
@@ -434,10 +431,7 @@ export default function AdminDashboard({ onLogout }) {
                     : 'text-slate-400 hover:bg-slate-800 hover:text-white'
                 }`}
               >
-                <div className="flex items-center gap-2.5">
-                  <Users className="w-4 h-4" />
-                  <span>👥 Client Master</span>
-                </div>
+                <span className="text-sm font-bold">👥 Client Master</span>
                 <span className="px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 text-[10px]">{totalCount}</span>
               </button>
 
@@ -449,10 +443,7 @@ export default function AdminDashboard({ onLogout }) {
                     : 'text-slate-400 hover:bg-slate-800 hover:text-white'
                 }`}
               >
-                <div className="flex items-center gap-2.5">
-                  <KeyRound className="w-4 h-4" />
-                  <span>🔑 License Master</span>
-                </div>
+                <span className="text-sm font-bold">🔑 License Master</span>
                 <span className="px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 text-[10px]">{activeCount}</span>
               </button>
 
@@ -464,10 +455,7 @@ export default function AdminDashboard({ onLogout }) {
                     : 'text-slate-400 hover:bg-slate-800 hover:text-white'
                 }`}
               >
-                <div className="flex items-center gap-2.5">
-                  <DollarSign className="w-4 h-4" />
-                  <span>💎 Plan Master</span>
-                </div>
+                <span className="text-sm font-bold">💎 Plan Master</span>
                 <span className="px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 text-[10px]">{plans.length}</span>
               </button>
 
@@ -480,10 +468,7 @@ export default function AdminDashboard({ onLogout }) {
                     : 'text-slate-400 hover:bg-slate-800 hover:text-white'
                 }`}
               >
-                <div className="flex items-center gap-2.5">
-                  <Settings className="w-4 h-4 text-emerald-400" />
-                  <span>⚙️ Manage Account</span>
-                </div>
+                <span className="text-sm font-bold">⚙️ Manage Account</span>
                 <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-extrabold">Config</span>
               </button>
             </nav>
