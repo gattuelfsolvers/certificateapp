@@ -445,7 +445,10 @@ export default function AdminDashboard({ onLogout }) {
                     : 'text-slate-400 hover:bg-slate-800 hover:text-white'
                 }`}
               >
-                <span className="text-sm font-bold">📊 Dashboard</span>
+                <div className="flex items-center gap-2.5">
+                  <span className="w-5 text-center text-sm font-bold">📊</span>
+                  <span className="text-sm font-bold whitespace-nowrap">Dashboard</span>
+                </div>
                 <span className="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 font-extrabold text-[10px]">Overview</span>
               </button>
 
@@ -457,7 +460,10 @@ export default function AdminDashboard({ onLogout }) {
                     : 'text-slate-400 hover:bg-slate-800 hover:text-white'
                 }`}
               >
-                <span className="text-sm font-bold">👥 Client Master</span>
+                <div className="flex items-center gap-2.5">
+                  <span className="w-5 text-center text-sm font-bold">👥</span>
+                  <span className="text-sm font-bold whitespace-nowrap">Client Master</span>
+                </div>
                 <span className="px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 text-[10px]">{totalCount}</span>
               </button>
 
@@ -469,7 +475,10 @@ export default function AdminDashboard({ onLogout }) {
                     : 'text-slate-400 hover:bg-slate-800 hover:text-white'
                 }`}
               >
-                <span className="text-sm font-bold">🔑 License Master</span>
+                <div className="flex items-center gap-2.5">
+                  <span className="w-5 text-center text-sm font-bold">🔑</span>
+                  <span className="text-sm font-bold whitespace-nowrap">License Master</span>
+                </div>
                 <span className="px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 text-[10px]">{activeCount}</span>
               </button>
 
@@ -481,7 +490,10 @@ export default function AdminDashboard({ onLogout }) {
                     : 'text-slate-400 hover:bg-slate-800 hover:text-white'
                 }`}
               >
-                <span className="text-sm font-bold">💎 Plan Master</span>
+                <div className="flex items-center gap-2.5">
+                  <span className="w-5 text-center text-sm font-bold">💎</span>
+                  <span className="text-sm font-bold whitespace-nowrap">Plan Master</span>
+                </div>
                 <span className="px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 text-[10px]">{plans.length}</span>
               </button>
 
@@ -494,8 +506,10 @@ export default function AdminDashboard({ onLogout }) {
                     : 'text-slate-400 hover:bg-slate-800 hover:text-white'
                 }`}
               >
-                <span className="text-sm font-bold">⚙️ Manage Account</span>
-                <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-extrabold">Config</span>
+                <div className="flex items-center gap-2.5">
+                  <span className="w-5 text-center text-sm font-bold">⚙️</span>
+                  <span className="text-sm font-bold whitespace-nowrap">Manage Account</span>
+                </div>
               </button>
             </nav>
           </div>
