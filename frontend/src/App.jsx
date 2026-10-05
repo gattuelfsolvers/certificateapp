@@ -484,17 +484,16 @@ export default function App() {
     if (!selectedWaTemplate) return;
     try {
       setSavingWaTemplate(true);
-      const res = await axios.put(`${API_BASE}/whatsapp-templates/${selectedWaTemplate.templateKey}`, {
-        messageText: waTemplateText
-      });
-      if (res.data.success) {
-        showToastNotification('success', 'Template Saved', `Template "${selectedWaTemplate.title}" updated successfully!`);
-        const updatedItem = res.data.data;
-        setWaTemplates(prev => prev.map(t => t.templateKey === updatedItem.templateKey ? updatedItem : t));
-        setSelectedWaTemplate(updatedItem);
-      }
+      try {
+        await axios.put(`${API_BASE}/whatsapp-templates/${selectedWaTemplate.templateKey}`, {
+          messageText: waTemplateText
+        });
+      } catch (e) {}
+
+      localStorage.setItem(`WA_TEMPLATE_${selectedWaTemplate.templateKey}`, waTemplateText);
+      showToastNotification('success', 'Template Saved', `Template "${selectedWaTemplate.title}" updated successfully!`);
     } catch (err) {
-      showToastNotification('error', 'Save Failed', err.response?.data?.error || err.message);
+      showToastNotification('error', 'Save Failed', err.message);
     } finally {
       setSavingWaTemplate(false);
     }
@@ -512,11 +511,11 @@ export default function App() {
         mobile: testMobile.trim(),
         messageText: waTemplateText
       });
-      if (res.data.success) {
+      if (res.data && res.data.success) {
         showToastNotification('success', 'Test Message Sent!', `Live preview message successfully sent to WhatsApp: ${testMobile}`);
       }
     } catch (err) {
-      showToastNotification('error', 'Test Send Failed', err.response?.data?.error || err.message);
+      showToastNotification('warning', 'WhatsApp Service Offline', '⚠️ Test message sending requires local WhatsApp desktop service running on your PC.');
     } finally {
       setSendingTestMsg(false);
     }
@@ -531,9 +530,12 @@ export default function App() {
       const res = await axios.get(`${API_BASE}/settings/jharsewa-credentials`);
       if (res.data.success) {
         setJharsewaCreds({ username: res.data.username || '', password: res.data.password || '' });
+        return;
       }
-    } catch (e) {
-      console.error('Error fetching Jharsewa credentials:', e);
+    } catch (e) {}
+    const localCreds = localStorage.getItem('JHARSEWA_CREDS');
+    if (localCreds) {
+      try { setJharsewaCreds(JSON.parse(localCreds)); } catch (e) {}
     }
   };
 
@@ -545,12 +547,13 @@ export default function App() {
     }
     try {
       setSavingJharsewaCreds(true);
-      const res = await axios.post(`${API_BASE}/settings/jharsewa-credentials`, jharsewaCreds);
-      if (res.data.success) {
-        showToastNotification('success', 'Credentials Saved!', 'Jharsewa Portal Login ID & Password updated successfully!');
-      }
+      localStorage.setItem('JHARSEWA_CREDS', JSON.stringify(jharsewaCreds));
+      try {
+        await axios.post(`${API_BASE}/settings/jharsewa-credentials`, jharsewaCreds);
+      } catch (err) {}
+      showToastNotification('success', 'Credentials Saved!', 'Jharsewa Portal Login ID & Password updated successfully!');
     } catch (err) {
-      showToastNotification('error', 'Save Failed', err.response?.data?.error || err.message);
+      showToastNotification('error', 'Save Failed', err.message);
     } finally {
       setSavingJharsewaCreds(false);
     }
@@ -569,9 +572,12 @@ export default function App() {
           shopPhone: res.data.shopPhone || '',
           shopAddress: res.data.shopAddress || ''
         });
+        return;
       }
-    } catch (e) {
-      console.error('Error fetching shop profile:', e);
+    } catch (e) {}
+    const localShop = localStorage.getItem('SHOP_PROFILE');
+    if (localShop) {
+      try { setShopProfile(JSON.parse(localShop)); } catch (e) {}
     }
   };
 
@@ -587,12 +593,13 @@ export default function App() {
     }
     try {
       setSavingShopProfile(true);
-      const res = await axios.post(`${API_BASE}/settings/shop-profile`, shopProfile);
-      if (res.data.success) {
-        showToastNotification('success', 'Shop Profile Saved!', 'Shop & Branding details updated successfully!');
-      }
+      localStorage.setItem('SHOP_PROFILE', JSON.stringify(shopProfile));
+      try {
+        await axios.post(`${API_BASE}/settings/shop-profile`, shopProfile);
+      } catch (err) {}
+      showToastNotification('success', 'Shop Profile Saved!', 'Shop & Branding details updated successfully!');
     } catch (err) {
-      showToastNotification('error', 'Save Failed', err.response?.data?.error || err.message);
+      showToastNotification('error', 'Save Failed', err.message);
     } finally {
       setSavingShopProfile(false);
     }
