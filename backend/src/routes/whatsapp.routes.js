@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { getWhatsAppStatus, initWhatsApp } = require('../services/whatsapp.service');
+const { getWhatsAppStatus, initWhatsApp, logoutWhatsApp } = require('../services/whatsapp.service');
 const prisma = require('../db');
 
 // Get WhatsApp QR code & connection status
@@ -9,11 +9,21 @@ router.get('/status', (req, res) => {
   res.json({ success: true, ...status });
 });
 
-// Re-initialize WhatsApp
+// Re-initialize WhatsApp / Request QR
 router.post('/reconnect', async (req, res) => {
   try {
     await initWhatsApp();
     res.json({ success: true, message: 'WhatsApp reconnect initiated.' });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// Logout / Unlink WhatsApp Device
+router.post('/logout', async (req, res) => {
+  try {
+    const result = await logoutWhatsApp();
+    res.json(result);
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
   }

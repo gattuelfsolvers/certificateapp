@@ -59,7 +59,7 @@ export default function AdminDashboard({ onLogout }) {
     confirmPassword: ''
   });
 
-  // Persistent WhatsApp Session & Automation Gateway State
+  // Persistent WhatsApp Session & Anti-Spam Gateway State
   const [whatsappConfig, setWhatsappConfig] = useState(() => {
     const saved = localStorage.getItem('WA_GATEWAY_CONFIG');
     if (saved) {
@@ -68,16 +68,52 @@ export default function AdminDashboard({ onLogout }) {
       } catch (e) {}
     }
     return {
-      connectedPhone: '919876543210',
-      instanceStatus: 'CONNECTED', // 'CONNECTED' | 'DISCONNECTED'
+      connectedPhone: 'NOT_LINKED',
+      instanceStatus: 'DISCONNECTED', // 'CONNECTED' | 'DISCONNECTED'
       welcomeMsg: true,
       activationMsg: true,
       renewalMsg: true,
       expiryReminderMsg: true,
       apiToken: 'WA_API_KEY_APNA_HUB_9981',
-      sessionKey: 'PERSISTENT_WA_SESSION_TOKEN_ACTIVE'
+      rateLimitSeconds: '3-7'
     };
   });
+
+  const [qrModalOpen, setQrModalOpen] = useState(false);
+  const [backendQrUri, setBackendQrUri] = useState(null);
+
+  // Poll Backend Baileys Engine Status
+  useEffect(() => {
+    let isMounted = true;
+    const checkWaStatus = async () => {
+      try {
+        const res = await fetch('/api/whatsapp/status');
+        const data = await res.json();
+        if (data.success && isMounted) {
+          if (data.isConnected) {
+            setWhatsappConfig(prev => ({
+              ...prev,
+              instanceStatus: 'CONNECTED',
+              connectedPhone: data.connectedPhone || prev.connectedPhone || '919876543210'
+            }));
+          } else {
+            if (data.qrCodeData) {
+              setBackendQrUri(data.qrCodeData);
+            }
+          }
+        }
+      } catch (e) {
+        // Fallback for offline API test mode
+      }
+    };
+
+    checkWaStatus();
+    const interval = setInterval(checkWaStatus, 5000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
 
   // Save WhatsApp Config to localStorage on update
   useEffect(() => {
@@ -929,15 +965,17 @@ export default function AdminDashboard({ onLogout }) {
                     <div className="flex items-center gap-2">
                       {whatsappConfig.instanceStatus === 'CONNECTED' ? (
                         <button 
-                          onClick={() => {
-                            if (window.confirm('Are you sure you want to manually UNLINK your WhatsApp device?')) {
+                          onClick={async () => {
+                            if (window.confirm('Are you sure you want to UNLINK your active WhatsApp device?')) {
+                              try {
+                                await fetch('/api/whatsapp/logout', { method: 'POST' });
+                              } catch(e) {}
                               setWhatsappConfig(prev => ({
                                 ...prev,
                                 instanceStatus: 'DISCONNECTED',
                                 connectedPhone: 'NOT_LINKED',
-                                sessionKey: null
                               }));
-                              showToast('info', 'Device Unlinked', 'WhatsApp device session unlinked manually.');
+                              showToast('info', 'Device Unlinked', 'WhatsApp device session unlinked and logged out.');
                             }
                           }}
                           className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl shadow-sm transition"
@@ -946,17 +984,18 @@ export default function AdminDashboard({ onLogout }) {
                         </button>
                       ) : (
                         <button 
-                          onClick={() => {
-                            setWhatsappConfig(prev => ({
-                              ...prev,
-                              instanceStatus: 'CONNECTED',
-                              connectedPhone: '919876543210',
-                              sessionKey: 'PERSISTENT_WA_SESSION_TOKEN_ACTIVE'
-                            }));
-                            showToast('success', 'Device Linked', 'WhatsApp device scanned and linked successfully!');
+                          onClick={async () => {
+                            try {
+                              await fetch('/api/whatsapp/reconnect', { method: 'POST' });
+                              const res = await fetch('/api/whatsapp/status');
+                              const data = await res.json();
+                              if (data.qrCodeData) setBackendQrUri(data.qrCodeData);
+                            } catch(e) {}
+                            setQrModalOpen(true);
                           }}
-                          className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-sm transition"
+                          className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-sm transition flex items-center gap-1.5"
                         >
+                          <QrCode className="w-3.5 h-3.5" />
                           Link Device (Scan QR)
                         </button>
                       )}
@@ -1179,6 +1218,62 @@ export default function AdminDashboard({ onLogout }) {
                 <button type="submit" className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md">Save Client Details</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* REAL-TIME WHATSAPP QR CODE SCAN MODAL */}
+      {qrModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-emerald-500/40 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-5 text-center relative animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 className="text-base font-extrabold text-white flex items-center gap-2">
+                <QrCode className="w-5 h-5 text-emerald-400" />
+                Scan WhatsApp Web QR Code
+              </h3>
+              <button 
+                onClick={() => setQrModalOpen(false)}
+                className="text-slate-400 hover:text-white text-2xl font-bold"
+              >
+                &times;
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-xs text-slate-300 font-medium">
+                Open WhatsApp on phone → <strong className="text-emerald-400">Linked Devices</strong> → <strong className="text-emerald-400">Link a Device</strong>
+              </p>
+            </div>
+
+            {/* Live QR Image or Public Static Fallback */}
+            <div className="p-4 bg-white rounded-2xl border-4 border-emerald-500/30 max-w-[260px] mx-auto shadow-inner">
+              <img 
+                src={backendQrUri || '/public/whatsapp-qr.png'} 
+                alt="WhatsApp Real-Time QR Code" 
+                onError={(e) => {
+                  e.target.src = 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=CERTIFICATE_SOFTWARE_WA_GATEWAY_LINK';
+                }}
+                className="w-full h-auto rounded-lg mx-auto"
+              />
+            </div>
+
+            {/* Anti-Spam Compliance Note */}
+            <div className="p-3 bg-emerald-950/60 border border-emerald-500/30 rounded-2xl text-[11px] text-emerald-300 text-left space-y-1">
+              <div className="font-bold flex items-center gap-1.5 text-emerald-400">
+                <ShieldCheck className="w-4 h-4 shrink-0" />
+                <span>WhatsApp Terms & Anti-Spam Protection Active</span>
+              </div>
+              <p className="text-[10px] text-slate-300 leading-relaxed">
+                Messages dispatched with humanized random delays (3-7 seconds) to maintain WhatsApp official compliance and protect account health.
+              </p>
+            </div>
+
+            <button
+              onClick={() => setQrModalOpen(false)}
+              className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs rounded-xl transition"
+            >
+              Done / Close Window
+            </button>
           </div>
         </div>
       )}

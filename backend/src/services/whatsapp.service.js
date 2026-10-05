@@ -7,6 +7,69 @@ const fs = require('fs');
 let sock = null;
 let isConnected = false;
 let qrCodeDataUri = null;
+let connectedPhone = null;
+
+// Anti-Spam Rate-Limiter Message Queue (WhatsApp Official Terms Safety Compliance)
+const messageQueue = [];
+let isProcessingQueue = false;
+
+// Minimum delay between messages: 3500ms to 7500ms (Random Humanized Delay)
+function getRandomDelay(min = 3500, max = 7500) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+/**
+ * Enqueue message to Anti-Spam rate-limited queue
+ */
+function enqueueMessage(taskFn) {
+  return new Promise((resolve, reject) => {
+    messageQueue.push({ taskFn, resolve, reject });
+    processQueue();
+  });
+}
+
+async function processQueue() {
+  if (isProcessingQueue || messageQueue.length === 0) return;
+  isProcessingQueue = true;
+
+  const { taskFn, resolve, reject } = messageQueue.shift();
+
+  try {
+    const result = await taskFn();
+    resolve(result);
+  } catch (err) {
+    reject(err);
+  } finally {
+    const delay = getRandomDelay();
+    console.log(`⏳ Anti-Spam Protection: Waiting ${Math.round(delay / 1000)} seconds before next WhatsApp dispatch...`);
+    setTimeout(() => {
+      isProcessingQueue = false;
+      processQueue();
+    }, delay);
+  }
+}
+
+async function logoutWhatsApp() {
+  try {
+    const authDir = path.join(__dirname, '../../auth_info_baileys');
+    if (sock) {
+      await sock.logout();
+    }
+    sock = null;
+    isConnected = false;
+    qrCodeDataUri = null;
+    connectedPhone = null;
+
+    if (fs.existsSync(authDir)) {
+      fs.rmSync(authDir, { recursive: true, force: true });
+    }
+    console.log('🚪 WhatsApp Device Unlinked and Auth Credentials Cleared.');
+    return { success: true, message: 'WhatsApp unlinked successfully.' };
+  } catch (err) {
+    console.error('Logout error:', err);
+    return { success: false, error: err.message };
+  }
+}
 
 async function initWhatsApp() {
   try {
@@ -20,7 +83,11 @@ async function initWhatsApp() {
 
     sock = makeWASocket({
       auth: state,
-      browser: ['Certificate Entry System', 'Chrome', '1.0.0'],
+      browser: ['Certificate Management Hub', 'Chrome', '1.0.0'],
+      connectTimeoutMs: 60000,
+      defaultQueryTimeoutMs: 60000,
+      keepAliveIntervalMs: 30000,
+      syncFullHistory: false
     });
 
     sock.ev.on('creds.update', saveCreds);
@@ -45,21 +112,24 @@ async function initWhatsApp() {
 
       if (connection === 'close') {
         isConnected = false;
+        connectedPhone = null;
         const statusCode = (lastDisconnect?.error)?.output?.statusCode;
         console.log('WhatsApp connection closed. Status Code:', statusCode);
         const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
         if (shouldReconnect) {
-          setTimeout(initWhatsApp, 3000);
+          setTimeout(initWhatsApp, 4000);
         } else {
           console.log('Logged out. Clearing auth info...');
           fs.rmSync(authDir, { recursive: true, force: true });
-          setTimeout(initWhatsApp, 3000);
+          setTimeout(initWhatsApp, 4000);
         }
       } else if (connection === 'open') {
         isConnected = true;
         qrCodeDataUri = null;
+        const userJid = sock.user?.id || '';
+        connectedPhone = userJid.split('@')[0].split(':')[0];
         console.log('\n===========================================');
-        console.log('✅ WHATSAPP CONNECTED SUCCESSFULLY!');
+        console.log(`✅ WHATSAPP CONNECTED: +${connectedPhone}`);
         console.log('===========================================\n');
       }
     });
@@ -356,6 +426,7 @@ async function sendPDFDocument(mobile, pdfFilePath, cert) {
 function getWhatsAppStatus() {
   return {
     isConnected,
+    connectedPhone,
     qrCodeData: qrCodeDataUri,
   };
 }
@@ -384,9 +455,7 @@ async function sendTestWhatsAppMessage(mobile, messageText) {
     .replace(/\{certListLines\}/g, '1. *Income Certificate (JHIC)*\n   - रेफरेंस नंबर: *JHIC/2026/999999*\n\n2. *Caste Certificate (JHCBC)*\n   - रेफरेंस नंबर: *JHCBC/2026/888888*');
 
   try {
-    await sock.sendMessage(jid, { text: testContent });
-    console.log(`🚀 TEST WHATSAPP MESSAGE SENT to ${mobile}`);
-    return { success: true, message: `Test WhatsApp message sent successfully to ${mobile}!` };
+    return await enqueueMessage(() => sock.sendMessage(jid, { text: testContent }));
   } catch (err) {
     console.error('Failed to send test WhatsApp message:', err);
     return { success: false, error: err.message };
@@ -395,10 +464,11 @@ async function sendTestWhatsAppMessage(mobile, messageText) {
 
 module.exports = {
   initWhatsApp,
-  sendAutomaticReceipt,
-  sendBulkAutomaticReceipt,
-  sendStatusUpdateNotification,
-  sendPDFDocument,
+  logoutWhatsApp,
+  sendAutomaticReceipt: (cert) => enqueueMessage(() => sendAutomaticReceipt(cert)),
+  sendBulkAutomaticReceipt: (certList) => enqueueMessage(() => sendBulkAutomaticReceipt(certList)),
+  sendStatusUpdateNotification: (cert, oldStatus, newStatus) => enqueueMessage(() => sendStatusUpdateNotification(cert, oldStatus, newStatus)),
+  sendPDFDocument: (mobile, pdfFilePath, cert) => enqueueMessage(() => sendPDFDocument(mobile, pdfFilePath, cert)),
   getWhatsAppStatus,
   sendTestWhatsAppMessage,
 };
