@@ -1470,7 +1470,20 @@ export default function App() {
   const handleSyncSingle = async (id, refNo) => {
     try {
       setSyncSingleId(id);
-      const res = await axios.post(`${API_BASE}/certificates/${id}/sync-jharsewa`);
+      let res;
+      try {
+        res = await axios.post(`${API_BASE}/certificates/${id}/sync-jharsewa`);
+        if (!res.data || !res.data.success) {
+          throw new Error('Invalid response from primary API endpoint');
+        }
+      } catch (primaryErr) {
+        if (API_BASE !== 'http://localhost:5000/api') {
+          console.log('Primary API failed, trying local backend sync endpoint...');
+          res = await axios.post(`http://localhost:5000/api/certificates/${id}/sync-jharsewa`);
+        } else {
+          throw primaryErr;
+        }
+      }
       if (res.data && res.data.success) {
         const certObj = certificates.find((c) => c.id === id);
         const newStatus = res.data.statusResult?.status || res.data.newStatus;
