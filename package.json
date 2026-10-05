@@ -1,0 +1,10 @@
+{
+  "name": "certificate-entry-fullstack",
+  "version": "1.0.0",
+  "description": "Unified Certificate Entry Management App & Jharsewa Sync Engine",
+  "main": "backend/src/server.js",
+  "scripts": {
+    "build": "npm --prefix frontend install && npm --prefix frontend run build && npm --prefix backend install && npx --prefix backend prisma db push",
+    "start": "node backend/src/server.js"
+  }
+}

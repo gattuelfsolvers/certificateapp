@@ -1,13 +1,12 @@
 services:
   - type: web
-    name: certificateapp-backend
+    name: certificateapp
     env: node
     region: singapore
-    rootDir: backend
-    buildCommand: npm install && npx prisma db push
+    buildCommand: npm run build
     startCommand: npm start
     envVars:
       - key: PORT
-        value: 5000
+        value: 10000
       - key: DATABASE_URL
         value: file:./dev.db

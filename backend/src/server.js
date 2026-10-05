@@ -41,6 +41,18 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', app: 'Certificate Entry Management API', timestamp: new Date() });
 });
 
+// Serve static React frontend build (Single Server Fullstack)
+const frontendDistPath = path.join(__dirname, '../../frontend/dist');
+if (require('fs').existsSync(frontendDistPath)) {
+  app.use(express.static(frontendDistPath));
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api') || req.path.startsWith('/public')) {
+      return next();
+    }
+    res.sendFile(path.join(frontendDistPath, 'index.html'));
+  });
+}
+
 // Start Server
 app.listen(PORT, async () => {
   console.log(`\n======================================================`);

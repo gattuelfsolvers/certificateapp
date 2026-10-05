@@ -29,8 +29,8 @@ const getApiBaseUrl = () => {
   const custom = typeof localStorage !== 'undefined' ? localStorage.getItem('CUSTOM_API_BASE') : null;
   if (custom && custom.trim()) return custom.trim();
   if (import.meta.env.VITE_API_BASE_URL) return import.meta.env.VITE_API_BASE_URL;
-  if (typeof window !== 'undefined' && window.location.hostname.includes('onrender.com')) {
-    return 'https://certificateapp-backend.onrender.com/api';
+  if (typeof window !== 'undefined' && (window.location.hostname.includes('onrender.com') || window.location.port === '5000')) {
+    return '/api';
   }
   return 'http://localhost:5000/api';
 };
