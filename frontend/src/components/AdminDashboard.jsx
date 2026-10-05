@@ -270,23 +270,14 @@ export default function AdminDashboard({ onLogout }) {
         <aside className="w-64 bg-slate-900 text-white shrink-0 flex flex-col justify-between border-r border-slate-800 min-h-screen sticky top-0 h-screen z-50 transition-all duration-300">
           <div className="p-6 space-y-6">
             {/* Logo & Admin Branding */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-extrabold shadow-lg">
-                  <ShieldCheck className="w-6 h-6 text-yellow-300" />
-                </div>
-                <div>
-                  <h2 className="text-base font-extrabold text-white tracking-tight">Master Admin</h2>
-                  <p className="text-[11px] text-slate-400 font-medium">Apna Digital Hub</p>
-                </div>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-extrabold shadow-lg">
+                <ShieldCheck className="w-6 h-6 text-yellow-300" />
               </div>
-              <button
-                onClick={() => setIsSidebarOpen(false)}
-                title="Hide Sidebar"
-                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition"
-              >
-                <PanelLeftClose className="w-5 h-5" />
-              </button>
+              <div>
+                <h2 className="text-base font-extrabold text-white tracking-tight">Master Admin</h2>
+                <p className="text-[11px] text-slate-400 font-medium">Apna Digital Hub</p>
+              </div>
             </div>
 
             {/* Navigation Links - DASHBOARD AT TOP */}
