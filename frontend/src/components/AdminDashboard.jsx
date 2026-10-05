@@ -4,7 +4,7 @@ import {
   RefreshCw, CheckCircle2, Clock, XCircle, AlertTriangle, LogOut, 
   Copy, Check, Download, Upload, Trash2, Edit, Smartphone, Store,
   Building2, Calendar, Shield, Activity, Power, RefreshCcw, Bell,
-  ChevronRight, Layers, DollarSign, LayoutDashboard, Settings, Menu, PanelLeftClose, PanelLeft
+  ChevronRight, Layers, DollarSign, LayoutDashboard, Settings, Menu, PanelLeftClose, PanelLeft, UserCheck
 } from 'lucide-react';
 import { 
   fetchClientsFromFirebase, 
@@ -227,6 +227,7 @@ export default function AdminDashboard({ onLogout }) {
   const expiredCount = clients.filter(c => new Date(c.expiresAt) <= new Date() || c.status === 'EXPIRED').length;
   const killedCount = clients.filter(c => c.status === 'KILLED' || c.status === 'INACTIVE').length;
   const pendingRequests = clients.filter(c => c.status === 'PENDING');
+  const pendingCount = pendingRequests.length;
 
   // Filtered Clients
   const filteredClients = clients.filter(c => {
@@ -391,9 +392,13 @@ export default function AdminDashboard({ onLogout }) {
         {/* Dashboard Body Container */}
         <main className="p-6 md:p-8 space-y-8 flex-1 w-full">
           
-          {/* KPI Summary Metric Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-5 w-full">
-            <div className="bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-200/80 rounded-2xl p-5 shadow-sm hover:shadow-md transition flex items-center justify-between">
+          {/* KPI Summary Metric Cards (5 Cards Grid including Pending For Approval) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 w-full">
+            {/* Total Clients Card */}
+            <div 
+              onClick={() => { setActiveTab('clients'); setStatusFilter('ALL'); }}
+              className="bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-200/80 rounded-2xl p-5 shadow-sm hover:shadow-md transition flex items-center justify-between cursor-pointer"
+            >
               <div>
                 <p className="text-xs font-bold text-indigo-600 uppercase tracking-wider mb-1">Total Clients</p>
                 <h3 className="text-3xl font-extrabold text-indigo-950">{totalCount}</h3>
@@ -403,7 +408,11 @@ export default function AdminDashboard({ onLogout }) {
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200/80 rounded-2xl p-5 shadow-sm hover:shadow-md transition flex items-center justify-between">
+            {/* Active Subscriptions Card */}
+            <div 
+              onClick={() => { setActiveTab('clients'); setStatusFilter('ACTIVE'); }}
+              className="bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200/80 rounded-2xl p-5 shadow-sm hover:shadow-md transition flex items-center justify-between cursor-pointer"
+            >
               <div>
                 <p className="text-xs font-bold text-emerald-600 uppercase tracking-wider mb-1">Active Subscriptions</p>
                 <h3 className="text-3xl font-extrabold text-emerald-950">{activeCount}</h3>
@@ -413,7 +422,11 @@ export default function AdminDashboard({ onLogout }) {
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200/80 rounded-2xl p-5 shadow-sm hover:shadow-md transition flex items-center justify-between">
+            {/* Expired Accounts Card */}
+            <div 
+              onClick={() => { setActiveTab('clients'); setStatusFilter('EXPIRED'); }}
+              className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200/80 rounded-2xl p-5 shadow-sm hover:shadow-md transition flex items-center justify-between cursor-pointer"
+            >
               <div>
                 <p className="text-xs font-bold text-amber-600 uppercase tracking-wider mb-1">Expired Accounts</p>
                 <h3 className="text-3xl font-extrabold text-amber-950">{expiredCount}</h3>
@@ -423,13 +436,37 @@ export default function AdminDashboard({ onLogout }) {
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-rose-50 to-pink-50 border border-rose-200/80 rounded-2xl p-5 shadow-sm hover:shadow-md transition flex items-center justify-between">
+            {/* Killed / Blocked Card */}
+            <div 
+              onClick={() => { setActiveTab('clients'); setStatusFilter('KILLED'); }}
+              className="bg-gradient-to-br from-rose-50 to-pink-50 border border-rose-200/80 rounded-2xl p-5 shadow-sm hover:shadow-md transition flex items-center justify-between cursor-pointer"
+            >
               <div>
                 <p className="text-xs font-bold text-rose-600 uppercase tracking-wider mb-1">Killed / Blocked</p>
                 <h3 className="text-3xl font-extrabold text-rose-950">{killedCount}</h3>
               </div>
               <div className="w-12 h-12 rounded-2xl bg-rose-600 text-white flex items-center justify-center shadow-md shadow-rose-500/20">
                 <ShieldAlert className="w-6 h-6" />
+              </div>
+            </div>
+
+            {/* 5th Card: PENDING FOR APPROVAL */}
+            <div 
+              onClick={() => { setActiveTab('clients'); setStatusFilter('PENDING'); }}
+              className="bg-gradient-to-br from-violet-50 to-purple-50 border border-violet-200/80 rounded-2xl p-5 shadow-sm hover:shadow-md transition flex items-center justify-between cursor-pointer relative"
+            >
+              {pendingCount > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-4 w-4 bg-violet-600"></span>
+                </span>
+              )}
+              <div>
+                <p className="text-xs font-bold text-violet-600 uppercase tracking-wider mb-1">Pending Approval</p>
+                <h3 className="text-3xl font-extrabold text-violet-950">{pendingCount}</h3>
+              </div>
+              <div className="w-12 h-12 rounded-2xl bg-violet-600 text-white flex items-center justify-center shadow-md shadow-violet-500/20">
+                <UserCheck className="w-6 h-6" />
               </div>
             </div>
           </div>
@@ -494,7 +531,7 @@ export default function AdminDashboard({ onLogout }) {
                     <option value="ACTIVE">Active Only ({activeCount})</option>
                     <option value="EXPIRED">Expired Only ({expiredCount})</option>
                     <option value="KILLED">Killed / Blocked ({killedCount})</option>
-                    <option value="PENDING">Pending Approval ({pendingRequests.length})</option>
+                    <option value="PENDING">Pending Approval ({pendingCount})</option>
                   </select>
                 </div>
               </div>
@@ -531,6 +568,7 @@ export default function AdminDashboard({ onLogout }) {
                           const daysLeft = calculateDaysLeft(client.expiresAt);
                           const isExpired = daysLeft <= 0;
                           const isKilled = client.status === 'KILLED' || client.status === 'INACTIVE';
+                          const isPending = client.status === 'PENDING';
 
                           return (
                             <tr key={client.hwid || client.id} className="hover:bg-blue-50/30 transition">
@@ -566,7 +604,11 @@ export default function AdminDashboard({ onLogout }) {
                               </td>
 
                               <td className="px-6 py-4">
-                                {isKilled ? (
+                                {isPending ? (
+                                  <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-violet-100 text-violet-800 border border-violet-200 text-[10px] font-extrabold animate-pulse">
+                                    <Clock className="w-3 h-3 text-violet-600" /> PENDING APPROVAL
+                                  </span>
+                                ) : isKilled ? (
                                   <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-rose-100 text-rose-700 border border-rose-200 text-[10px] font-extrabold">
                                     <ShieldAlert className="w-3 h-3" /> KILLED / BLOCKED
                                   </span>
