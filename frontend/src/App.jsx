@@ -1100,6 +1100,11 @@ export default function App() {
           ews: fbCerts.filter(c => (c.certType || '').toUpperCase().includes('EWS')).length,
           marriage: fbCerts.filter(c => (c.certType || '').toUpperCase().includes('MARR') || (c.certType || '').toUpperCase().includes('HMGR')).length,
           pan: fbCerts.filter(c => (c.certType || '').toUpperCase().includes('PAN')).length,
+          totalFees: fbCerts.reduce((sum, c) => sum + ((parseFloat(c.totalFee) || 0) || ((parseFloat(c.basePrice) || 0) + (parseFloat(c.additionalCharge) || 0))), 0),
+          totalDues: fbCerts.reduce((sum, c) => sum + (parseFloat(c.duesAmount) || 0), 0),
+          underProcessCount: fbCerts.filter(c => (c.status || c.currentStatus || '').includes('UNDER_PROCESS') || (c.status || c.currentStatus) === 'INITIATED').length,
+          deliveredCount: fbCerts.filter(c => (c.status || c.currentStatus || '').includes('DELIVERED')).length,
+          rejectedCount: fbCerts.filter(c => (c.status || c.currentStatus || '') === 'REJECTED').length
         };
         setStats(computedStats);
 
@@ -1939,11 +1944,11 @@ export default function App() {
           </div>
           <div className="bg-teal-50/50 border border-teal-200 rounded-xl p-3 flex flex-col">
             <span className="text-xs text-teal-700 font-medium">Total Fees</span>
-            <span className="text-xl font-bold text-teal-700">₹{stats.totalFees.toLocaleString()}</span>
+            <span className="text-xl font-bold text-teal-700">₹{(stats?.totalFees || 0).toLocaleString()}</span>
           </div>
           <div className="bg-amber-50/50 border border-amber-300 rounded-xl p-3 flex flex-col">
             <span className="text-xs text-amber-800 font-medium">Total Dues</span>
-            <span className="text-xl font-bold text-amber-800">₹{stats.totalDues.toLocaleString()}</span>
+            <span className="text-xl font-bold text-amber-800">₹{(stats?.totalDues || 0).toLocaleString()}</span>
           </div>
         </div>
       )}
