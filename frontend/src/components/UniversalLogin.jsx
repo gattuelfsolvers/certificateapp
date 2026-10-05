@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ShieldCheck, Lock, User, KeyRound, AlertCircle, ArrowRight, UserPlus, Sparkles } from 'lucide-react';
+import { ShieldCheck, Lock, User, KeyRound, AlertCircle, ArrowRight, UserPlus, Sparkles, Shield, Cpu } from 'lucide-react';
 import { fetchClientsFromFirebase, saveClientToFirebase } from '../firebase';
 
 export default function UniversalLogin({ onLoginSuccess }) {
@@ -100,65 +100,86 @@ export default function UniversalLogin({ onLoginSuccess }) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-slate-100 text-slate-800 flex items-center justify-center p-6 relative font-sans">
-      {/* Decorative Blur Backgrounds */}
-      <div className="absolute top-10 left-10 w-80 h-80 bg-blue-400/20 blur-3xl rounded-full pointer-events-none"></div>
-      <div className="absolute bottom-10 right-10 w-96 h-96 bg-violet-400/20 blur-3xl rounded-full pointer-events-none"></div>
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-6 relative overflow-hidden font-sans">
+      {/* Hi-Tech Glowing Ambient Background & Mesh Overlay */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(59,130,246,0.25),rgba(255,255,255,0))] pointer-events-none"></div>
+      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-600/15 blur-[120px] rounded-full pointer-events-none"></div>
+      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-indigo-600/15 blur-[120px] rounded-full pointer-events-none"></div>
 
-      <div className="max-w-md w-full bg-white/95 backdrop-blur border border-slate-200/80 rounded-3xl p-8 shadow-2xl relative z-10 space-y-6">
+      {/* Hi-Tech Grid Lines Accent */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#1e293b15_1px,transparent_1px),linear-gradient(to_bottom,#1e293b15_1px,transparent_1px)] bg-[size:4rem_4rem] pointer-events-none"></div>
+
+      {/* Wider Modern Glassmorphism Card (max-w-xl) */}
+      <div className="max-w-xl w-full bg-slate-900/90 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-10 shadow-[0_0_50px_rgba(37,99,235,0.15)] relative z-10 space-y-8">
         
-        {/* Header Title Section */}
-        <div className="text-center space-y-2">
-          <div className="w-16 h-16 bg-gradient-to-tr from-blue-600 via-indigo-600 to-violet-600 text-white rounded-2xl flex items-center justify-center mx-auto shadow-xl shadow-blue-500/30">
-            <Sparkles className="w-9 h-9" />
+        {/* Hi-Tech Header Section */}
+        <div className="text-center space-y-3">
+          <div className="relative inline-block">
+            <div className="w-16 h-16 bg-gradient-to-br from-blue-500 via-indigo-600 to-violet-600 text-white rounded-2xl flex items-center justify-center mx-auto shadow-lg shadow-blue-500/30 border border-blue-400/30">
+              <Cpu className="w-8 h-8 text-white animate-pulse" />
+            </div>
+            <span className="absolute -bottom-1 -right-1 flex h-4 w-4">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-4 w-4 bg-emerald-500 border-2 border-slate-900"></span>
+            </span>
           </div>
-          <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight leading-snug">
-            Welcome to Certificate Management Software
-          </h1>
-          <p className="text-xs font-bold text-blue-600 tracking-wide">
-            Powered by - Apna Digital Hub
-          </p>
+
+          <div className="space-y-1">
+            {/* Line 1: Welcome to (Medium Text) */}
+            <p className="text-sm font-extrabold uppercase tracking-widest text-blue-400">
+              Welcome to
+            </p>
+            {/* Line 2: Certificate Management Software (Large Text) */}
+            <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight leading-tight">
+              Certificate Management Software
+            </h1>
+            {/* Line 3: Powered by - Apna Digital Hub (Small Text) */}
+            <p className="text-xs font-semibold text-slate-400 pt-1 flex items-center justify-center gap-1">
+              <span>Powered by -</span>
+              <span className="text-blue-400 font-bold">Apna Digital Hub</span>
+            </p>
+          </div>
         </div>
 
         {error && (
-          <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 flex items-center gap-3 text-rose-700 text-xs font-medium">
-            <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+          <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 flex items-center gap-3 text-rose-300 text-xs font-semibold">
+            <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
             <span>{error}</span>
           </div>
         )}
 
-        {/* Universal Login Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">
+        {/* Universal Form */}
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="space-y-1.5">
+            <label className="block text-xs font-bold text-slate-300 tracking-wide uppercase">
               User ID / License Key / Mobile
             </label>
             <div className="relative">
-              <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <User className="w-5 h-5 text-slate-500 absolute left-4 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 required
                 value={userId}
                 onChange={(e) => setUserId(e.target.value)}
                 placeholder="Enter Admin ID or License Key"
-                className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-10 pr-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition font-medium"
+                className="w-full bg-slate-950/80 border border-slate-800 focus:border-blue-500 rounded-2xl pl-12 pr-4 py-3.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:ring-4 focus:ring-blue-500/15 transition font-medium"
               />
             </div>
           </div>
 
-          <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">
+          <div className="space-y-1.5">
+            <label className="block text-xs font-bold text-slate-300 tracking-wide uppercase">
               Password
             </label>
             <div className="relative">
-              <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <Lock className="w-5 h-5 text-slate-500 absolute left-4 top-1/2 -translate-y-1/2" />
               <input
                 type="password"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Enter Password"
-                className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-10 pr-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition font-medium"
+                className="w-full bg-slate-950/80 border border-slate-800 focus:border-blue-500 rounded-2xl pl-12 pr-4 py-3.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:ring-4 focus:ring-blue-500/15 transition font-medium"
               />
             </div>
           </div>
@@ -166,101 +187,104 @@ export default function UniversalLogin({ onLoginSuccess }) {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 hover:from-blue-700 hover:to-violet-700 text-white font-extrabold text-sm shadow-lg shadow-blue-600/30 transition disabled:opacity-50 flex items-center justify-center gap-2 mt-2"
+            className="w-full py-4 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 hover:from-blue-500 hover:to-violet-500 text-white font-extrabold text-base shadow-xl shadow-blue-600/25 transition disabled:opacity-50 flex items-center justify-center gap-2 mt-4 active:scale-[0.99]"
           >
             {loading ? (
-              <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+              <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
             ) : (
               <>
-                <KeyRound className="w-4 h-4" />
+                <KeyRound className="w-5 h-5" />
                 Login to Portal
-                <ArrowRight className="w-4 h-4" />
+                <ArrowRight className="w-5 h-5" />
               </>
             )}
           </button>
         </form>
 
-        {/* Footer Action Links */}
-        <div className="text-center pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+        {/* Footer Navigation */}
+        <div className="text-center pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs">
           <button 
             onClick={() => setIsRequestModalOpen(true)}
-            className="text-blue-600 font-bold hover:underline flex items-center gap-1"
+            className="text-blue-400 font-bold hover:text-blue-300 transition flex items-center gap-1.5"
           >
-            <UserPlus className="w-3.5 h-3.5" />
-            Request New License
+            <UserPlus className="w-4 h-4" />
+            Request New License Key
           </button>
-          <span className="text-[11px] text-slate-400 font-medium">Protected SaaS System</span>
+          <span className="text-slate-500 font-mono text-[11px] flex items-center gap-1">
+            <Shield className="w-3.5 h-3.5 text-emerald-400" />
+            Encrypted SaaS Portal
+          </span>
         </div>
       </div>
 
       {/* Request New License Modal */}
       {isRequestModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
-                <UserPlus className="w-5 h-5 text-blue-600" />
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 className="text-base font-extrabold text-white flex items-center gap-2">
+                <UserPlus className="w-5 h-5 text-blue-400" />
                 Request Software Access License
               </h3>
               <button 
                 onClick={() => setIsRequestModalOpen(false)}
-                className="text-slate-400 hover:text-slate-700 text-2xl font-bold"
+                className="text-slate-400 hover:text-white text-2xl font-bold"
               >
                 &times;
               </button>
             </div>
 
             {requestSuccess ? (
-              <div className="p-4 bg-emerald-50 text-emerald-800 rounded-2xl border border-emerald-200 text-center space-y-2">
+              <div className="p-4 bg-emerald-950/60 text-emerald-300 rounded-2xl border border-emerald-500/30 text-center space-y-2">
                 <h4 className="font-bold text-sm">Request Submitted Successfully!</h4>
-                <p className="text-xs">Master Admin has been notified. Your account will be activated shortly.</p>
+                <p className="text-xs text-slate-300">Master Admin has been notified. Your account will be activated shortly.</p>
               </div>
             ) : (
               <form onSubmit={handleRequestAccessSubmit} className="space-y-3 text-xs font-medium">
                 <div>
-                  <label className="block text-slate-700 font-bold mb-1">Shop / CSC Center Name *</label>
+                  <label className="block text-slate-300 font-bold mb-1">Shop / CSC Center Name *</label>
                   <input
                     type="text"
                     required
                     value={requestForm.shopName}
                     onChange={(e) => setRequestForm(prev => ({ ...prev, shopName: e.target.value }))}
                     placeholder="e.g. Rahul CSC Kendra"
-                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-900"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-slate-700 font-bold mb-1">Owner Name *</label>
+                  <label className="block text-slate-300 font-bold mb-1">Owner Name *</label>
                   <input
                     type="text"
                     required
                     value={requestForm.ownerName}
                     onChange={(e) => setRequestForm(prev => ({ ...prev, ownerName: e.target.value }))}
                     placeholder="e.g. Rahul Kumar"
-                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-900"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-slate-700 font-bold mb-1">WhatsApp Mobile No *</label>
+                  <label className="block text-slate-300 font-bold mb-1">WhatsApp Mobile No *</label>
                   <input
                     type="text"
                     required
                     value={requestForm.phone}
                     onChange={(e) => setRequestForm(prev => ({ ...prev, phone: e.target.value }))}
                     placeholder="e.g. 9876543210"
-                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-900 font-mono"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white font-mono"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-slate-700 font-bold mb-1">Center Address</label>
+                  <label className="block text-slate-300 font-bold mb-1">Center Address</label>
                   <input
                     type="text"
                     value={requestForm.address}
                     onChange={(e) => setRequestForm(prev => ({ ...prev, address: e.target.value }))}
                     placeholder="e.g. Ranchi, Jharkhand"
-                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-900"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
                   />
                 </div>
 
@@ -268,13 +292,13 @@ export default function UniversalLogin({ onLoginSuccess }) {
                   <button
                     type="button"
                     onClick={() => setIsRequestModalOpen(false)}
-                    className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold"
+                    className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow"
+                    className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold shadow"
                   >
                     Submit Access Request
                   </button>
