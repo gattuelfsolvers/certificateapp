@@ -1471,7 +1471,7 @@ export default function App() {
     try {
       setSyncSingleId(id);
       const res = await axios.post(`${API_BASE}/certificates/${id}/sync-jharsewa`);
-      if (res.data.success) {
+      if (res.data && res.data.success) {
         const certObj = certificates.find((c) => c.id === id);
         const newStatus = res.data.statusResult?.status || res.data.newStatus;
         const oldStatus = certObj?.currentStatus;
@@ -1497,11 +1497,12 @@ export default function App() {
         fetchStats();
       }
     } catch (err) {
-      // Gentle status fallback: Open edit modal directly to allow instant status selection
+      // Re-fetch latest record from Cloud DB without opening any Edit Modal!
+      await fetchCertificates();
+      await fetchStats();
       const certObj = certificates.find((c) => c.id === id);
-      if (certObj) {
-        openEditModal(certObj);
-      }
+      const currentSt = certObj ? (certObj.currentStatus || certObj.status || 'Initiated') : 'Initiated';
+      showToastNotification('info', 'Status Refreshed', `Status for ${refNo}: ${currentSt}`);
     } finally {
       setSyncSingleId(null);
     }
