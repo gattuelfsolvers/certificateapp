@@ -24,13 +24,13 @@ class ErrorBoundary extends React.Component {
     if (this.state.hasError) {
       return (
         <div className="min-h-screen bg-slate-900 text-white flex flex-col items-center justify-center p-6 text-center">
-          <div className="bg-slate-800 border border-slate-700 rounded-3xl p-8 max-w-md w-full shadow-2xl space-y-4">
+          <div className="bg-slate-800 border border-slate-700 rounded-3xl p-8 max-w-lg w-full shadow-2xl space-y-4">
             <div className="w-12 h-12 bg-rose-500/20 text-rose-400 rounded-2xl flex items-center justify-center mx-auto border border-rose-500/30">
               ⚠️
             </div>
-            <h2 className="text-xl font-bold text-white">System Recovered</h2>
-            <p className="text-xs text-slate-300">
-              A temporary rendering delay occurred. Please refresh the page to continue.
+            <h2 className="text-xl font-bold text-white">System Diagnostics</h2>
+            <p className="text-xs text-rose-300 font-mono bg-slate-950 p-3 rounded-xl text-left overflow-auto max-h-40">
+              {this.state.error ? String(this.state.error.stack || this.state.error.message || this.state.error) : 'Unknown Render Error'}
             </p>
             <button
               onClick={() => window.location.reload()}
