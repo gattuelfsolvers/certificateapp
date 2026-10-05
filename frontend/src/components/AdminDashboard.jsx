@@ -5,7 +5,7 @@ import {
   Copy, Check, Download, Upload, Trash2, Edit, Smartphone, Store,
   Building2, Calendar, Shield, Activity, Power, RefreshCcw, Bell,
   ChevronRight, Layers, DollarSign, LayoutDashboard, Settings, Menu, PanelLeftClose, PanelLeft, UserCheck,
-  UserCheck as ManageAccountIcon, MessageSquare, Key, CheckCircle, Send, QrCode, Sliders
+  UserCheck as ManageAccountIcon, MessageSquare, Key, CheckCircle, Send, QrCode, Sliders, Eye
 } from 'lucide-react';
 import { 
   fetchClientsFromFirebase, 
@@ -35,6 +35,7 @@ export default function AdminDashboard({ onLogout }) {
   // Modal States
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingClient, setEditingClient] = useState(null);
+  const [isViewOnly, setIsViewOnly] = useState(false);
   
   // Form State with Multi-HWID & Max PCs Support
   const [formData, setFormData] = useState({
@@ -146,6 +147,7 @@ export default function AdminDashboard({ onLogout }) {
     const defaultHwid = `HWID-WIN-${Math.random().toString(36).substring(2, 6).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
     const generated = generateLicenseKey(defaultHwid, 'MONTHLY');
     setEditingClient(null);
+    setIsViewOnly(false);
     setFormData({
       hwid: defaultHwid,
       hwids: [defaultHwid],
@@ -164,6 +166,30 @@ export default function AdminDashboard({ onLogout }) {
 
   const handleOpenEditModal = (client) => {
     setEditingClient(client);
+    setIsViewOnly(false);
+    const existingHwids = Array.isArray(client.hwids) && client.hwids.length > 0 
+      ? client.hwids 
+      : [client.hwid || client.id];
+      
+    setFormData({
+      hwid: client.hwid || client.id,
+      hwids: existingHwids,
+      allowedPcs: client.allowedPcs || 2,
+      clientName: client.clientName || '',
+      ownerName: client.ownerName || '',
+      phone: client.phone || '',
+      planType: client.planType || 'MONTHLY',
+      customDays: 30,
+      licenseKey: client.licenseKey || '',
+      status: client.status || 'ACTIVE'
+    });
+    setNewHwidInput('');
+    setIsModalOpen(true);
+  };
+
+  const handleOpenViewModal = (client) => {
+    setEditingClient(client);
+    setIsViewOnly(true);
     const existingHwids = Array.isArray(client.hwids) && client.hwids.length > 0 
       ? client.hwids 
       : [client.hwid || client.id];
@@ -747,14 +773,25 @@ export default function AdminDashboard({ onLogout }) {
                               </td>
 
                               <td className="px-6 py-4 text-right">
-                                <div className="flex items-center justify-end gap-1.5">
-                                  <button onClick={() => handleRenewLicense(client)} title="Renew License (+30 Days)" className="p-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 transition shadow-sm"><RefreshCcw className="w-4 h-4" /></button>
-                                  <button onClick={() => handleResetHWID(client)} title="Reset HWID (Support Formatted PC)" className="p-2 rounded-xl bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 transition shadow-sm"><Power className="w-4 h-4" /></button>
-                                  <button onClick={() => handleToggleStatus(client.hwid || client.id, client.status)} title={isKilled ? "Unblock Client" : "Kill / Terminate Client"} className={`p-2 rounded-xl border transition shadow-sm ${isKilled ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-rose-50 text-rose-700 border-rose-200'}`}><ShieldAlert className="w-4 h-4" /></button>
-                                  <button onClick={() => handleOpenEditModal(client)} title="Edit Client" className="p-2 rounded-xl bg-slate-100 text-slate-700 border border-slate-200"><Edit className="w-4 h-4" /></button>
-                                  <button onClick={() => handleBackupClientData(client)} title="Download Backup" className="p-2 rounded-xl bg-blue-50 text-blue-700 border border-blue-200"><Download className="w-4 h-4" /></button>
-                                  <button onClick={() => handleDeleteClient(client.hwid || client.id, client.clientName)} title="Delete Client" className="p-2 rounded-xl bg-slate-100 text-rose-600 border border-slate-200"><Trash2 className="w-4 h-4" /></button>
-                                </div>
+                                {activeTab === 'dashboard' ? (
+                                  <button 
+                                    onClick={() => handleOpenViewModal(client)} 
+                                    title="View Client Details" 
+                                    className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs shadow-md transition inline-flex items-center gap-1.5"
+                                  >
+                                    <Eye className="w-4 h-4" />
+                                    View
+                                  </button>
+                                ) : (
+                                  <div className="flex items-center justify-end gap-1.5">
+                                    <button onClick={() => handleRenewLicense(client)} title="Renew License (+30 Days)" className="p-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 transition shadow-sm"><RefreshCcw className="w-4 h-4" /></button>
+                                    <button onClick={() => handleResetHWID(client)} title="Reset HWID (Support Formatted PC)" className="p-2 rounded-xl bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 transition shadow-sm"><Power className="w-4 h-4" /></button>
+                                    <button onClick={() => handleToggleStatus(client.hwid || client.id, client.status)} title={isKilled ? "Unblock Client" : "Kill / Terminate Client"} className={`p-2 rounded-xl border transition shadow-sm ${isKilled ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-rose-50 text-rose-700 border-rose-200'}`}><ShieldAlert className="w-4 h-4" /></button>
+                                    <button onClick={() => handleOpenEditModal(client)} title="Edit Client" className="p-2 rounded-xl bg-slate-100 text-slate-700 border border-slate-200"><Edit className="w-4 h-4" /></button>
+                                    <button onClick={() => handleBackupClientData(client)} title="Download Backup" className="p-2 rounded-xl bg-blue-50 text-blue-700 border border-blue-200"><Download className="w-4 h-4" /></button>
+                                    <button onClick={() => handleDeleteClient(client.hwid || client.id, client.clientName)} title="Delete Client" className="p-2 rounded-xl bg-slate-100 text-rose-600 border border-slate-200"><Trash2 className="w-4 h-4" /></button>
+                                  </div>
+                                )}
                               </td>
                             </tr>
                           );
@@ -1095,31 +1132,31 @@ export default function AdminDashboard({ onLogout }) {
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <h3 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
                 <Store className="w-6 h-6 text-blue-600" />
-                {editingClient ? 'Edit Client Account' : 'Add New Client & Generate License'}
+                {isViewOnly ? 'View Client Account Details' : editingClient ? 'Edit Client Account' : 'Add New Client & Generate License'}
               </h3>
               <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-700 text-3xl font-bold">&times;</button>
             </div>
 
-            <form onSubmit={handleSaveClient} className="space-y-5 text-sm font-medium">
+            <fieldset disabled={isViewOnly} className="space-y-5 text-sm font-medium">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-slate-700 font-bold mb-1.5 text-xs">Shop / CSC Center Name *</label>
-                  <input type="text" required value={formData.clientName} onChange={(e) => setFormData(prev => ({ ...prev, clientName: e.target.value }))} placeholder="e.g. Gattu Jan Seva Kendra" className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-slate-900 font-semibold" />
+                  <input type="text" required value={formData.clientName} onChange={(e) => setFormData(prev => ({ ...prev, clientName: e.target.value }))} placeholder="e.g. Gattu Jan Seva Kendra" className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-slate-900 font-semibold disabled:bg-slate-100 disabled:text-slate-800" />
                 </div>
                 <div>
                   <label className="block text-slate-700 font-bold mb-1.5 text-xs">Owner Name *</label>
-                  <input type="text" required value={formData.ownerName} onChange={(e) => setFormData(prev => ({ ...prev, ownerName: e.target.value }))} placeholder="e.g. Nitish Nath" className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-slate-900 font-semibold" />
+                  <input type="text" required value={formData.ownerName} onChange={(e) => setFormData(prev => ({ ...prev, ownerName: e.target.value }))} placeholder="e.g. Nitish Nath" className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-slate-900 font-semibold disabled:bg-slate-100 disabled:text-slate-800" />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-slate-700 font-bold mb-1.5 text-xs">WhatsApp Mobile No *</label>
-                  <input type="text" required value={formData.phone} onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))} placeholder="e.g. 9876543210" className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-slate-900 font-mono font-semibold" />
+                  <input type="text" required value={formData.phone} onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))} placeholder="e.g. 9876543210" className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-slate-900 font-mono font-semibold disabled:bg-slate-100 disabled:text-slate-800" />
                 </div>
                 <div>
                   <label className="block text-slate-700 font-bold mb-1.5 text-xs">Subscription Plan</label>
-                  <select value={formData.planType} onChange={(e) => handlePlanTypeChange(e.target.value)} className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-slate-900 font-bold">
+                  <select value={formData.planType} onChange={(e) => handlePlanTypeChange(e.target.value)} className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-slate-900 font-bold disabled:bg-slate-100 disabled:text-slate-800">
                     <option value="FREE_TRIAL">Free Trial (7 Days)</option>
                     <option value="MONTHLY">Monthly (30 Days)</option>
                     <option value="HALF_YEARLY">Half-Yearly (180 Days)</option>
@@ -1131,7 +1168,7 @@ export default function AdminDashboard({ onLogout }) {
               <div>
                 <label className="block text-slate-700 font-bold mb-1.5 text-xs flex items-center justify-between">
                   <span>Generated License Key</span>
-                  <button type="button" onClick={handleGenerateNewKey} className="text-blue-600 hover:underline text-xs font-bold">Generate Fresh Key</button>
+                  {!isViewOnly && <button type="button" onClick={handleGenerateNewKey} className="text-blue-600 hover:underline text-xs font-bold">Generate Fresh Key</button>}
                 </label>
                 <input type="text" readOnly value={formData.licenseKey} className="w-full bg-blue-50 border border-blue-200 rounded-xl px-4 py-2.5 text-blue-800 font-mono text-sm font-black tracking-wide" />
               </div>
@@ -1142,7 +1179,7 @@ export default function AdminDashboard({ onLogout }) {
                   <select 
                     value={formData.allowedPcs} 
                     onChange={(e) => setFormData(prev => ({ ...prev, allowedPcs: parseInt(e.target.value) }))} 
-                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-slate-900 font-bold"
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-slate-900 font-bold disabled:bg-slate-100 disabled:text-slate-800"
                   >
                     <option value={1}>1 PC (Single System)</option>
                     <option value={2}>2 PCs (Dual Systems)</option>
@@ -1153,7 +1190,7 @@ export default function AdminDashboard({ onLogout }) {
                 </div>
                 <div>
                   <label className="block text-slate-700 font-bold mb-1.5 text-xs">Account Status</label>
-                  <select value={formData.status} onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value }))} className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-slate-900 font-bold">
+                  <select value={formData.status} onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value }))} className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-slate-900 font-bold disabled:bg-slate-100 disabled:text-slate-800">
                     <option value="ACTIVE">ACTIVE</option>
                     <option value="EXPIRED">EXPIRED</option>
                     <option value="KILLED">KILLED / BLOCKED</option>
@@ -1176,7 +1213,7 @@ export default function AdminDashboard({ onLogout }) {
                   {formData.hwids.map((h, idx) => (
                     <div key={idx} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-100 border border-amber-300 text-amber-900 font-mono text-xs font-bold shadow-sm">
                       <span>{h}</span>
-                      {formData.hwids.length > 1 && (
+                      {!isViewOnly && formData.hwids.length > 1 && (
                         <button 
                           type="button" 
                           onClick={() => handleRemoveHwidTag(h)} 
@@ -1191,29 +1228,37 @@ export default function AdminDashboard({ onLogout }) {
                 </div>
 
                 {/* Add HWID Input & Add Button */}
-                <div className="flex items-center gap-2 pt-1">
-                  <input 
-                    type="text" 
-                    value={newHwidInput} 
-                    onChange={(e) => setNewHwidInput(e.target.value)} 
-                    placeholder="Enter additional HWID (e.g. HWID-WIN-9812-AA4B)" 
-                    className="flex-1 bg-white border border-amber-300 rounded-xl px-3 py-2 text-amber-900 font-mono text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-amber-500/30"
-                  />
-                  <button 
-                    type="button" 
-                    onClick={handleAddHwidTag}
-                    className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-extrabold text-xs rounded-xl shadow-sm transition shrink-0"
-                  >
-                    + Add PC HWID
-                  </button>
-                </div>
+                {!isViewOnly && (
+                  <div className="flex items-center gap-2 pt-1">
+                    <input 
+                      type="text" 
+                      value={newHwidInput} 
+                      onChange={(e) => setNewHwidInput(e.target.value)} 
+                      placeholder="Enter additional HWID (e.g. HWID-WIN-9812-AA4B)" 
+                      className="flex-1 bg-white border border-amber-300 rounded-xl px-3 py-2 text-amber-900 font-mono text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-amber-500/30"
+                    />
+                    <button 
+                      type="button" 
+                      onClick={handleAddHwidTag}
+                      className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-extrabold text-xs rounded-xl shadow-sm transition shrink-0"
+                    >
+                      + Add PC HWID
+                    </button>
+                  </div>
+                )}
               </div>
+            </fieldset>
 
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs">Cancel</button>
-                <button type="submit" className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md">Save Client Details</button>
-              </div>
-            </form>
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+              {isViewOnly ? (
+                <button type="button" onClick={() => setIsModalOpen(false)} className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs shadow-md">Close Window</button>
+              ) : (
+                <>
+                  <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs">Cancel</button>
+                  <button type="button" onClick={handleSaveClient} className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md">Save Client Details</button>
+                </>
+              )}
+            </div>
           </div>
         </div>
       )}
