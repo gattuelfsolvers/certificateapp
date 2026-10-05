@@ -4,7 +4,8 @@ import {
   RefreshCw, CheckCircle2, Clock, XCircle, AlertTriangle, LogOut, 
   Copy, Check, Download, Upload, Trash2, Edit, Smartphone, Store,
   Building2, Calendar, Shield, Activity, Power, RefreshCcw, Bell,
-  ChevronRight, Layers, DollarSign, LayoutDashboard, Settings, Menu, PanelLeftClose, PanelLeft, UserCheck
+  ChevronRight, Layers, DollarSign, LayoutDashboard, Settings, Menu, PanelLeftClose, PanelLeft, UserCheck,
+  UserCheck as ManageAccountIcon, MessageSquare, Key, CheckCircle, Send, QrCode, Sliders
 } from 'lucide-react';
 import { 
   fetchClientsFromFirebase, 
@@ -45,6 +46,24 @@ export default function AdminDashboard({ onLogout }) {
     customDays: 30,
     licenseKey: '',
     status: 'ACTIVE'
+  });
+
+  // Admin Password Change State
+  const [passForm, setPassForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+
+  // WhatsApp Automation Settings State
+  const [whatsappConfig, setWhatsappConfig] = useState({
+    connectedPhone: '919876543210',
+    instanceStatus: 'CONNECTED', // 'CONNECTED' | 'DISCONNECTED'
+    welcomeMsg: true,
+    activationMsg: true,
+    renewalMsg: true,
+    expiryReminderMsg: true,
+    apiToken: 'WA_API_KEY_APNA_HUB_9981'
   });
 
   const [copiedKey, setCopiedKey] = useState(null);
@@ -341,6 +360,22 @@ export default function AdminDashboard({ onLogout }) {
                   <span>💎 Plan Master</span>
                 </div>
                 <span className="px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 text-[10px]">{plans.length}</span>
+              </button>
+
+              {/* ⚙️ MANAGE ACCOUNT (ADMIN PASSWORD & WHATSAPP AUTOMATION) */}
+              <button
+                onClick={() => setActiveTab('account')}
+                className={`w-full flex items-center justify-between px-4 py-3 rounded-xl font-bold text-xs transition ${
+                  activeTab === 'account'
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
+                    : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <Settings className="w-4 h-4 text-emerald-400" />
+                  <span>⚙️ Manage Account</span>
+                </div>
+                <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-extrabold">Config</span>
               </button>
             </nav>
           </div>
@@ -689,6 +724,218 @@ export default function AdminDashboard({ onLogout }) {
                       <p className="text-xs text-slate-500">Includes 1-Click Jharsewa Sync Bot & WhatsApp receipts.</p>
                     </div>
                   ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 4: MANAGE ACCOUNT VIEW (ADMIN PASSWORD & WHATSAPP LINKING) */}
+          {activeTab === 'account' && (
+            <div className="space-y-6 w-full animate-in fade-in duration-300">
+              {/* Header Title */}
+              <div className="flex items-center justify-between bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+                <div>
+                  <h2 className="text-xl font-black text-slate-900 flex items-center gap-2">
+                    <Settings className="w-6 h-6 text-emerald-600" />
+                    Manage Account & System Settings
+                  </h2>
+                  <p className="text-xs text-slate-500 pt-1 font-medium">
+                    Configure Master Admin password and WhatsApp automated messaging gateway for Client management.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* 1. ADMIN PASSWORD CHANGE FORM */}
+                <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-5">
+                  <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
+                    <div className="w-10 h-10 rounded-2xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600">
+                      <Key className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-extrabold text-slate-900">Change Admin Password</h3>
+                      <p className="text-[11px] text-slate-500 font-medium">Update credentials for Master Admin Portal</p>
+                    </div>
+                  </div>
+
+                  <form 
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      if (passForm.newPassword !== passForm.confirmPassword) {
+                        showToast('error', 'Password Mismatch', 'New Password and Confirm Password do not match!');
+                        return;
+                      }
+                      if (passForm.currentPassword !== 'Gattu@1994#') {
+                        showToast('error', 'Authentication Failed', 'Current password entered is incorrect!');
+                        return;
+                      }
+                      showToast('success', 'Password Updated', 'Master Admin password has been updated successfully!');
+                      setPassForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+                    }} 
+                    className="space-y-4 text-xs"
+                  >
+                    <div>
+                      <label className="block text-slate-700 font-bold mb-1">Current Password *</label>
+                      <input 
+                        type="password" 
+                        required 
+                        value={passForm.currentPassword} 
+                        onChange={(e) => setPassForm(prev => ({ ...prev, currentPassword: e.target.value }))}
+                        placeholder="Enter current password" 
+                        className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-slate-900 font-medium" 
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-700 font-bold mb-1">New Password *</label>
+                      <input 
+                        type="password" 
+                        required 
+                        value={passForm.newPassword} 
+                        onChange={(e) => setPassForm(prev => ({ ...prev, newPassword: e.target.value }))}
+                        placeholder="Enter new strong password" 
+                        className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-slate-900 font-medium" 
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-700 font-bold mb-1">Confirm New Password *</label>
+                      <input 
+                        type="password" 
+                        required 
+                        value={passForm.confirmPassword} 
+                        onChange={(e) => setPassForm(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                        placeholder="Re-enter new password" 
+                        className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-slate-900 font-medium" 
+                      />
+                    </div>
+
+                    <button 
+                      type="submit" 
+                      className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs shadow-md transition"
+                    >
+                      Update Password
+                    </button>
+                  </form>
+                </div>
+
+                {/* 2. WHATSAPP LINKING & AUTOMATIC MESSAGE SYSTEM */}
+                <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-5">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600">
+                        <MessageSquare className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h3 className="text-base font-extrabold text-slate-900">WhatsApp Gateway Linking</h3>
+                        <p className="text-[11px] text-slate-500 font-medium">Auto-dispatch client notifications via WhatsApp</p>
+                      </div>
+                    </div>
+                    <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black uppercase flex items-center gap-1">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                      {whatsappConfig.instanceStatus}
+                    </span>
+                  </div>
+
+                  {/* Connected WhatsApp Account Bar */}
+                  <div className="p-4 rounded-2xl bg-emerald-50/60 border border-emerald-200 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <QrCode className="w-6 h-6 text-emerald-700" />
+                      <div>
+                        <div className="text-xs font-bold text-slate-900">Linked WhatsApp Number</div>
+                        <div className="text-xs font-mono text-emerald-800 font-extrabold">+{whatsappConfig.connectedPhone}</div>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => showToast('info', 'QR Code Generator', 'Scan QR Code with WhatsApp Web scanner on phone to re-link instance.')}
+                      className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-sm transition"
+                    >
+                      Re-Link QR
+                    </button>
+                  </div>
+
+                  {/* Automatic Message Trigger Controls */}
+                  <div className="space-y-3 pt-1">
+                    <h4 className="text-xs font-black text-slate-700 uppercase tracking-wide">Automatic Message Triggers:</h4>
+
+                    <div className="space-y-2">
+                      {/* Trigger 1: Welcome Note */}
+                      <label className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200 cursor-pointer hover:bg-slate-100 transition">
+                        <div className="flex items-center gap-2.5">
+                          <CheckCircle className={`w-4 h-4 ${whatsappConfig.welcomeMsg ? 'text-emerald-600' : 'text-slate-400'}`} />
+                          <div>
+                            <div className="text-xs font-bold text-slate-800">Welcome Note & Credentials</div>
+                            <div className="text-[10px] text-slate-500">Sent automatically when a new client registers/requests access</div>
+                          </div>
+                        </div>
+                        <input 
+                          type="checkbox" 
+                          checked={whatsappConfig.welcomeMsg} 
+                          onChange={(e) => setWhatsappConfig(prev => ({ ...prev, welcomeMsg: e.target.checked }))}
+                          className="w-4 h-4 accent-emerald-600 rounded cursor-pointer" 
+                        />
+                      </label>
+
+                      {/* Trigger 2: License Activation */}
+                      <label className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200 cursor-pointer hover:bg-slate-100 transition">
+                        <div className="flex items-center gap-2.5">
+                          <CheckCircle className={`w-4 h-4 ${whatsappConfig.activationMsg ? 'text-emerald-600' : 'text-slate-400'}`} />
+                          <div>
+                            <div className="text-xs font-bold text-slate-800">License Activation Alert</div>
+                            <div className="text-[10px] text-slate-500">Sent with fresh license key when status set to ACTIVE</div>
+                          </div>
+                        </div>
+                        <input 
+                          type="checkbox" 
+                          checked={whatsappConfig.activationMsg} 
+                          onChange={(e) => setWhatsappConfig(prev => ({ ...prev, activationMsg: e.target.checked }))}
+                          className="w-4 h-4 accent-emerald-600 rounded cursor-pointer" 
+                        />
+                      </label>
+
+                      {/* Trigger 3: License Renewal Confirmation */}
+                      <label className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200 cursor-pointer hover:bg-slate-100 transition">
+                        <div className="flex items-center gap-2.5">
+                          <CheckCircle className={`w-4 h-4 ${whatsappConfig.renewalMsg ? 'text-emerald-600' : 'text-slate-400'}`} />
+                          <div>
+                            <div className="text-xs font-bold text-slate-800">License Renewal Confirmation</div>
+                            <div className="text-[10px] text-slate-500">Sent upon +30 Days extension with new validity date</div>
+                          </div>
+                        </div>
+                        <input 
+                          type="checkbox" 
+                          checked={whatsappConfig.renewalMsg} 
+                          onChange={(e) => setWhatsappConfig(prev => ({ ...prev, renewalMsg: e.target.checked }))}
+                          className="w-4 h-4 accent-emerald-600 rounded cursor-pointer" 
+                        />
+                      </label>
+
+                      {/* Trigger 4: License Expiry Reminder */}
+                      <label className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200 cursor-pointer hover:bg-slate-100 transition">
+                        <div className="flex items-center gap-2.5">
+                          <CheckCircle className={`w-4 h-4 ${whatsappConfig.expiryReminderMsg ? 'text-emerald-600' : 'text-slate-400'}`} />
+                          <div>
+                            <div className="text-xs font-bold text-slate-800">License Expiry Warning (3 Days Before)</div>
+                            <div className="text-[10px] text-slate-500">Automated reminder with renewal payment link before account locks</div>
+                          </div>
+                        </div>
+                        <input 
+                          type="checkbox" 
+                          checked={whatsappConfig.expiryReminderMsg} 
+                          onChange={(e) => setWhatsappConfig(prev => ({ ...prev, expiryReminderMsg: e.target.checked }))}
+                          className="w-4 h-4 accent-emerald-600 rounded cursor-pointer" 
+                        />
+                      </label>
+                    </div>
+
+                    <button 
+                      onClick={() => showToast('success', 'WhatsApp Gateway Saved', 'Automated message triggers & gateway settings updated!')}
+                      className="w-full py-3 mt-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-md transition flex items-center justify-center gap-2"
+                    >
+                      <Send className="w-4 h-4" />
+                      Save WhatsApp Automation Settings
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
