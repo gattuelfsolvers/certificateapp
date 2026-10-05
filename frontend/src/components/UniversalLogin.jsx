@@ -99,6 +99,32 @@ export default function UniversalLogin({ onLoginSuccess }) {
     }
   };
 
+  // HWID Modal State
+  const [isHwidModalOpen, setIsHwidModalOpen] = useState(false);
+  const [currentHwid, setCurrentHwid] = useState('');
+
+  const handleGetHwid = () => {
+    let storedHwid = localStorage.getItem('CLIENT_SYSTEM_HWID');
+    if (!storedHwid) {
+      const userAgent = navigator.userAgent;
+      const screenRes = `${window.screen.width}x${window.screen.height}`;
+      const platform = navigator.platform || 'Win32';
+      const rawString = `${userAgent}-${screenRes}-${platform}`;
+      
+      let hash = 0;
+      for (let i = 0; i < rawString.length; i++) {
+        const char = rawString.charCodeAt(i);
+        hash = (hash << 5) - hash + char;
+        hash |= 0;
+      }
+      const hexHash = Math.abs(hash).toString(16).toUpperCase().padStart(8, '0');
+      storedHwid = `HWID-${platform.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 3)}-${hexHash.slice(0, 4)}-${hexHash.slice(4, 8)}`;
+      localStorage.setItem('CLIENT_SYSTEM_HWID', storedHwid);
+    }
+    setCurrentHwid(storedHwid);
+    setIsHwidModalOpen(true);
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-6 relative overflow-hidden font-sans">
       {/* Hi-Tech Glowing Ambient Background & Mesh Overlay */}
@@ -202,7 +228,7 @@ export default function UniversalLogin({ onLoginSuccess }) {
         </form>
 
         {/* Footer Navigation */}
-        <div className="text-center pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs">
+        <div className="text-center pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs gap-2">
           <button 
             onClick={() => setIsRequestModalOpen(true)}
             className="text-blue-400 font-bold hover:text-blue-300 transition flex items-center gap-1.5"
@@ -210,12 +236,65 @@ export default function UniversalLogin({ onLoginSuccess }) {
             <UserPlus className="w-4 h-4" />
             Request New License Key
           </button>
+
+          {/* GET HARDWARE ID BUTTON */}
+          <button
+            type="button"
+            onClick={handleGetHwid}
+            className="px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 font-extrabold transition flex items-center gap-1.5 shadow-sm active:scale-95"
+          >
+            <Cpu className="w-3.5 h-3.5 text-amber-400" />
+            Get Hardware ID
+          </button>
+
           <span className="text-slate-500 font-mono text-[11px] flex items-center gap-1">
             <Shield className="w-3.5 h-3.5 text-emerald-400" />
             Encrypted SaaS Portal
           </span>
         </div>
       </div>
+
+      {/* HARDWARE ID POPUP MODAL */}
+      {isHwidModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-amber-500/40 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-5 text-center relative animate-in fade-in zoom-in-95 duration-200">
+            <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center mx-auto text-amber-400 shadow-lg">
+              <Cpu className="w-7 h-7" />
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="text-lg font-black text-white">System Hardware ID</h3>
+              <p className="text-xs text-slate-300 font-medium">
+                your system's hwid is -
+              </p>
+            </div>
+
+            <div className="bg-slate-950 border border-slate-800 rounded-2xl p-4 flex items-center justify-between gap-3">
+              <span className="font-mono text-sm font-black text-amber-300 tracking-wider break-all select-all">
+                "{currentHwid}"
+              </span>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(currentHwid);
+                  alert('Hardware ID copied to clipboard!');
+                }}
+                className="px-3 py-1.5 bg-amber-500 text-slate-950 font-bold text-xs rounded-xl hover:bg-amber-400 shrink-0"
+              >
+                Copy
+              </button>
+            </div>
+
+            <div className="pt-2">
+              <button
+                onClick={() => setIsHwidModalOpen(false)}
+                className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs rounded-xl transition"
+              >
+                Close Window
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Request New License Modal */}
       {isRequestModalOpen && (
