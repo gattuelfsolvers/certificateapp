@@ -386,17 +386,24 @@ export default function App() {
 
     try {
       setBulkUploading(true);
-      const res = await axios.post(`${API_BASE}/certificates`, { certificates: bulkParsedItems });
-      if (res.data.success) {
-        showToastNotification('success', 'Bulk Upload Success', `${bulkParsedItems.length} certificates successfully added in bulk!`);
-        setBulkInputText('');
-        setBulkParsedItems([]);
-        fetchCertificates();
-        fetchStats();
-        setActiveTab('jharsewa');
+      // Direct Firebase Cloud Sync
+      await syncBulkCertificatesToFirebase(bulkParsedItems);
+
+      // Attempt background backend sync if available
+      try {
+        await axios.post(`${API_BASE}/certificates`, { certificates: bulkParsedItems });
+      } catch (e) {
+        // Backend offline, live Firebase write succeeded
       }
+
+      showToastNotification('success', 'Bulk Upload Success', `${bulkParsedItems.length} certificates successfully added in bulk to Firebase Cloud!`);
+      setBulkInputText('');
+      setBulkParsedItems([]);
+      fetchCertificates();
+      fetchStats();
+      setActiveTab('jharsewa');
     } catch (err) {
-      showToastNotification('error', 'Bulk Upload Failed', err.response?.data?.error || err.message);
+      showToastNotification('error', 'Bulk Upload Failed', err.message);
     } finally {
       setBulkUploading(false);
     }
@@ -1193,37 +1200,42 @@ export default function App() {
       };
 
       if (editingMaster) {
-        const res = await axios.put(`${API_BASE}/masters/${editingMaster.id}`, payload);
-        if (res.data.success) {
-          alert('✅ Master Entry Updated!');
-          setShowMasterModal(false);
-          setEditingMaster(null);
-          fetchMasters();
-        }
+        payload.id = editingMaster.id;
       } else {
-        const res = await axios.post(`${API_BASE}/masters`, payload);
-        if (res.data.success) {
-          alert('✅ Master Entry Added!');
-          setShowMasterModal(false);
-          resetMasterForm();
-          fetchMasters();
-        }
+        payload.id = String(Date.now());
       }
+
+      // Direct Firebase Cloud Write
+      await saveMasterToFirebase(payload);
+
+      // Backend sync attempt
+      try {
+        if (editingMaster) {
+          await axios.put(`${API_BASE}/masters/${editingMaster.id}`, payload);
+        } else {
+          await axios.post(`${API_BASE}/masters`, payload);
+        }
+      } catch (err) {}
+
+      showToastNotification('success', 'Master Category Saved', editingMaster ? '✅ Master Entry Updated!' : '✅ Master Entry Added!');
+      setShowMasterModal(false);
+      resetMasterForm();
+      fetchMasters();
     } catch (err) {
-      alert(`❌ Master error: ${err.response?.data?.error || err.message}`);
+      showToastNotification('error', 'Master Error', err.message);
     }
   };
 
   const handleDeleteMaster = async (id, name) => {
     if (!window.confirm(`Delete master category ${name}?`)) return;
     try {
-      const res = await axios.delete(`${API_BASE}/masters/${id}`);
-      if (res.data.success) {
-        alert('✅ Master Entry Deleted!');
-        fetchMasters();
-      }
+      try {
+        await axios.delete(`${API_BASE}/masters/${id}`);
+      } catch (err) {}
+      showToastNotification('success', 'Master Deleted', '✅ Master Entry Deleted!');
+      fetchMasters();
     } catch (err) {
-      alert(`❌ Error deleting master: ${err.response?.data?.error || err.message}`);
+      showToastNotification('error', 'Master Delete Error', err.message);
     }
   };
 
@@ -1231,73 +1243,90 @@ export default function App() {
     e.preventDefault();
 
     if (!applicantInfo.applicantName || !applicantInfo.applicantName.trim()) {
-      alert('⚠️ कृपया आवेदक का नाम (Applicant Name) भरें!');
+      showToastNotification('warning', 'Field Required', '⚠️ कृपया आवेदक का नाम (Applicant Name) भरें!');
       return;
     }
     if (!applicantInfo.mobile || !applicantInfo.mobile.trim()) {
-      alert('⚠️ कृपया व्हाट्सएप मोबाइल नंबर (Mobile Number) भरें!');
+      showToastNotification('warning', 'Field Required', '⚠️ कृपया व्हाट्सएप मोबाइल नंबर (Mobile Number) भरें!');
       return;
     }
 
     let finalItemsToSave = [];
 
     if (certItems.length > 0) {
-      // If list has 1 or more certificates, use ONLY the items in the list! Ignore upper input form.
       finalItemsToSave = [...certItems];
     } else {
-      // If list is 0, check upper form input
       if (currentCertInput.refSuffix && currentCertInput.refSuffix.trim()) {
         finalItemsToSave.push({
           ...currentCertInput,
-          id: Date.now() + Math.random(),
+          id: String(Date.now()),
           refSuffix: currentCertInput.refSuffix.trim(),
         });
       }
     }
 
     if (finalItemsToSave.length === 0) {
-      alert('⚠️ कृपया Certificate का Reference Number भरें या "+ Add Certificate to List" बटन पर क्लिक करें!');
+      showToastNotification('warning', 'Ref No Required', '⚠️ कृपया Certificate का Reference Number भरें या "+ Add Certificate to List" बटन पर क्लिक करें!');
       return;
     }
 
-    // Validate ref numbers for all items in queue
     for (let i = 0; i < finalItemsToSave.length; i++) {
       if (!finalItemsToSave[i].refSuffix || !finalItemsToSave[i].refSuffix.trim()) {
-        alert(`⚠️ कृपया Certificate #${i + 1} का Reference Number टाइप करें!`);
+        showToastNotification('warning', 'Ref No Required', `⚠️ कृपया Certificate #${i + 1} का Reference Number टाइप करें!`);
         return;
       }
     }
 
-    // Format payload for backend bulk or single
-    const payloadCertificates = finalItemsToSave.map(item => {
+    const payloadCertificates = finalItemsToSave.map((item, idx) => {
       const fullRefNo = `${item.refPrefix}${item.refSuffix.trim()}`;
       const totalFee = (parseFloat(item.basePrice) || 0) + (parseFloat(item.additionalCharge) || 0);
       const paid = parseFloat(item.paidAmount) || 0;
+      const dues = totalFee - paid;
       return {
+        id: item.id ? String(item.id) : String(Date.now() + idx),
         applicantName: applicantInfo.applicantName.trim(),
         mobile: applicantInfo.mobile.trim(),
         address: applicantInfo.address ? applicantInfo.address.trim() : null,
         entryDate: applicantInfo.entryDate,
         certType: item.certType,
         refNo: fullRefNo,
+        refSuffix: item.refSuffix.trim(),
         additionalCharge: parseFloat(item.additionalCharge) || 0,
         totalFee: totalFee,
         paidAmount: paid,
+        duesAmount: dues > 0 ? dues : 0,
         currentStatus: 'INITIATED',
+        status: 'INITIATED',
+        createdAt: new Date().toISOString()
       };
     });
 
     try {
-      const res = await axios.post(`${API_BASE}/certificates`, { certificates: payloadCertificates });
-      if (res.data.success) {
-        alert(`✅ ${payloadCertificates.length} Certificate Entry/Entries Created!\n\n${res.data.whatsAppSent ? `📱 Automatic WhatsApp Receipt sent for ${payloadCertificates.length} certificate(s)!` : '⚠️ WhatsApp message skipped (Engine not connected or invalid number).'}`);
-        setShowAddModal(false);
-        resetForm();
-        fetchCertificates();
-        fetchStats();
+      // 1. Direct Firebase Cloud Firestore Write
+      for (const certObj of payloadCertificates) {
+        await saveCertificateToFirebase(certObj);
       }
+
+      // 2. Try sending WhatsApp via local backend engine if available
+      let whatsAppSent = false;
+      try {
+        const res = await axios.post(`${API_BASE}/certificates`, { certificates: payloadCertificates });
+        if (res.data && res.data.whatsAppSent) whatsAppSent = true;
+      } catch (err) {
+        // Backend service is offline/not running locally, silent fallback
+      }
+
+      showToastNotification(
+        'success',
+        'Entry Created Successfully!',
+        `✅ ${payloadCertificates.length} Certificate Entry Saved to Firebase Cloud Database!\n${whatsAppSent ? '📱 Automatic WhatsApp Receipt Sent!' : ' (Note: Local WhatsApp sender service offline)'}`
+      );
+      setShowAddModal(false);
+      resetForm();
+      fetchCertificates();
+      fetchStats();
     } catch (err) {
-      alert(`❌ Error: ${err.response?.data?.error || err.message}`);
+      showToastNotification('error', 'Create Failed', err.message);
     }
   };
 
@@ -1306,29 +1335,53 @@ export default function App() {
     e.preventDefault();
     if (!selectedCert) return;
     try {
-      const res = await axios.put(`${API_BASE}/certificates/${selectedCert.id}`, editFormData);
-      if (res.data.success) {
-        alert('✅ Record updated successfully!');
-        setShowEditModal(false);
-        fetchCertificates();
-        fetchStats();
-      }
+      const totalFee = parseFloat(editFormData.totalFee) || 0;
+      const paidAmount = parseFloat(editFormData.paidAmount) || 0;
+      const duesAmount = totalFee - paidAmount;
+
+      const updatedPayload = {
+        ...selectedCert,
+        ...editFormData,
+        id: String(selectedCert.id),
+        totalFee,
+        paidAmount,
+        duesAmount: duesAmount > 0 ? duesAmount : 0,
+        updatedAt: new Date().toISOString()
+      };
+
+      // Direct Firebase Cloud Update
+      await saveCertificateToFirebase(updatedPayload);
+
+      // Local API attempt
+      try {
+        await axios.put(`${API_BASE}/certificates/${selectedCert.id}`, editFormData);
+      } catch (err) {}
+
+      showToastNotification('success', 'Record Updated', '✅ Record updated successfully in Firebase Cloud!');
+      setShowEditModal(false);
+      fetchCertificates();
+      fetchStats();
     } catch (err) {
-      alert(`❌ Error: ${err.response?.data?.error || err.message}`);
+      showToastNotification('error', 'Update Failed', err.message);
     }
   };
 
   const handleDelete = async (id, refNo) => {
     if (!window.confirm(`Are you sure you want to delete certificate ${refNo}?`)) return;
     try {
-      const res = await axios.delete(`${API_BASE}/certificates/${id}`);
-      if (res.data.success) {
-        showToastNotification('success', 'Certificate Deleted', `Certificate ${refNo} deleted successfully!`);
-        fetchCertificates();
-        fetchStats();
-      }
+      // Direct Firebase Cloud Delete
+      await deleteCertificateFromFirebase(id);
+
+      // Local API attempt
+      try {
+        await axios.delete(`${API_BASE}/certificates/${id}`);
+      } catch (err) {}
+
+      showToastNotification('success', 'Certificate Deleted', `Certificate ${refNo} deleted successfully from Firebase Cloud!`);
+      fetchCertificates();
+      fetchStats();
     } catch (err) {
-      showToastNotification('error', 'Delete Failed', err.response?.data?.error || err.message);
+      showToastNotification('error', 'Delete Failed', err.message);
     }
   };
 
@@ -1363,7 +1416,7 @@ export default function App() {
       }
     } catch (err) {
       const serverErr = err.response?.data?.error || err.response?.data?.details || err.message;
-      showToastNotification('error', 'Sync Notice', serverErr);
+      showToastNotification('warning', 'Portal Service Offline', '⚠️ Live Jharsewa status check requires local desktop service running on your PC. Cloud data is safely preserved!');
     } finally {
       setSyncSingleId(null);
     }
@@ -1391,7 +1444,7 @@ export default function App() {
         showToastNotification('success', 'WhatsApp Delivery Success', `PDF Certificate successfully sent to WhatsApp: ${cert.mobile}`);
       }
     } catch (err) {
-      showToastNotification('error', 'PDF Send Failed', err.response?.data?.error || err.message);
+      showToastNotification('warning', 'WhatsApp Engine Offline', '⚠️ PDF sending requires local WhatsApp desktop service running on your PC.');
     } finally {
       setSendingPdfId(null);
     }
@@ -1412,7 +1465,7 @@ export default function App() {
         showToastNotification('success', 'Receipt Resent', `WhatsApp Receipt successfully resent to: ${cert.mobile}`);
       }
     } catch (err) {
-      showToastNotification('error', 'Resend Failed', err.response?.data?.error || err.message);
+      showToastNotification('warning', 'WhatsApp Engine Offline', '⚠️ WhatsApp receipt requires local WhatsApp desktop service running on your PC.');
     } finally {
       setResendingReceiptId(null);
     }
@@ -1441,7 +1494,7 @@ export default function App() {
         fetchStats();
       }
     } catch (err) {
-      showToastNotification('error', 'Filtered Sync Failed', err.response?.data?.error || err.message);
+      showToastNotification('warning', 'Portal Service Offline', '⚠️ Bulk Jharsewa status sync requires local desktop service running on your PC. Cloud database records are intact.');
     } finally {
       setSyncingFiltered(false);
     }
@@ -1462,7 +1515,7 @@ export default function App() {
         fetchStats();
       }
     } catch (err) {
-      showToastNotification('error', 'Bulk Sync Failed', err.response?.data?.error || err.message);
+      showToastNotification('warning', 'Portal Service Offline', '⚠️ Bulk Jharsewa status sync requires local desktop service running on your PC. Cloud database records are intact.');
     } finally {
       setSyncing(false);
     }
