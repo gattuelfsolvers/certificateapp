@@ -16,7 +16,7 @@ import {
 } from '../firebase';
 
 export default function AdminDashboard({ onLogout }) {
-  const [activeTab, setActiveTab] = useState('clients'); // 'clients' | 'licenses' | 'plans'
+  const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard' | 'clients' | 'licenses' | 'plans'
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -265,7 +265,7 @@ export default function AdminDashboard({ onLogout }) {
         </div>
       )}
 
-      {/* LEFT SIDEBAR NAVIGATION BAR (HIDE / SHOW SUPPORTED) */}
+      {/* LEFT SIDEBAR NAVIGATION BAR (WITH DASHBOARD OPTION AT TOP) */}
       {isSidebarOpen && (
         <aside className="w-64 bg-slate-900 text-white shrink-0 flex flex-col justify-between border-r border-slate-800 min-h-screen sticky top-0 h-screen z-50 transition-all duration-300">
           <div className="p-6 space-y-6">
@@ -289,8 +289,24 @@ export default function AdminDashboard({ onLogout }) {
               </button>
             </div>
 
-            {/* Navigation Links */}
+            {/* Navigation Links - DASHBOARD AT TOP */}
             <nav className="space-y-1.5 pt-4 border-t border-slate-800">
+              {/* 📊 DASHBOARD MENU OPTION (ABOVE CLIENT MASTER) */}
+              <button
+                onClick={() => setActiveTab('dashboard')}
+                className={`w-full flex items-center justify-between px-4 py-3 rounded-xl font-bold text-xs transition ${
+                  activeTab === 'dashboard'
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
+                    : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <LayoutDashboard className="w-4 h-4 text-yellow-400" />
+                  <span>📊 Dashboard</span>
+                </div>
+                <span className="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 font-extrabold text-[10px]">Overview</span>
+              </button>
+
               <button
                 onClick={() => setActiveTab('clients')}
                 className={`w-full flex items-center justify-between px-4 py-3 rounded-xl font-bold text-xs transition ${
@@ -361,6 +377,7 @@ export default function AdminDashboard({ onLogout }) {
 
             <div>
               <h1 className="text-xl font-extrabold tracking-tight flex items-center gap-2 text-white">
+                {activeTab === 'dashboard' && '📊 Master Overview Dashboard'}
                 {activeTab === 'clients' && '👥 Client Master Management'}
                 {activeTab === 'licenses' && '🔑 License Master & Device Control'}
                 {activeTab === 'plans' && '💎 Plan Master & Pricing'}
@@ -505,8 +522,8 @@ export default function AdminDashboard({ onLogout }) {
             </div>
           )}
 
-          {/* TAB 1: CLIENT MASTER VIEW */}
-          {activeTab === 'clients' && (
+          {/* TAB 0: OVERVIEW DASHBOARD VIEW */}
+          {(activeTab === 'dashboard' || activeTab === 'clients') && (
             <div className="space-y-4 w-full">
               <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm w-full">
                 <div className="relative w-full md:w-96">
@@ -536,7 +553,7 @@ export default function AdminDashboard({ onLogout }) {
                 </div>
               </div>
 
-              {/* Client Master Table (LICENSE KEY COLUMN REMOVED AS REQUESTED) */}
+              {/* Client Master Table */}
               <div className="bg-white border border-slate-200/80 rounded-2xl overflow-hidden shadow-sm w-full">
                 <div className="overflow-x-auto w-full">
                   <table className="w-full text-left border-collapse">
