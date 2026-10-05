@@ -992,19 +992,32 @@ export default function AdminDashboard({ onLogout }) {
                 <input type="text" readOnly value={formData.licenseKey} className="w-full bg-blue-50 border border-blue-200 rounded-xl px-4 py-2.5 text-blue-800 font-mono text-sm font-black tracking-wide" />
               </div>
 
-              <div>
-                <label className="block text-slate-700 font-bold mb-1.5 text-xs">Account Status</label>
-                <select value={formData.status} onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value }))} className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-slate-900 font-bold">
-                  <option value="ACTIVE">ACTIVE</option>
-                  <option value="EXPIRED">EXPIRED</option>
-                  <option value="KILLED">KILLED / BLOCKED</option>
-                  <option value="PENDING">PENDING</option>
-                </select>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-slate-700 font-bold mb-1.5 text-xs">Hardware ID (HWID) *</label>
+                  <input 
+                    type="text" 
+                    required 
+                    value={formData.hwid} 
+                    onChange={(e) => setFormData(prev => ({ ...prev, hwid: e.target.value }))} 
+                    placeholder="e.g. HWID-WIN-A7B2-99C1" 
+                    className="w-full bg-amber-50/60 border border-amber-300 rounded-xl px-4 py-2.5 text-amber-900 font-mono text-xs font-bold" 
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-700 font-bold mb-1.5 text-xs">Account Status</label>
+                  <select value={formData.status} onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value }))} className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-slate-900 font-bold">
+                    <option value="ACTIVE">ACTIVE</option>
+                    <option value="EXPIRED">EXPIRED</option>
+                    <option value="KILLED">KILLED / BLOCKED</option>
+                    <option value="PENDING">PENDING</option>
+                  </select>
+                </div>
               </div>
 
               <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
                 <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs">Cancel</button>
-                <button type="submit" className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md">Save Client License</button>
+                <button type="submit" className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md">Save Client Details</button>
               </div>
             </form>
           </div>
