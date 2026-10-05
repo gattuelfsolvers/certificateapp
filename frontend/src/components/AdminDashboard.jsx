@@ -100,15 +100,21 @@ export default function AdminDashboard({ onLogout }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phoneNumber: pairingPhone })
       });
-      const data = await res.json();
+      const text = await res.text();
+      let data = {};
+      try {
+        data = JSON.parse(text);
+      } catch (err) {
+        throw new Error('Server starting up. Please click "Get Code" again in 3 seconds.');
+      }
       if (data.success && data.pairingCode) {
         setPairingCodeResult(data.pairingCode);
         showToast('success', 'Pairing Code Generated', 'Enter this 8-digit code in WhatsApp app Linked Devices.');
       } else {
-        showToast('error', 'Pairing Failed', data.error || 'Failed to get pairing code.');
+        showToast('error', 'Pairing Failed', data.error || 'Failed to get pairing code. Please retry.');
       }
     } catch (e) {
-      showToast('error', 'Request Failed', e.message);
+      showToast('error', 'Pairing Code Request', e.message);
     } finally {
       setLoadingPairingCode(false);
     }

@@ -463,17 +463,36 @@ async function sendTestWhatsAppMessage(mobile, messageText) {
 }
 
 async function requestPairingCode(phoneNumber) {
-  if (!sock) {
-    await initWhatsApp();
-  }
   const cleanPhone = phoneNumber.replace(/\D/g, '');
   const formattedPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
+
+  if (!sock) {
+    await initWhatsApp();
+    // Give 2 seconds for socket handshake
+    await new Promise(r => setTimeout(r, 2000));
+  }
+
   try {
+    if (!sock || typeof sock.requestPairingCode !== 'function') {
+      await initWhatsApp();
+      await new Promise(r => setTimeout(r, 2500));
+    }
     const code = await sock.requestPairingCode(formattedPhone);
     return { success: true, pairingCode: code };
   } catch (err) {
     console.error('Failed to request pairing code:', err);
-    return { success: false, error: err.message };
+    // Retry once after re-initializing socket
+    try {
+      await initWhatsApp();
+      await new Promise(r => setTimeout(r, 3000));
+      if (sock && typeof sock.requestPairingCode === 'function') {
+        const retryCode = await sock.requestPairingCode(formattedPhone);
+        return { success: true, pairingCode: retryCode };
+      }
+    } catch (retryErr) {
+      console.error('Retry pairing code failed:', retryErr);
+    }
+    return { success: false, error: err.message || 'WhatsApp engine is busy. Please try again in 5 seconds.' };
   }
 }
 
