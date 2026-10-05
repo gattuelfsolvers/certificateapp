@@ -13,6 +13,10 @@ import {
 import { 
   fetchClientsFromFirebase, 
   subscribeClientsFromFirebase,
+  saveClientToFirebase,
+  updateClientStatusOnFirebase,
+  deleteClientFromFirebase,
+  generateLicenseKey,
   fetchCertificatesFromFirebase,
   saveCertificateToFirebase,
   syncBulkCertificatesToFirebase,
@@ -887,25 +891,39 @@ export default function App() {
 
     try {
       setRenewingSubmit(true);
-      const res = await axios.post(`${API_BASE}/license/generate-key`, {
+      const generated = generateLicenseKey(renewingClient.hwid, renewPlan);
+      const payload = {
         hwid: renewingClient.hwid,
-        planType: renewPlan,
         clientName: renewingClient.clientName,
         ownerName: renewingClient.ownerName,
-        phone: renewingClient.phone
-      });
+        phone: renewingClient.phone,
+        planType: renewPlan,
+        expiresAt: generated.expiresAt,
+        licenseKey: generated.licenseKey,
+        status: 'ACTIVE'
+      };
 
-      if (res.data.success) {
-        showToastNotification(
-          'success',
-          '🎉 License Renewed Successfully!',
-          `New Key Generated: ${res.data.licenseKey}\nClient license reactivated with ${renewPlan} plan.`
-        );
-        setShowRenewModal(false);
-        fetchClients();
-      }
+      await saveClientToFirebase(payload);
+
+      try {
+        await axios.post(`${API_BASE}/license/generate-key`, {
+          hwid: renewingClient.hwid,
+          planType: renewPlan,
+          clientName: renewingClient.clientName,
+          ownerName: renewingClient.ownerName,
+          phone: renewingClient.phone
+        });
+      } catch (err) {}
+
+      showToastNotification(
+        'success',
+        '🎉 License Renewed Successfully!',
+        `New Key Generated: ${generated.licenseKey}\nClient license reactivated with ${renewPlan} plan in Firebase Cloud!`
+      );
+      setShowRenewModal(false);
+      fetchClients();
     } catch (err) {
-      showToastNotification('error', 'Renewal Failed', err.response?.data?.error || err.message);
+      showToastNotification('error', 'Renewal Failed', err.message);
     } finally {
       setRenewingSubmit(false);
     }
@@ -961,23 +979,24 @@ export default function App() {
     }
     try {
       setSavingClient(true);
-      if (editingClient) {
-        const res = await axios.put(`${API_BASE}/license/clients/${editingClient.id}`, clientFormData);
-        if (res.data.success) {
-          showToastNotification('success', 'Client Updated!', res.data.message);
-          setShowClientModal(false);
-          fetchClients();
+      
+      // Save directly to Firebase Cloud Firestore
+      await saveClientToFirebase(clientFormData);
+
+      // Local API attempt
+      try {
+        if (editingClient) {
+          await axios.put(`${API_BASE}/license/clients/${editingClient.id}`, clientFormData);
+        } else {
+          await axios.post(`${API_BASE}/license/clients/create`, clientFormData);
         }
-      } else {
-        const res = await axios.post(`${API_BASE}/license/clients/create`, clientFormData);
-        if (res.data.success) {
-          showToastNotification('success', 'Client Created!', res.data.message);
-          setShowClientModal(false);
-          fetchClients();
-        }
-      }
+      } catch (err) {}
+
+      showToastNotification('success', editingClient ? 'Client Updated!' : 'Client Created!', 'Client details saved successfully to Firebase Cloud Database!');
+      setShowClientModal(false);
+      fetchClients();
     } catch (err) {
-      showToastNotification('error', 'Save Failed', err.response?.data?.error || err.message);
+      showToastNotification('error', 'Save Failed', err.message);
     } finally {
       setSavingClient(false);
     }
@@ -986,52 +1005,55 @@ export default function App() {
   const handleDeleteClient = async (id, name) => {
     if (!window.confirm(`Are you sure you want to move client "${name}" to Deleted History Archive?\nTheir Serial Key & Hardware ID details will be preserved.`)) return;
     try {
-      const res = await axios.delete(`${API_BASE}/license/clients/${id}`);
-      if (res.data.success) {
-        showToastNotification('success', 'Client Archived', res.data.message);
-        fetchClients();
-      }
+      await updateClientStatusOnFirebase(id, 'ARCHIVED');
+      try {
+        await axios.delete(`${API_BASE}/license/clients/${id}`);
+      } catch (err) {}
+      showToastNotification('success', 'Client Archived', `Client "${name}" moved to Archive in Firebase Cloud Database.`);
+      fetchClients();
     } catch (err) {
-      showToastNotification('error', 'Archive Failed', err.response?.data?.error || err.message);
+      showToastNotification('error', 'Archive Failed', err.message);
     }
   };
 
   const handleRestoreClient = async (id, name) => {
     if (!window.confirm(`Restore client "${name}" back to Active Clients list?`)) return;
     try {
-      const res = await axios.post(`${API_BASE}/license/clients/${id}/restore`);
-      if (res.data.success) {
-        showToastNotification('success', 'Client Restored', res.data.message);
-        fetchClients();
-      }
+      await updateClientStatusOnFirebase(id, 'ACTIVE');
+      try {
+        await axios.post(`${API_BASE}/license/clients/${id}/restore`);
+      } catch (err) {}
+      showToastNotification('success', 'Client Restored', `Client "${name}" restored to Active list.`);
+      fetchClients();
     } catch (err) {
-      showToastNotification('error', 'Restore Failed', err.response?.data?.error || err.message);
+      showToastNotification('error', 'Restore Failed', err.message);
     }
   };
 
   const handlePermanentDeleteClient = async (id, name) => {
     if (!window.confirm(`⚠️ PERMANENT DELETE WARNING: Are you sure you want to PERMANENTLY erase client "${name}" from database?\nThis action CANNOT be undone.`)) return;
     try {
-      const res = await axios.delete(`${API_BASE}/license/clients/${id}/permanent`);
-      if (res.data.success) {
-        showToastNotification('success', 'Permanently Deleted', res.data.message);
-        fetchClients();
-      }
+      await deleteClientFromFirebase(id);
+      try {
+        await axios.delete(`${API_BASE}/license/clients/${id}/permanent`);
+      } catch (err) {}
+      showToastNotification('success', 'Permanently Deleted', `Client "${name}" erased from Firebase Cloud Database.`);
+      fetchClients();
     } catch (err) {
-      showToastNotification('error', 'Permanent Delete Failed', err.response?.data?.error || err.message);
+      showToastNotification('error', 'Permanent Delete Failed', err.message);
     }
   };
 
   const handleUpdateStatusDirect = async (hwid, newStatus) => {
     try {
-      const res = await axios.post(`${API_BASE}/license/toggle-client-status`, { hwid, status: newStatus });
-      if (res.data.success) {
-        showToastNotification('success', 'Status Updated', `Client status changed to ${newStatus}`);
-        fetchClients();
-        checkLicenseStatus();
-      }
+      await updateClientStatusOnFirebase(hwid, newStatus);
+      try {
+        await axios.post(`${API_BASE}/license/toggle-client-status`, { hwid, status: newStatus });
+      } catch (err) {}
+      showToastNotification('success', 'Status Updated', `Client status changed to ${newStatus}`);
+      fetchClients();
     } catch (err) {
-      showToastNotification('error', 'Update Failed', err.response?.data?.error || err.message);
+      showToastNotification('error', 'Update Failed', err.message);
     }
   };
 
@@ -1043,19 +1065,33 @@ export default function App() {
     }
     try {
       setGeneratingKey(true);
-      const res = await axios.post(`${API_BASE}/license/generate-key`, {
+      const generated = generateLicenseKey(genHwid.trim(), genPlan);
+      const payload = {
         hwid: genHwid.trim(),
         planType: genPlan,
-        clientName: genClientName,
-        phone: genPhone
-      });
-      if (res.data.success) {
-        setGeneratedKeyResult(res.data.licenseKey);
-        showToastNotification('success', 'License Key Generated!', `Key created for ${genClientName || 'Client'}`);
-        fetchClients();
-      }
+        clientName: genClientName || 'Client Shop',
+        phone: genPhone || '',
+        licenseKey: generated.licenseKey,
+        expiresAt: generated.expiresAt,
+        status: 'ACTIVE'
+      };
+
+      await saveClientToFirebase(payload);
+
+      try {
+        await axios.post(`${API_BASE}/license/generate-key`, {
+          hwid: genHwid.trim(),
+          planType: genPlan,
+          clientName: genClientName,
+          phone: genPhone
+        });
+      } catch (err) {}
+
+      setGeneratedKeyResult(generated.licenseKey);
+      showToastNotification('success', 'License Key Generated!', `Key created for ${genClientName || 'Client'} and saved to Firebase Cloud Database!`);
+      fetchClients();
     } catch (err) {
-      showToastNotification('error', 'Key Generation Failed', err.response?.data?.error || err.message);
+      showToastNotification('error', 'Key Generation Failed', err.message);
     } finally {
       setGeneratingKey(false);
     }
@@ -1065,14 +1101,14 @@ export default function App() {
     const nextStatus = currentStatus === 'ACTIVE' ? 'KILLED' : 'ACTIVE';
     if (!window.confirm(`Are you sure you want to change client status to ${nextStatus}?`)) return;
     try {
-      const res = await axios.post(`${API_BASE}/license/toggle-client-status`, { hwid, status: nextStatus });
-      if (res.data.success) {
-        showToastNotification('success', 'Client Status Updated', res.data.message);
-        fetchClients();
-        checkLicenseStatus();
-      }
+      await updateClientStatusOnFirebase(hwid, nextStatus);
+      try {
+        await axios.post(`${API_BASE}/license/toggle-client-status`, { hwid, status: nextStatus });
+      } catch (err) {}
+      showToastNotification('success', 'Client Status Updated', `Status changed to ${nextStatus} in Firebase Cloud Database!`);
+      fetchClients();
     } catch (err) {
-      showToastNotification('error', 'Status Update Failed', err.response?.data?.error || err.message);
+      showToastNotification('error', 'Status Update Failed', err.message);
     }
   };
 
