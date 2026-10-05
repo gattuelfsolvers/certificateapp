@@ -109,10 +109,10 @@ export default function UniversalLogin({ onLoginSuccess }) {
       {/* Hi-Tech Grid Lines Accent */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#1e293b15_1px,transparent_1px),linear-gradient(to_bottom,#1e293b15_1px,transparent_1px)] bg-[size:4rem_4rem] pointer-events-none"></div>
 
-      {/* Wider Modern Glassmorphism Card (max-w-xl) */}
-      <div className="max-w-xl w-full bg-slate-900/90 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-10 shadow-[0_0_50px_rgba(37,99,235,0.15)] relative z-10 space-y-8">
+      {/* Extra Wide Card Container (max-w-2xl) to fit Title on ONE Single Line */}
+      <div className="max-w-2xl w-full bg-slate-900/90 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-10 shadow-[0_0_50px_rgba(37,99,235,0.15)] relative z-10 space-y-8">
         
-        {/* Hi-Tech Header Section */}
+        {/* Header Section */}
         <div className="text-center space-y-3">
           <div className="relative inline-block">
             <div className="w-16 h-16 bg-gradient-to-br from-blue-500 via-indigo-600 to-violet-600 text-white rounded-2xl flex items-center justify-center mx-auto shadow-lg shadow-blue-500/30 border border-blue-400/30">
@@ -125,15 +125,15 @@ export default function UniversalLogin({ onLoginSuccess }) {
           </div>
 
           <div className="space-y-1">
-            {/* Line 1: Welcome to (Medium Text) */}
-            <p className="text-sm font-extrabold uppercase tracking-widest text-blue-400">
-              Welcome to
+            {/* Line 1: WELCOME TO */}
+            <p className="text-sm font-black uppercase tracking-widest text-blue-400">
+              WELCOME TO
             </p>
-            {/* Line 2: Certificate Management Software (Large Text) */}
-            <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight leading-tight">
+            {/* Line 2: Certificate Management Software (STRICTLY ONE SINGLE LINE) */}
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-white tracking-tight whitespace-nowrap">
               Certificate Management Software
             </h1>
-            {/* Line 3: Powered by - Apna Digital Hub (Small Text) */}
+            {/* Line 3: Powered by - Apna Digital Hub */}
             <p className="text-xs font-semibold text-slate-400 pt-1 flex items-center justify-center gap-1">
               <span>Powered by -</span>
               <span className="text-blue-400 font-bold">Apna Digital Hub</span>
