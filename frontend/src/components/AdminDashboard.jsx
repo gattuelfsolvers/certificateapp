@@ -478,18 +478,20 @@ export default function AdminDashboard({ onLogout }) {
     }));
   };
 
-  const handlePlanTypeChange = (plan) => {
-    let days = 30;
-    let pcs = 2;
-    if (plan === 'FREE_TRIAL') { days = 7; pcs = 1; }
-    if (plan === 'MONTHLY') { days = 30; pcs = 2; }
-    if (plan === 'HALF_YEARLY') { days = 180; pcs = 5; }
-    if (plan === 'YEARLY') { days = 365; pcs = 10; }
+  const handlePlanTypeChange = (planId) => {
+    const targetPlan = plans.find(p => p.id === planId);
+    let days = targetPlan ? targetPlan.days : 30;
+    let pcs = 1;
+    if (planId === 'FREE_TRIAL') pcs = 1;
+    if (planId === 'MONTHLY') pcs = 1;
+    if (planId === 'HALF_YEARLY') pcs = 3;
+    if (planId === 'YEARLY') pcs = 5;
+    if (planId === 'LIFETIME') pcs = 10;
 
-    const generated = generateLicenseKey(formData.hwid || 'DEFAULT', plan);
+    const generated = generateLicenseKey(formData.hwid || 'DEFAULT', planId);
     setFormData(prev => ({
       ...prev,
-      planType: plan,
+      planType: planId,
       customDays: days,
       allowedPcs: pcs,
       licenseKey: generated.licenseKey
@@ -1720,10 +1722,11 @@ export default function AdminDashboard({ onLogout }) {
                 <div>
                   <label className="block text-slate-700 font-bold mb-1.5 text-xs">Subscription Plan</label>
                   <select value={formData.planType} onChange={(e) => handlePlanTypeChange(e.target.value)} className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-slate-900 font-bold disabled:bg-slate-100 disabled:text-slate-800">
-                    <option value="FREE_TRIAL">Free Trial (7 Days)</option>
-                    <option value="MONTHLY">Monthly (30 Days)</option>
-                    <option value="HALF_YEARLY">Half-Yearly (180 Days)</option>
-                    <option value="YEARLY">Yearly (365 Days)</option>
+                    {plans.map(p => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} ({p.days >= 36500 ? 'Lifetime' : `${p.days} Days`})
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>
