@@ -28,6 +28,7 @@ export default function UniversalLogin({ onLoginSuccess }) {
       name: 'Free Trial',
       badge: 'Demo',
       badgeColor: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+      originalPrice: null,
       price: '₹0',
       duration: '5 Demo Entries',
       pcs: '1 PC Allowed',
@@ -39,6 +40,7 @@ export default function UniversalLogin({ onLoginSuccess }) {
       name: 'Monthly Plan',
       badge: 'Starter',
       badgeColor: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+      originalPrice: '₹299',
       price: '₹149',
       duration: '30 Days Validity',
       pcs: '1 PC Allowed',
@@ -50,6 +52,7 @@ export default function UniversalLogin({ onLoginSuccess }) {
       name: 'Half-Yearly Plan',
       badge: 'Top Selling',
       badgeColor: 'bg-amber-500/30 text-amber-300 border-amber-500/50',
+      originalPrice: '₹699',
       price: '₹349',
       duration: '180 Days Validity',
       pcs: '3 PCs Allowed',
@@ -61,6 +64,7 @@ export default function UniversalLogin({ onLoginSuccess }) {
       name: 'Yearly Plan',
       badge: 'Value for Money',
       badgeColor: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
+      originalPrice: '₹999',
       price: '₹599',
       duration: '365 Days Validity',
       pcs: '5 PCs Allowed',
@@ -589,45 +593,50 @@ export default function UniversalLogin({ onLoginSuccess }) {
             {/* STEP 2: CHOOSE CHATGPT STYLE PLANS */}
             {regStep === 2 && (
               <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 items-stretch pt-3 pb-4">
                   {registrationPlans.map((plan) => {
                     const isSelected = selectedPlanId === plan.id;
                     return (
                       <div
                         key={plan.id}
                         onClick={() => setSelectedPlanId(plan.id)}
-                        className={`relative rounded-2xl p-4 border transition-all cursor-pointer flex flex-col justify-between ${
+                        className={`relative rounded-3xl p-5 border transition-all duration-300 ease-out cursor-pointer flex flex-col justify-between ${
                           isSelected
-                            ? 'bg-slate-950 border-blue-500 ring-2 ring-blue-500/50 shadow-xl shadow-blue-950/40 scale-[1.02]'
-                            : 'bg-slate-950/60 border-slate-800 hover:border-slate-700 hover:bg-slate-950/90'
+                            ? 'bg-slate-950 border-blue-500 ring-4 ring-blue-500/30 shadow-2xl shadow-blue-500/20 scale-105 -translate-y-2 z-10'
+                            : 'bg-slate-950/60 border-slate-800 hover:border-slate-700 hover:bg-slate-950/90 scale-98 opacity-90 hover:opacity-100'
                         }`}
                       >
                         {/* Plan Header & Badge */}
-                        <div className="space-y-3">
+                        <div className="space-y-4">
                           <div className="flex items-center justify-between">
-                            <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full border uppercase tracking-wider ${plan.badgeColor}`}>
+                            <span className={`text-[10px] font-black px-3 py-1 rounded-full border uppercase tracking-wider ${plan.badgeColor}`}>
                               {plan.badge}
                             </span>
                             {isSelected && (
-                              <div className="w-5 h-5 rounded-full bg-blue-500 text-slate-950 flex items-center justify-center font-bold text-xs shadow">
+                              <div className="w-6 h-6 rounded-full bg-blue-500 text-slate-950 flex items-center justify-center font-black text-xs shadow-lg animate-in zoom-in-50 duration-200">
                                 ✓
                               </div>
                             )}
                           </div>
 
                           <div>
-                            <h4 className="text-sm font-black text-white">{plan.name}</h4>
-                            <div className="mt-1 flex items-baseline gap-1">
-                              <span className="text-xl font-black text-white">{plan.price}</span>
+                            <h4 className="text-base font-black text-white">{plan.name}</h4>
+                            <div className="mt-1.5 flex items-baseline gap-2">
+                              {plan.originalPrice && (
+                                <span className="text-xs font-bold text-slate-500 line-through">
+                                  {plan.originalPrice}
+                                </span>
+                              )}
+                              <span className="text-2xl font-black text-white">{plan.price}</span>
                               <span className="text-[10px] text-slate-400 font-medium">/ {plan.duration}</span>
                             </div>
-                            <p className="text-[11px] text-emerald-400 font-bold mt-0.5">{plan.pcs}</p>
+                            <p className="text-[11px] text-emerald-400 font-extrabold mt-1">{plan.pcs}</p>
                           </div>
 
                           {/* Features List */}
-                          <div className="border-t border-slate-800/80 pt-3 space-y-1.5">
+                          <div className="border-t border-slate-800/80 pt-3.5 space-y-2">
                             {plan.features.map((feat, idx) => (
-                              <div key={idx} className="flex items-center gap-1.5 text-[11px] text-slate-300 font-medium">
+                              <div key={idx} className="flex items-center gap-2 text-xs text-slate-300 font-medium">
                                 <span className="text-blue-400 font-bold">✓</span>
                                 {feat}
                               </div>
@@ -635,12 +644,12 @@ export default function UniversalLogin({ onLoginSuccess }) {
                           </div>
                         </div>
 
-                        <div className="mt-4 pt-2">
+                        <div className="mt-5 pt-2">
                           <button
                             type="button"
-                            className={`w-full py-2 rounded-xl text-xs font-bold transition ${
+                            className={`w-full py-2.5 rounded-xl text-xs font-black transition ${
                               isSelected
-                                ? 'bg-blue-600 text-white shadow-md'
+                                ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-600/30'
                                 : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
                             }`}
                           >

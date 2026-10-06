@@ -1153,21 +1153,29 @@ export default function AdminDashboard({ onLogout }) {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 w-full">
                 {pendingRequests.map(req => (
-                  <div key={req.id} className="bg-white/95 text-slate-800 p-4 rounded-xl shadow flex items-center justify-between">
+                  <div key={req.id} className="bg-white/95 text-slate-800 p-4 rounded-xl shadow flex items-center justify-between gap-3">
                     <div>
                       <h4 className="text-sm font-bold text-slate-900">{req.clientName}</h4>
                       <p className="text-xs text-slate-500 font-mono">{req.phone}</p>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button 
+                        onClick={() => handleOpenViewModal(req)}
+                        className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow transition flex items-center gap-1"
+                        title="View Full Client & Request Details"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        View Details
+                      </button>
                       <button 
                         onClick={() => updateClientStatusOnFirebase(req.hwid || req.id, 'ACTIVE')}
-                        className="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow"
+                        className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow transition"
                       >
                         Approve
                       </button>
                       <button 
                         onClick={() => updateClientStatusOnFirebase(req.hwid || req.id, 'KILLED')}
-                        className="px-3.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow"
+                        className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow transition"
                       >
                         Reject
                       </button>
@@ -2346,7 +2354,33 @@ export default function AdminDashboard({ onLogout }) {
 
             <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
               {isViewOnly ? (
-                <button type="button" onClick={() => setIsModalOpen(false)} className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs shadow-md">Close Window</button>
+                <div className="flex items-center gap-3">
+                  {editingClient && editingClient.status === 'PENDING' && (
+                    <>
+                      <button 
+                        type="button" 
+                        onClick={async () => {
+                          await updateClientStatusOnFirebase(editingClient.hwid || editingClient.id, 'ACTIVE');
+                          setIsModalOpen(false);
+                        }} 
+                        className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-md transition"
+                      >
+                        Approve Request
+                      </button>
+                      <button 
+                        type="button" 
+                        onClick={async () => {
+                          await updateClientStatusOnFirebase(editingClient.hwid || editingClient.id, 'KILLED');
+                          setIsModalOpen(false);
+                        }} 
+                        className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs shadow-md transition"
+                      >
+                        Reject Request
+                      </button>
+                    </>
+                  )}
+                  <button type="button" onClick={() => setIsModalOpen(false)} className="px-6 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-extrabold text-xs shadow-md">Close Window</button>
+                </div>
               ) : (
                 <>
                   <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs">Cancel</button>
