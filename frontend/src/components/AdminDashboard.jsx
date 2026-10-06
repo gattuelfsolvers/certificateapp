@@ -1224,62 +1224,62 @@ export default function AdminDashboard({ onLogout }) {
             <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
               <button
                 onClick={() => setActiveTab('clients')}
-                className="flex flex-col items-center justify-center p-3 rounded-xl bg-slate-50 hover:bg-violet-50 text-slate-700 hover:text-violet-700 border border-slate-200/70 hover:border-violet-200 transition group shadow-xs hover:shadow-sm"
+                className="flex flex-col items-center justify-center p-3 rounded-xl bg-violet-50/80 hover:bg-violet-100/80 text-violet-900 border border-violet-100 hover:border-violet-300 transition group shadow-xs hover:shadow-md"
               >
-                <div className="w-10 h-10 rounded-lg bg-violet-100 text-violet-600 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                <div className="w-10 h-10 rounded-lg bg-violet-600 text-white flex items-center justify-center mb-2 group-hover:scale-110 transition-transform shadow-sm shadow-violet-500/30">
                   <Users className="w-5 h-5" />
                 </div>
-                <span className="text-xs font-semibold text-center">Client Master</span>
+                <span className="text-xs font-bold text-center">Client Master</span>
               </button>
 
               <button
                 onClick={() => setActiveTab('licenses')}
-                className="flex flex-col items-center justify-center p-3 rounded-xl bg-slate-50 hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 border border-slate-200/70 hover:border-indigo-200 transition group shadow-xs hover:shadow-sm"
+                className="flex flex-col items-center justify-center p-3 rounded-xl bg-indigo-50/80 hover:bg-indigo-100/80 text-indigo-900 border border-indigo-100 hover:border-indigo-300 transition group shadow-xs hover:shadow-md"
               >
-                <div className="w-10 h-10 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                <div className="w-10 h-10 rounded-lg bg-indigo-600 text-white flex items-center justify-center mb-2 group-hover:scale-110 transition-transform shadow-sm shadow-indigo-500/30">
                   <KeyRound className="w-5 h-5" />
                 </div>
-                <span className="text-xs font-semibold text-center">License Master</span>
+                <span className="text-xs font-bold text-center">License Master</span>
               </button>
 
               <button
                 onClick={() => setActiveTab('plans')}
-                className="flex flex-col items-center justify-center p-3 rounded-xl bg-slate-50 hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 border border-slate-200/70 hover:border-emerald-200 transition group shadow-xs hover:shadow-sm"
+                className="flex flex-col items-center justify-center p-3 rounded-xl bg-emerald-50/80 hover:bg-emerald-100/80 text-emerald-900 border border-emerald-100 hover:border-emerald-300 transition group shadow-xs hover:shadow-md"
               >
-                <div className="w-10 h-10 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                <div className="w-10 h-10 rounded-lg bg-emerald-600 text-white flex items-center justify-center mb-2 group-hover:scale-110 transition-transform shadow-sm shadow-emerald-500/30">
                   <DollarSign className="w-5 h-5" />
                 </div>
-                <span className="text-xs font-semibold text-center">Plan Master</span>
+                <span className="text-xs font-bold text-center">Plan Master</span>
               </button>
 
               <button
                 onClick={() => setActiveTab('data_master')}
-                className="flex flex-col items-center justify-center p-3 rounded-xl bg-slate-50 hover:bg-blue-50 text-slate-700 hover:text-blue-700 border border-slate-200/70 hover:border-blue-200 transition group shadow-xs hover:shadow-sm"
+                className="flex flex-col items-center justify-center p-3 rounded-xl bg-blue-50/80 hover:bg-blue-100/80 text-blue-900 border border-blue-100 hover:border-blue-300 transition group shadow-xs hover:shadow-md"
               >
-                <div className="w-10 h-10 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                <div className="w-10 h-10 rounded-lg bg-blue-600 text-white flex items-center justify-center mb-2 group-hover:scale-110 transition-transform shadow-sm shadow-blue-500/30">
                   <Database className="w-5 h-5" />
                 </div>
-                <span className="text-xs font-semibold text-center">Data Master</span>
+                <span className="text-xs font-bold text-center">Data Master</span>
               </button>
 
               <button
                 onClick={() => setActiveTab('whatsapp_master')}
-                className="flex flex-col items-center justify-center p-3 rounded-xl bg-slate-50 hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 border border-slate-200/70 hover:border-emerald-200 transition group shadow-xs hover:shadow-sm"
+                className="flex flex-col items-center justify-center p-3 rounded-xl bg-teal-50/80 hover:bg-teal-100/80 text-teal-900 border border-teal-100 hover:border-teal-300 transition group shadow-xs hover:shadow-md"
               >
-                <div className="w-10 h-10 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                <div className="w-10 h-10 rounded-lg bg-teal-600 text-white flex items-center justify-center mb-2 group-hover:scale-110 transition-transform shadow-sm shadow-teal-500/30">
                   <MessageSquare className="w-5 h-5" />
                 </div>
-                <span className="text-xs font-semibold text-center">WhatsApp Master</span>
+                <span className="text-xs font-bold text-center">WhatsApp Master</span>
               </button>
 
               <button
                 onClick={() => setActiveTab('account')}
-                className="flex flex-col items-center justify-center p-3 rounded-xl bg-slate-50 hover:bg-amber-50 text-slate-700 hover:text-amber-700 border border-slate-200/70 hover:border-amber-200 transition group shadow-xs hover:shadow-sm"
+                className="flex flex-col items-center justify-center p-3 rounded-xl bg-amber-50/80 hover:bg-amber-100/80 text-amber-900 border border-amber-100 hover:border-amber-300 transition group shadow-xs hover:shadow-md"
               >
-                <div className="w-10 h-10 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                <div className="w-10 h-10 rounded-lg bg-amber-600 text-white flex items-center justify-center mb-2 group-hover:scale-110 transition-transform shadow-sm shadow-amber-500/30">
                   <Settings className="w-5 h-5" />
                 </div>
-                <span className="text-xs font-semibold text-center">Manage Account</span>
+                <span className="text-xs font-bold text-center">Manage Account</span>
               </button>
 
               <button
