@@ -129,19 +129,21 @@ export default function UniversalLogin({ onLoginSuccess }) {
       const freeTrialDays = 7;
       const expiresAt = new Date(Date.now() + freeTrialDays * 86400000).toISOString();
 
+      const isFreeTrial = selectedPlanId === 'FREE_TRIAL';
+
       const newClientPayload = {
         hwid: cleanHwid,
         hwids: [cleanHwid],
-        allowedPcs: 1, // Default 1 PC for Free Trial
+        allowedPcs: 1, // Default 1 PC for initial registration
         clientName: requestForm.shopName.trim(),
         ownerName: requestForm.ownerName.trim(),
         phone: cleanPhone,
         address: requestForm.address.trim(),
-        planType: 'FREE_TRIAL', // Activated on Free Trial by default
-        requestedPlan: selectedPlanId, // Track requested paid plan for admin approval
-        status: 'ACTIVE', // Instantly ACTIVE so user can log in without HWID block
+        planType: 'FREE_TRIAL', // Initial 5 Demo entries allocation
+        requestedPlan: selectedPlanId, // Track requested paid/demo plan
+        status: 'PENDING', // All registrations are PENDING approval from Master Admin
         password: cleanPhone, // Mobile number as default password
-        licenseKey: `LIC-FREE-${Math.random().toString(36).substring(2, 6).toUpperCase()}`,
+        licenseKey: `LIC-REQ-${Math.random().toString(36).substring(2, 6).toUpperCase()}`,
         expiresAt: expiresAt,
         createdAt: new Date().toISOString()
       };
@@ -150,10 +152,10 @@ export default function UniversalLogin({ onLoginSuccess }) {
 
       // Construct Grammatically Correct Messages
       let messageText = '';
-      if (selectedPlanId === 'FREE_TRIAL') {
-        messageText = `Thanks for choosing our service! Please log in and use your 5 demo entries.\n\nYour Login ID is: ${cleanPhone}\nYour Password is: ${cleanPhone}`;
+      if (isFreeTrial) {
+        messageText = `Thanks for registering with our service!\n\nYour Login ID is: ${cleanPhone}\nYour Password is: ${cleanPhone}\n\nYour account is currently PENDING approval from Admin for 5 demo entries. You will receive a confirmation message once Admin approves your access.`;
       } else {
-        messageText = `Thanks for choosing our service!\n\nYour Login ID is: ${cleanPhone}\nYour Password is: ${cleanPhone}\n\nYour account has been activated with a Free Demo Plan. Please wait for Admin to confirm your payment for the ${selectedPlanId.replace('_', ' ')} plan. Once confirmed, your subscription will be automatically upgraded to your chosen plan. Make sure you have paid your subscription fee for a smooth software experience.`;
+        messageText = `Thanks for choosing our service!\n\nYour Login ID is: ${cleanPhone}\nYour Password is: ${cleanPhone}\n\nYour account is currently PENDING approval. Please wait for Admin to confirm your payment for the ${selectedPlanId.replace('_', ' ')} plan. Once confirmed by Admin, your account will be activated. Make sure you have paid your subscription fee for a smooth software experience.`;
       }
 
       // Send WhatsApp Notification to Client

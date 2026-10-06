@@ -867,16 +867,13 @@ export default function AdminDashboard({ onLogout }) {
     localStorage.setItem('DISMISSED_ACCESS_REQUESTS', JSON.stringify(updated));
   };
 
-  // Access Requests Notification (Paid Pending Approval & Free Demo Accounts)
+  // Access Requests Notification (All New Registrations with status PENDING)
   const accessRequests = clients.filter(c => {
     const id = c.hwid || c.id;
     if (dismissedRequests.includes(id)) return false;
     
-    // 1. Paid Registration Requests Pending Approval
+    // Any registration account with status PENDING (Paid or Free Demo)
     if (c.status === 'PENDING') return true;
-    
-    // 2. Free Demo Accounts (Default ACTIVE FREE_TRIAL)
-    if (c.planType === 'FREE_TRIAL') return true;
     
     return false;
   });
@@ -1229,8 +1226,8 @@ export default function AdminDashboard({ onLogout }) {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 w-full pt-1">
                 {accessRequests.map(req => {
                   const reqId = req.hwid || req.id;
-                  const isFree = req.planType === 'FREE_TRIAL';
-                  const requestedPlanName = req.requestedPlan ? req.requestedPlan.replace('_', ' ') : (isFree ? 'FREE TRIAL' : 'PAID PLAN');
+                  const isFree = req.requestedPlan === 'FREE_TRIAL' || req.planType === 'FREE_TRIAL';
+                  const requestedPlanName = req.requestedPlan ? req.requestedPlan.replace('_', ' ') : 'FREE DEMO';
 
                   return (
                     <div key={reqId} className="bg-white/95 text-slate-800 p-4 rounded-xl shadow flex items-center justify-between gap-3">
@@ -1259,9 +1256,12 @@ export default function AdminDashboard({ onLogout }) {
                               View
                             </button>
                             <button 
-                              onClick={() => handleDismissRequest(reqId)}
+                              onClick={async () => {
+                                await updateClientStatusOnFirebase(reqId, 'ACTIVE');
+                                handleDismissRequest(reqId);
+                              }}
                               className="px-3 py-1.5 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold transition flex items-center gap-1"
-                              title="Clear Notification from Dashboard"
+                              title="Approve Free Demo & Clear Notification"
                             >
                               Clear
                             </button>
@@ -1279,8 +1279,19 @@ export default function AdminDashboard({ onLogout }) {
                             </button>
                             <button 
                               onClick={async () => {
-                                await updateClientStatusOnFirebase(reqId, 'ACTIVE');
+                                const targetPlan = req.requestedPlan || 'MONTHLY';
+                                let daysToAdd = 30;
+                                if (targetPlan === 'HALF_YEARLY') daysToAdd = 180;
+                                else if (targetPlan === 'YEARLY') daysToAdd = 365;
+
+                                await saveClientToFirebase({
+                                  ...req,
+                                  planType: targetPlan,
+                                  status: 'ACTIVE',
+                                  expiresAt: new Date(Date.now() + daysToAdd * 86400000).toISOString()
+                                });
                                 handleDismissRequest(reqId);
+                                showToast('success', 'Plan Approved', `${req.clientName}'s plan has been approved and activated!`);
                               }}
                               className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow transition"
                             >
@@ -1290,6 +1301,7 @@ export default function AdminDashboard({ onLogout }) {
                               onClick={async () => {
                                 await updateClientStatusOnFirebase(reqId, 'KILLED');
                                 handleDismissRequest(reqId);
+                                showToast('error', 'Request Rejected', `Registration for ${req.clientName} rejected.`);
                               }}
                               className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow transition"
                             >
