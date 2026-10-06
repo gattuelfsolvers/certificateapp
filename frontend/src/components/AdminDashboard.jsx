@@ -1120,15 +1120,8 @@ export default function AdminDashboard({ onLogout }) {
             </div>
           </div>
 
-          {/* TOP RIGHT CORNER ACTION BUTTONS (+ Add New Client & Logout) */}
+          {/* TOP RIGHT CORNER ACTION BUTTONS (Logout) */}
           <div className="flex items-center gap-3">
-            <button
-              onClick={handleOpenAddModal}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white font-bold text-sm shadow-md transition"
-            >
-              <Plus className="w-4 h-4" />
-              Add New Client
-            </button>
             <button
               onClick={onLogout}
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/20 text-sm font-semibold transition"
