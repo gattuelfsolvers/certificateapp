@@ -475,25 +475,20 @@ export default function ClientDashboard({ clientData, onLogout }) {
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2.5 w-full">
             {CERTIFICATE_CATEGORIES.map((cat) => (
-              <div key={cat.id} className="bg-white border border-slate-200 rounded-2xl p-2.5 shadow-sm space-y-2 flex flex-col justify-between">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-1">
-                  <span className="text-[11px] font-extrabold text-blue-700 uppercase tracking-tight truncate">{cat.name}</span>
-                  <span className="text-[10px] font-bold text-slate-400">{cat.subServices.length}</span>
+              <div key={cat.id} className="bg-slate-50/90 border border-slate-200 rounded-2xl p-2.5 shadow-xs space-y-2 flex flex-col justify-between">
+                <div className="border-b border-slate-200/80 pb-1 flex items-center justify-center text-center">
+                  <span className="text-[11px] font-black text-slate-800 uppercase tracking-tight text-center truncate">{cat.name}</span>
                 </div>
                 <div className={`grid gap-1 ${cat.subServices.length > 2 ? 'grid-cols-2' : 'grid-cols-1'}`}>
-                  {cat.subServices.map((sub) => {
-                    const count = getSubServiceCount(sub.code);
-                    return (
-                      <button
-                        key={sub.code}
-                        onClick={() => handleOpenAddModal(sub.code)}
-                        className="flex items-center justify-between px-1.5 py-1 rounded-lg bg-slate-50 hover:bg-blue-50 text-slate-800 hover:text-blue-700 border border-slate-200 text-[10px] font-bold transition"
-                      >
-                        <span className="truncate">+ {sub.code}</span>
-                        <span className="px-1 py-0.2 rounded bg-blue-100 text-blue-800 text-[9px] font-extrabold ml-1">{count}</span>
-                      </button>
-                    );
-                  })}
+                  {cat.subServices.map((sub) => (
+                    <button
+                      key={sub.code}
+                      onClick={() => handleOpenAddModal(sub.code)}
+                      className="flex items-center justify-center px-2 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-extrabold transition shadow-xs hover:shadow text-center"
+                    >
+                      <span className="truncate">+ {sub.code}</span>
+                    </button>
+                  ))}
                 </div>
               </div>
             ))}
