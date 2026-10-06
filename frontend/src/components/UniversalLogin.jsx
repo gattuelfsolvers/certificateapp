@@ -103,8 +103,27 @@ export default function UniversalLogin({ onLoginSuccess }) {
     return () => unsubscribe();
   }, []);
 
-  // State for Registration Duplicate Mobile Check Popup Modal
-  const [duplicateModalData, setDuplicateModalData] = useState(null); // { isOpen: boolean, phone: string, status: string, isReactivation: boolean, message: string }
+  // Helper to consistently get or generate System Hardware ID (HWID)
+  const getOrCreateSystemHwid = () => {
+    let storedHwid = localStorage.getItem('CLIENT_SYSTEM_HWID');
+    if (!storedHwid) {
+      const userAgent = navigator.userAgent;
+      const screenRes = `${window.screen.width}x${window.screen.height}`;
+      const platform = navigator.platform || 'Win32';
+      const rawString = `${userAgent}-${screenRes}-${platform}`;
+      
+      let hash = 0;
+      for (let i = 0; i < rawString.length; i++) {
+        const char = rawString.charCodeAt(i);
+        hash = (hash << 5) - hash + char;
+        hash |= 0;
+      }
+      const hexHash = Math.abs(hash).toString(16).toUpperCase().padStart(8, '0');
+      storedHwid = `HWID-${platform.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 3)}-${hexHash.slice(0, 4)}-${hexHash.slice(4, 8)}`;
+      localStorage.setItem('CLIENT_SYSTEM_HWID', storedHwid);
+    }
+    return storedHwid.toUpperCase();
+  };
 
   const handleNextStep1 = async (e) => {
     e.preventDefault();
@@ -118,21 +137,20 @@ export default function UniversalLogin({ onLoginSuccess }) {
       return;
     }
 
-    // Check duplicate mobile registration across all clients from Firebase Firestore
+    const currentSystemHwid = getOrCreateSystemHwid();
+
+    // Check duplicate mobile registration & HWID registration across all clients from Firebase Firestore
     try {
       const clients = await fetchClientsFromFirebase();
-      const existingClient = (clients || []).find(c => c.phone && c.phone.trim() === cleanPhone);
+      
+      // 1. Check Duplicate Mobile Number
+      const existingPhoneClient = (clients || []).find(c => c.phone && c.phone.trim() === cleanPhone);
 
-      if (existingClient) {
-        const clientStatus = existingClient.status || 'ACTIVE';
+      if (existingPhoneClient) {
+        const clientStatus = existingPhoneClient.status || 'ACTIVE';
         const isReactivationNeeded = clientStatus === 'EXPIRED' || clientStatus === 'KILLED' || clientStatus === 'INACTIVE' || clientStatus === 'DELETED';
 
-        let customMsg = '';
-        if (isReactivationNeeded) {
-          customMsg = `Your number (${cleanPhone}) is already registered with us and it is in "${clientStatus}" status. Please contact the Admin at 7781931880 for reactivating your account.`;
-        } else {
-          customMsg = `Your number (${cleanPhone}) is already registered with us and it is in "${clientStatus}" status. Please login with your user ID and password.`;
-        }
+        let customMsg = `Your mobile number (${cleanPhone}) is already registered with us (${existingPhoneClient.clientName || 'Account'}) and it is in "${clientStatus}" status.`;
 
         setDuplicateModalData({
           isOpen: true,
@@ -143,8 +161,32 @@ export default function UniversalLogin({ onLoginSuccess }) {
         });
         return;
       }
+
+      // 2. Check Duplicate Hardware ID (HWID)
+      const existingHwidClient = (clients || []).find(c => {
+        const hwidList = Array.isArray(c.hwids) && c.hwids.length > 0 
+          ? c.hwids.map(h => h.toUpperCase())
+          : [(c.hwid || '').toUpperCase()];
+        return hwidList.includes(currentSystemHwid);
+      });
+
+      if (existingHwidClient) {
+        const clientStatus = existingHwidClient.status || 'ACTIVE';
+        const isReactivationNeeded = clientStatus === 'EXPIRED' || clientStatus === 'KILLED' || clientStatus === 'INACTIVE' || clientStatus === 'DELETED';
+
+        let customMsg = `This PC / Hardware ID (${currentSystemHwid}) is already registered under account "${existingHwidClient.clientName || 'Shop'}" (${existingHwidClient.phone}) with status "${clientStatus}".`;
+
+        setDuplicateModalData({
+          isOpen: true,
+          phone: existingHwidClient.phone || cleanPhone,
+          status: clientStatus,
+          isReactivation: isReactivationNeeded,
+          message: customMsg
+        });
+        return;
+      }
     } catch (err) {
-      console.error("Duplicate mobile check error:", err);
+      console.error("Duplicate mobile/HWID check error:", err);
     }
 
     setRegStep(2);
@@ -154,14 +196,7 @@ export default function UniversalLogin({ onLoginSuccess }) {
     setSubmittingReg(true);
     try {
       const cleanPhone = requestForm.phone.trim();
-      
-      // Auto fetch current system HWID from local device
-      let currentSystemHwid = localStorage.getItem('CLIENT_SYSTEM_HWID');
-      if (!currentSystemHwid) {
-        currentSystemHwid = 'HWID-' + Math.random().toString(36).substring(2, 10).toUpperCase();
-        localStorage.setItem('CLIENT_SYSTEM_HWID', currentSystemHwid);
-      }
-      const cleanHwid = currentSystemHwid.toUpperCase();
+      const cleanHwid = getOrCreateSystemHwid();
 
       // Default Active Free Trial (7 Days / 5 Demo entries) for ALL accounts initially
       const freeTrialDays = 7;
@@ -280,15 +315,9 @@ export default function UniversalLogin({ onLoginSuccess }) {
           return;
         }
 
-        // Account Status Check
+        // Account Status Check (KILLED / BLOCKED check)
         if (matchedClient.status === 'KILLED' || matchedClient.status === 'INACTIVE') {
           setError('Your account license has been terminated or blocked by Admin.');
-          setLoading(false);
-          return;
-        }
-
-        if (matchedClient.status === 'PENDING') {
-          setError('Your account registration is currently PENDING approval from Admin.');
           setLoading(false);
           return;
         }
