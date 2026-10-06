@@ -8,6 +8,7 @@ import {
 import { CERTIFICATE_CATEGORIES as DEFAULT_CATEGORIES } from '../constants/certificateTypes';
 import { fetchCertificatesFromFirebase, saveCertificateToFirebase, deleteCertificateFromFirebase } from '../firebase';
 import CodeMasterView from './CodeMasterView';
+import ProfileSettingsView from './ProfileSettingsView';
 import axios from 'axios';
 
 const getActiveCategories = () => {
@@ -805,10 +806,14 @@ export default function ClientDashboard({ clientData, onLogout }) {
             </button>
 
             <button
-              onClick={() => setIsProfileModalOpen(true)}
-              className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold bg-amber-50/80 hover:bg-amber-100 text-amber-900 border border-amber-200 transition shadow-xs hover:shadow"
+              onClick={() => setActiveTab('profile')}
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold border transition shadow-xs hover:shadow ${
+                activeTab === 'profile' 
+                  ? 'bg-amber-600 text-white border-amber-600 shadow-sm' 
+                  : 'bg-amber-50/80 hover:bg-amber-100 text-amber-900 border-amber-200'
+              }`}
             >
-              <User className="w-4 h-4 text-amber-600" />
+              <User className="w-4 h-4" />
               <span>Profile Settings</span>
             </button>
 
@@ -824,6 +829,8 @@ export default function ClientDashboard({ clientData, onLogout }) {
 
         {activeTab === 'code_master' ? (
           <CodeMasterView showToast={showToast} />
+        ) : activeTab === 'profile' ? (
+          <ProfileSettingsView clientData={clientData} showToast={showToast} />
         ) : (
           <>
             {/* Sub-Services Quick Launch Cards - FULL PAGE WIDTH IN 1 ROW */}
