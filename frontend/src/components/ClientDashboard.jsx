@@ -528,20 +528,22 @@ export default function ClientDashboard({ clientData, onLogout }) {
               };
 
               return (
-                <div key={cat.id} className={`${styles.cardBg} border rounded-2xl p-2.5 shadow-xs space-y-2 flex flex-col justify-between`}>
-                  <div className={`border-b ${styles.borderDivider} pb-1 flex items-center justify-center text-center`}>
+                <div key={cat.id} className={`${styles.cardBg} border rounded-2xl p-2.5 shadow-xs flex flex-col justify-between h-full`}>
+                  <div className={`border-b ${styles.borderDivider} pb-1 mb-1.5 flex items-center justify-center text-center`}>
                     <span className={`text-[11px] font-black uppercase tracking-tight text-center truncate ${styles.titleText}`}>{cat.name}</span>
                   </div>
-                  <div className={`grid gap-1 ${cat.subServices.length > 2 ? 'grid-cols-2' : 'grid-cols-1'}`}>
-                    {cat.subServices.map((sub) => (
-                      <button
-                        key={sub.code}
-                        onClick={() => handleOpenAddModal(sub.code)}
-                        className={`flex items-center justify-center px-2 py-1.5 rounded-xl ${styles.btnBg} text-[11px] font-extrabold transition shadow-xs hover:shadow text-center`}
-                      >
-                        <span className="truncate">{sub.code}</span>
-                      </button>
-                    ))}
+                  <div className="flex-1 flex flex-col justify-center w-full">
+                    <div className={`grid gap-1 ${cat.subServices.length > 2 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                      {cat.subServices.map((sub) => (
+                        <button
+                          key={sub.code}
+                          onClick={() => handleOpenAddModal(sub.code)}
+                          className={`flex items-center justify-center px-2 py-1.5 rounded-xl ${styles.btnBg} text-[11px] font-extrabold transition shadow-xs hover:shadow text-center`}
+                        >
+                          <span className="truncate">{sub.code}</span>
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
               );
