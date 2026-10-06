@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   User, Store, Phone, MapPin, Key, ShieldCheck, Cpu, Calendar, Clock, 
-  Lock, Smartphone, CheckCircle2, MessageSquare, AlertCircle, Save, Eye, EyeOff, QrCode, RefreshCw, Zap
+  Lock, Smartphone, CheckCircle2, MessageSquare, AlertCircle, Save, Eye, EyeOff, QrCode, RefreshCw, Zap, Send, FileEdit
 } from 'lucide-react';
 
 export default function ProfileSettingsView({ clientData, showToast }) {
@@ -21,6 +21,19 @@ export default function ProfileSettingsView({ clientData, showToast }) {
   });
 
   const [showPassword, setShowPassword] = useState(false);
+
+  // Request for Changes Modal State
+  const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
+  const [requestFields, setRequestFields] = useState({
+    shopName: false,
+    ownerName: false,
+    mobile: false
+  });
+  const [newValues, setNewValues] = useState({
+    newShopName: '',
+    newOwnerName: '',
+    newMobile: ''
+  });
 
   // 2. License Details (Read-Only)
   const licenseInfo = {
@@ -237,10 +250,19 @@ export default function ProfileSettingsView({ clientData, showToast }) {
               <span>Shop Name, Owner Name, और Registered Mobile Number बदलने के लिए अपने Admin से संपर्क करें। आप केवल Address और Password ही बदल सकते हैं।</span>
             </p>
 
-            <div className="flex justify-end pt-2">
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsRequestModalOpen(true)}
+                className="flex items-center gap-2 px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black rounded-xl shadow-md transition text-xs cursor-pointer"
+              >
+                <FileEdit className="w-4 h-4" />
+                <span>Request for Changes</span>
+              </button>
+
               <button
                 type="submit"
-                className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-xl shadow-md transition"
+                className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-xl shadow-md transition text-xs cursor-pointer"
               >
                 <Save className="w-4 h-4" />
                 <span>Save Profile Changes</span>
@@ -492,6 +514,183 @@ export default function ProfileSettingsView({ clientData, showToast }) {
         </div>
 
       </div>
+
+      {/* REQUEST FOR PROFILE CHANGES MODAL */}
+      {isRequestModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-2xl space-y-6 animate-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center font-black">
+                  <FileEdit className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black text-slate-900">Request Profile Update</h3>
+                  <p className="text-xs text-slate-500">Send change request directly to Admin WhatsApp</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsRequestModalOpen(false)}
+                className="text-slate-400 hover:text-slate-700 text-2xl font-bold"
+              >
+                &times;
+              </button>
+            </div>
+
+            {/* Checkbox Section */}
+            <div className="space-y-4 text-xs font-medium">
+              <div>
+                <label className="block text-slate-800 font-extrabold text-sm mb-1">
+                  What fields do you want to update? *
+                </label>
+                <p className="text-slate-500 text-[11px] mb-3">Select the locked fields you wish to update:</p>
+
+                <div className="space-y-3 bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
+                  {/* 1. Shop Name Checkbox */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="chkShopName"
+                        checked={requestFields.shopName}
+                        onChange={(e) => setRequestFields(prev => ({ ...prev, shopName: e.target.checked }))}
+                        className="w-4 h-4 text-amber-600 rounded border-slate-300 focus:ring-amber-500 cursor-pointer"
+                      />
+                      <label htmlFor="chkShopName" className="text-slate-800 font-bold cursor-pointer select-none">
+                        Shop / Business Name
+                      </label>
+                    </div>
+
+                    {requestFields.shopName && (
+                      <div className="pl-6 animate-in fade-in">
+                        <input
+                          type="text"
+                          value={newValues.newShopName}
+                          onChange={(e) => setNewValues(prev => ({ ...prev, newShopName: e.target.value }))}
+                          placeholder="Enter New Shop / Business Name..."
+                          className="w-full bg-white border border-amber-300 rounded-xl px-3 py-2 text-slate-900 font-bold focus:ring-2 focus:ring-amber-500/20"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 2. Owner Name Checkbox */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="chkOwnerName"
+                        checked={requestFields.ownerName}
+                        onChange={(e) => setRequestFields(prev => ({ ...prev, ownerName: e.target.value }))}
+                        className="w-4 h-4 text-amber-600 rounded border-slate-300 focus:ring-amber-500 cursor-pointer"
+                      />
+                      <label htmlFor="chkOwnerName" className="text-slate-800 font-bold cursor-pointer select-none">
+                        Owner / CSC Partner Name
+                      </label>
+                    </div>
+
+                    {requestFields.ownerName && (
+                      <div className="pl-6 animate-in fade-in">
+                        <input
+                          type="text"
+                          value={newValues.newOwnerName}
+                          onChange={(e) => setNewValues(prev => ({ ...prev, newOwnerName: e.target.value }))}
+                          placeholder="Enter New Owner Name..."
+                          className="w-full bg-white border border-amber-300 rounded-xl px-3 py-2 text-slate-900 font-semibold focus:ring-2 focus:ring-amber-500/20"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 3. Registered Mobile Checkbox */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="chkMobile"
+                        checked={requestFields.mobile}
+                        onChange={(e) => setRequestFields(prev => ({ ...prev, mobile: e.target.value }))}
+                        className="w-4 h-4 text-amber-600 rounded border-slate-300 focus:ring-amber-500 cursor-pointer"
+                      />
+                      <label htmlFor="chkMobile" className="text-slate-800 font-bold cursor-pointer select-none">
+                        Registered Mobile Number
+                      </label>
+                    </div>
+
+                    {requestFields.mobile && (
+                      <div className="pl-6 animate-in fade-in">
+                        <input
+                          type="text"
+                          value={newValues.newMobile}
+                          onChange={(e) => setNewValues(prev => ({ ...prev, newMobile: e.target.value }))}
+                          placeholder="Enter New Registered Mobile Number..."
+                          className="w-full bg-white border border-amber-300 rounded-xl px-3 py-2 text-slate-900 font-mono font-bold focus:ring-2 focus:ring-amber-500/20"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setIsRequestModalOpen(false)}
+                  className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold transition"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="button"
+                  disabled={!requestFields.shopName && !requestFields.ownerName && !requestFields.mobile}
+                  onClick={() => {
+                    const changes = [];
+                    if (requestFields.shopName && newValues.newShopName.trim()) {
+                      changes.push(`• New Shop Name: ${newValues.newShopName.trim()}`);
+                    }
+                    if (requestFields.ownerName && newValues.newOwnerName.trim()) {
+                      changes.push(`• New Owner Name: ${newValues.newOwnerName.trim()}`);
+                    }
+                    if (requestFields.mobile && newValues.newMobile.trim()) {
+                      changes.push(`• New Registered Mobile: ${newValues.newMobile.trim()}`);
+                    }
+
+                    if (changes.length === 0) {
+                      if (showToast) showToast('error', 'New Values Required', 'Please enter new values for selected fields');
+                      return;
+                    }
+
+                    const adminMsg = `*PROFILE CHANGE REQUEST FROM CLIENT*\n\n` +
+                      `*Current Client Details:*\n` +
+                      `• Current Shop Name: ${profile.clientName}\n` +
+                      `• Current Owner: ${profile.ownerName}\n` +
+                      `• Registered Mobile: ${profile.phone}\n` +
+                      `• Hardware ID (HWID): ${licenseInfo.hwid}\n` +
+                      `• License Status: ${licenseInfo.planType} (${licenseInfo.daysLeft} Days Left)\n\n` +
+                      `*Requested Profile Updates:*\n` +
+                      `${changes.join('\n')}\n\n` +
+                      `Please update these profile details in Admin Panel. Thank you!`;
+
+                    const encodedMsg = encodeURIComponent(adminMsg);
+                    const whatsappUrl = `https://wa.me/918210212926?text=${encodedMsg}`;
+                    window.open(whatsappUrl, '_blank');
+
+                    setIsRequestModalOpen(false);
+                    if (showToast) showToast('success', 'Request Dispatched', 'Opening WhatsApp to send change request to Admin!');
+                  }}
+                  className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black shadow-md transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  <Send className="w-4 h-4" />
+                  <span>Submit Request via WhatsApp</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
