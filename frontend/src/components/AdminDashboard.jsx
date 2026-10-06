@@ -57,13 +57,97 @@ export default function AdminDashboard({ onLogout }) {
   const [testTemplatePhone, setTestTemplatePhone] = useState('');
   const [templateFormData, setTemplateFormData] = useState({ templateKey: '', title: '', messageText: '' });
   
-  // Plans Master State with Max Allowed PCs
+  // Plans Master State with Facilities & Pricing Controls
   const [plans, setPlans] = useState([
-    { id: 'FREE_TRIAL', name: 'Free Trial', days: 7, price: 0, status: 'ACTIVE', maxPcs: 1 },
-    { id: 'MONTHLY', name: 'Monthly Plan', days: 30, price: 299, status: 'ACTIVE', maxPcs: 2 },
-    { id: 'HALF_YEARLY', name: 'Half-Yearly Plan', days: 180, price: 1499, status: 'ACTIVE', maxPcs: 5 },
-    { id: 'YEARLY', name: 'Yearly Plan', days: 365, price: 2499, status: 'ACTIVE', maxPcs: 10 }
+    {
+      id: 'FREE_TRIAL',
+      name: 'Free Trial Plan',
+      days: 7,
+      originalPrice: 0,
+      price: 0,
+      entriesLimit: '5 Entries',
+      status: 'ACTIVE',
+      maxPcs: 1,
+      facilities: {
+        autoWhatsapp: true,
+        jharsewaSync: true,
+        syncAll: false,
+        backupAllowed: false,
+        customerSupport: false
+      }
+    },
+    {
+      id: 'MONTHLY',
+      name: 'Monthly Plan',
+      days: 30,
+      originalPrice: 149,
+      price: 49,
+      entriesLimit: 'Upto 100 Entries',
+      status: 'ACTIVE',
+      maxPcs: 2,
+      facilities: {
+        autoWhatsapp: true,
+        jharsewaSync: true,
+        syncAll: false,
+        backupAllowed: true,
+        customerSupport: true
+      }
+    },
+    {
+      id: 'HALF_YEARLY',
+      name: 'Half-Yearly Plan',
+      days: 180,
+      originalPrice: 699,
+      price: 349,
+      entriesLimit: 'Upto 1000 Entries',
+      status: 'ACTIVE',
+      maxPcs: 5,
+      facilities: {
+        autoWhatsapp: true,
+        jharsewaSync: true,
+        syncAll: true,
+        backupAllowed: true,
+        customerSupport: true
+      }
+    },
+    {
+      id: 'YEARLY',
+      name: 'Yearly Plan',
+      days: 365,
+      originalPrice: 999,
+      price: 599,
+      entriesLimit: 'Unlimited',
+      status: 'ACTIVE',
+      maxPcs: 10,
+      facilities: {
+        autoWhatsapp: true,
+        jharsewaSync: true,
+        syncAll: true,
+        backupAllowed: true,
+        customerSupport: true
+      }
+    },
+    {
+      id: 'LIFETIME',
+      name: 'Lifetime Plan',
+      days: 36500,
+      originalPrice: 5999,
+      price: 2999,
+      entriesLimit: 'Unlimited',
+      status: 'ACTIVE',
+      maxPcs: 20,
+      facilities: {
+        autoWhatsapp: true,
+        jharsewaSync: true,
+        syncAll: true,
+        backupAllowed: true,
+        customerSupport: true
+      }
+    }
   ]);
+
+  const [editingPlan, setEditingPlan] = useState(null);
+  const [planModalOpen, setPlanModalOpen] = useState(false);
 
   // Modal States
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -1072,24 +1156,114 @@ export default function AdminDashboard({ onLogout }) {
 
           {/* TAB 3: PLAN MASTER VIEW */}
           {activeTab === 'plans' && (
-            <div className="space-y-4 w-full">
-              <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-4">
-                <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                  <DollarSign className="w-5 h-5 text-emerald-600" />
-                  SaaS Subscription Pricing & Duration Plans Master
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  {plans.map(p => (
-                    <div key={p.id} className="p-5 rounded-2xl bg-gradient-to-br from-slate-50 to-blue-50/40 border border-slate-200 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <h4 className="font-extrabold text-slate-900 text-base">{p.name}</h4>
-                        <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-extrabold text-[10px]">{p.status}</span>
-                      </div>
-                      <div className="text-2xl font-black text-blue-700">₹{p.price} <span className="text-xs font-medium text-slate-500">/ {p.days} Days</span></div>
-                      <p className="text-xs text-slate-500">Includes 1-Click Jharsewa Sync Bot & WhatsApp receipts.</p>
-                    </div>
-                  ))}
+            <div className="space-y-6 w-full">
+              <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm flex items-center justify-between">
+                <div>
+                  <h3 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
+                    <DollarSign className="w-6 h-6 text-emerald-600" />
+                    SaaS Subscription Pricing & Plan Master
+                  </h3>
+                  <p className="text-xs text-slate-500 font-medium pt-1">
+                    Manage client subscription plans, offer prices, validity, certificate limits, and facility ON/OFF toggles.
+                  </p>
                 </div>
+              </div>
+
+              {/* Plans Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-5 w-full">
+                {plans.map(p => (
+                  <div key={p.id} className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-sm hover:shadow-md transition space-y-4 flex flex-col justify-between relative overflow-hidden">
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                        <h4 className="font-black text-slate-900 text-sm tracking-tight">{p.name}</h4>
+                        <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-extrabold text-[9px] uppercase">
+                          {p.status}
+                        </span>
+                      </div>
+
+                      {/* Pricing Display */}
+                      <div>
+                        {p.originalPrice > 0 && p.originalPrice > p.price ? (
+                          <div className="text-xs text-slate-400 line-through font-bold font-mono">
+                            ₹{p.originalPrice}
+                          </div>
+                        ) : (
+                          <div className="text-xs text-slate-400 font-medium">Standard Price</div>
+                        )}
+                        <div className="text-2xl font-black text-emerald-600 font-mono">
+                          ₹{p.price} <span className="text-[11px] font-bold text-slate-500 font-sans">/ {p.days >= 36500 ? 'Lifetime' : `${p.days} Days`}</span>
+                        </div>
+                      </div>
+
+                      {/* Entries Limit Badge */}
+                      <div className="p-2 rounded-xl bg-blue-50 border border-blue-200 text-blue-900 text-[11px] font-bold flex items-center justify-between">
+                        <span>Cert. Entries:</span>
+                        <span className="font-extrabold text-blue-700 font-mono">{p.entriesLimit || 'Unlimited'}</span>
+                      </div>
+
+                      {/* Facilities ON / OFF Checklist */}
+                      <div className="space-y-1.5 pt-1 text-[11px]">
+                        <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Plan Facilities:</span>
+
+                        <div className="flex items-center justify-between p-1.5 rounded-lg bg-slate-50">
+                          <span className="text-slate-700 font-semibold">Auto WhatsApp Update</span>
+                          {p.facilities?.autoWhatsapp !== false ? (
+                            <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-extrabold text-[9px]">Yes</span>
+                          ) : (
+                            <span className="px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 font-extrabold text-[9px]">No</span>
+                          )}
+                        </div>
+
+                        <div className="flex items-center justify-between p-1.5 rounded-lg bg-slate-50">
+                          <span className="text-slate-700 font-semibold">Jharsewa Sync</span>
+                          {p.facilities?.jharsewaSync !== false ? (
+                            <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-extrabold text-[9px]">Yes</span>
+                          ) : (
+                            <span className="px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 font-extrabold text-[9px]">No</span>
+                          )}
+                        </div>
+
+                        <div className="flex items-center justify-between p-1.5 rounded-lg bg-slate-50">
+                          <span className="text-slate-700 font-semibold">Sync All</span>
+                          {p.facilities?.syncAll ? (
+                            <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-extrabold text-[9px]">Yes</span>
+                          ) : (
+                            <span className="px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 font-extrabold text-[9px]">No</span>
+                          )}
+                        </div>
+
+                        <div className="flex items-center justify-between p-1.5 rounded-lg bg-slate-50">
+                          <span className="text-slate-700 font-semibold">Backup Allowed</span>
+                          {p.facilities?.backupAllowed ? (
+                            <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-extrabold text-[9px]">Yes</span>
+                          ) : (
+                            <span className="px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 font-extrabold text-[9px]">No</span>
+                          )}
+                        </div>
+
+                        <div className="flex items-center justify-between p-1.5 rounded-lg bg-slate-50">
+                          <span className="text-slate-700 font-semibold">Customer Support</span>
+                          {p.facilities?.customerSupport ? (
+                            <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-extrabold text-[9px]">Yes</span>
+                          ) : (
+                            <span className="px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 font-extrabold text-[9px]">No</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => {
+                        setEditingPlan(p);
+                        setPlanModalOpen(true);
+                      }}
+                      className="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs shadow transition flex items-center justify-center gap-1.5 mt-2"
+                    >
+                      <Edit className="w-3.5 h-3.5 text-blue-400" />
+                      Edit Plan & Facilities
+                    </button>
+                  </div>
+                ))}
               </div>
             </div>
           )}
@@ -1820,6 +1994,162 @@ export default function AdminDashboard({ onLogout }) {
                 className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md transition"
               >
                 Save Message Format
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT PLAN MASTER MODAL */}
+      {planModalOpen && editingPlan && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 max-w-lg w-full shadow-2xl space-y-5">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
+                <Edit className="w-5 h-5 text-blue-600" />
+                Edit Subscription Plan: {editingPlan.name}
+              </h3>
+              <button onClick={() => setPlanModalOpen(false)} className="text-slate-400 hover:text-slate-700 text-2xl font-bold">&times;</button>
+            </div>
+
+            <div className="space-y-4 text-xs font-medium">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-slate-700 font-bold mb-1">Strikethrough Price (₹)</label>
+                  <input
+                    type="number"
+                    value={editingPlan.originalPrice || 0}
+                    onChange={(e) => setEditingPlan(prev => ({ ...prev, originalPrice: parseInt(e.target.value) || 0 }))}
+                    placeholder="e.g. 999"
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-slate-900 font-mono font-bold"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-700 font-bold mb-1">Offer Price (₹) *</label>
+                  <input
+                    type="number"
+                    required
+                    value={editingPlan.price}
+                    onChange={(e) => setEditingPlan(prev => ({ ...prev, price: parseInt(e.target.value) || 0 }))}
+                    placeholder="e.g. 599"
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-slate-900 font-mono font-bold"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-slate-700 font-bold mb-1">Validity Period (Days)</label>
+                  <input
+                    type="number"
+                    value={editingPlan.days}
+                    onChange={(e) => setEditingPlan(prev => ({ ...prev, days: parseInt(e.target.value) || 0 }))}
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-slate-900 font-semibold"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-700 font-bold mb-1">Certificate Entries Limit</label>
+                  <input
+                    type="text"
+                    value={editingPlan.entriesLimit || 'Unlimited'}
+                    onChange={(e) => setEditingPlan(prev => ({ ...prev, entriesLimit: e.target.value }))}
+                    placeholder="e.g. 5, Upto 100, Unlimited"
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-slate-900 font-bold font-mono"
+                  />
+                </div>
+              </div>
+
+              {/* Plan Facilities Toggle Switches */}
+              <div className="space-y-2 pt-2 border-t border-slate-100">
+                <span className="text-xs font-black uppercase text-slate-800 tracking-wider">Plan Facilities Toggle:</span>
+                
+                <div className="space-y-2">
+                  <label className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-200 cursor-pointer hover:bg-slate-100 transition">
+                    <span className="text-xs font-bold text-slate-800">Auto WhatsApp Update</span>
+                    <input
+                      type="checkbox"
+                      checked={editingPlan.facilities?.autoWhatsapp !== false}
+                      onChange={(e) => setEditingPlan(prev => ({
+                        ...prev,
+                        facilities: { ...prev.facilities, autoWhatsapp: e.target.checked }
+                      }))}
+                      className="w-4 h-4 accent-emerald-600 rounded cursor-pointer"
+                    />
+                  </label>
+
+                  <label className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-200 cursor-pointer hover:bg-slate-100 transition">
+                    <span className="text-xs font-bold text-slate-800">Jharsewa Sync</span>
+                    <input
+                      type="checkbox"
+                      checked={editingPlan.facilities?.jharsewaSync !== false}
+                      onChange={(e) => setEditingPlan(prev => ({
+                        ...prev,
+                        facilities: { ...prev.facilities, jharsewaSync: e.target.checked }
+                      }))}
+                      className="w-4 h-4 accent-emerald-600 rounded cursor-pointer"
+                    />
+                  </label>
+
+                  <label className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-200 cursor-pointer hover:bg-slate-100 transition">
+                    <span className="text-xs font-bold text-slate-800">Sync All</span>
+                    <input
+                      type="checkbox"
+                      checked={editingPlan.facilities?.syncAll === true}
+                      onChange={(e) => setEditingPlan(prev => ({
+                        ...prev,
+                        facilities: { ...prev.facilities, syncAll: e.target.checked }
+                      }))}
+                      className="w-4 h-4 accent-emerald-600 rounded cursor-pointer"
+                    />
+                  </label>
+
+                  <label className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-200 cursor-pointer hover:bg-slate-100 transition">
+                    <span className="text-xs font-bold text-slate-800">Backup Allowed</span>
+                    <input
+                      type="checkbox"
+                      checked={editingPlan.facilities?.backupAllowed === true}
+                      onChange={(e) => setEditingPlan(prev => ({
+                        ...prev,
+                        facilities: { ...prev.facilities, backupAllowed: e.target.checked }
+                      }))}
+                      className="w-4 h-4 accent-emerald-600 rounded cursor-pointer"
+                    />
+                  </label>
+
+                  <label className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-200 cursor-pointer hover:bg-slate-100 transition">
+                    <span className="text-xs font-bold text-slate-800">Customer Support</span>
+                    <input
+                      type="checkbox"
+                      checked={editingPlan.facilities?.customerSupport === true}
+                      onChange={(e) => setEditingPlan(prev => ({
+                        ...prev,
+                        facilities: { ...prev.facilities, customerSupport: e.target.checked }
+                      }))}
+                      className="w-4 h-4 accent-emerald-600 rounded cursor-pointer"
+                    />
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setPlanModalOpen(false)}
+                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setPlans(prev => prev.map(p => p.id === editingPlan.id ? editingPlan : p));
+                  setPlanModalOpen(false);
+                  showToast('success', 'Plan Details Updated', `Plan "${editingPlan.name}" updated successfully!`);
+                }}
+                className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md transition"
+              >
+                Save Plan Changes
               </button>
             </div>
           </div>
