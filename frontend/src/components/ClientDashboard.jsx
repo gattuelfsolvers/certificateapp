@@ -21,6 +21,31 @@ const getApiBaseUrl = () => {
 
 let API_BASE = getApiBaseUrl();
 
+const formatDateDDMMYYYY = (dateStr) => {
+  if (!dateStr) return 'N/A';
+  
+  const str = String(dateStr).trim();
+  if (str.includes('-')) {
+    const parts = str.split('T')[0].split('-');
+    if (parts.length === 3) {
+      const [year, month, day] = parts;
+      if (year.length === 4) {
+        const dd = day.padStart(2, '0');
+        const mm = month.padStart(2, '0');
+        return `${dd}-${mm}-${year}`;
+      }
+    }
+  }
+
+  const dateObj = new Date(dateStr);
+  if (isNaN(dateObj.getTime())) return 'N/A';
+
+  const dd = String(dateObj.getDate()).padStart(2, '0');
+  const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+  const yyyy = dateObj.getFullYear();
+  return `${dd}-${mm}-${yyyy}`;
+};
+
 const CATEGORY_COLOR_STYLES = {
   income: {
     cardBg: 'bg-emerald-50/80 border-emerald-200/90',
@@ -763,8 +788,8 @@ export default function ClientDashboard({ clientData, onLogout }) {
                             {cert.certType}
                           </span>
                         </td>
-                        <td className="px-6 py-4 text-slate-600 font-mono">
-                          {cert.entryDate ? new Date(cert.entryDate).toLocaleDateString() : 'N/A'}
+                        <td className="px-6 py-4 text-slate-600 font-mono font-semibold">
+                          {formatDateDDMMYYYY(cert.entryDate)}
                         </td>
                         <td className="px-6 py-4">
                           <span className="px-3 py-1 rounded-full bg-blue-100 text-blue-800 border border-blue-200 text-[10px] font-extrabold">
@@ -986,7 +1011,7 @@ export default function ClientDashboard({ clientData, onLogout }) {
                             <td className="px-3 py-2 text-slate-400">1</td>
                             <td className="px-3 py-2 font-bold text-blue-700">{itemForm.certType}</td>
                             <td className="px-3 py-2 font-mono font-bold text-slate-900">{itemForm.refNo}</td>
-                            <td className="px-3 py-2 text-slate-600">{itemForm.entryDate}</td>
+                            <td className="px-3 py-2 text-slate-600">{formatDateDDMMYYYY(itemForm.entryDate)}</td>
                             <td className="px-3 py-2 font-bold text-slate-900">₹{itemForm.totalFee}</td>
                             <td className="px-3 py-2 text-right text-slate-400 italic">Form Entry</td>
                           </tr>
@@ -1003,7 +1028,7 @@ export default function ClientDashboard({ clientData, onLogout }) {
                             <td className="px-3 py-2 text-slate-500 font-bold">{idx + 1}</td>
                             <td className="px-3 py-2 font-bold text-blue-700">{item.certType}</td>
                             <td className="px-3 py-2 font-mono font-bold text-slate-900">{item.refNo}</td>
-                            <td className="px-3 py-2 text-slate-600">{item.entryDate}</td>
+                            <td className="px-3 py-2 text-slate-600">{formatDateDDMMYYYY(item.entryDate)}</td>
                             <td className="px-3 py-2 font-bold text-slate-900">₹{item.totalFee}</td>
                             <td className="px-3 py-2 text-right">
                               <button
@@ -1133,7 +1158,7 @@ export default function ClientDashboard({ clientData, onLogout }) {
                 </div>
                 <div>
                   <p className="text-slate-400 font-bold mb-0.5">Application Date</p>
-                  <p className="text-slate-800 font-mono">{viewingCert.entryDate ? new Date(viewingCert.entryDate).toLocaleDateString() : 'N/A'}</p>
+                  <p className="text-slate-800 font-mono font-bold">{formatDateDDMMYYYY(viewingCert.entryDate)}</p>
                 </div>
               </div>
 
