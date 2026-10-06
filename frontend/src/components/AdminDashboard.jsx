@@ -829,12 +829,23 @@ export default function AdminDashboard({ onLogout }) {
   };
 
   const handleDeleteClient = async (hwid, clientName) => {
-    if (!window.confirm(`Are you sure you want to delete client "${clientName}"?`)) return;
+    if (!window.confirm(`Are you sure you want to move client "${clientName}" to Archived Clients?`)) return;
     try {
-      await deleteClientFromFirebase(hwid);
-      showToast('info', 'Client Deleted', `Client ${clientName} removed.`);
+      const targetClient = clients.find(c => (c.hwid === hwid || c.id === hwid));
+      if (targetClient) {
+        const daysRemaining = calculateDaysLeft(targetClient.expiresAt);
+        await saveClientToFirebase({
+          ...targetClient,
+          status: 'DELETED',
+          remainingDays: Math.max(0, daysRemaining)
+        });
+        showToast('info', 'Client Archived', `Client "${clientName}" has been moved to Archived Clients.`);
+      } else {
+        await updateClientStatusOnFirebase(hwid, 'DELETED');
+        showToast('info', 'Client Archived', `Client "${clientName}" has been moved to Archived Clients.`);
+      }
     } catch (err) {
-      showToast('error', 'Delete Failed', err.message);
+      showToast('error', 'Archive Failed', err.message);
     }
   };
 
@@ -882,7 +893,7 @@ export default function AdminDashboard({ onLogout }) {
   const totalCount = clients.length;
   const activeCount = clients.filter(c => c.status === 'ACTIVE' && new Date(c.expiresAt) > new Date()).length;
   const expiredCount = clients.filter(c => new Date(c.expiresAt) <= new Date() || c.status === 'EXPIRED').length;
-  const killedCount = clients.filter(c => c.status === 'KILLED' || c.status === 'INACTIVE').length;
+  const killedCount = clients.filter(c => c.status === 'KILLED' || c.status === 'INACTIVE' || c.status === 'DELETED').length;
   const pendingRequests = clients.filter(c => c.status === 'PENDING');
   const pendingCount = pendingRequests.length;
 
@@ -906,11 +917,11 @@ export default function AdminDashboard({ onLogout }) {
 
       const daysLeft = calculateDaysLeft(c.expiresAt);
       const isExp = daysLeft <= 0;
-      const isKilled = c.status === 'KILLED' || c.status === 'INACTIVE';
+      const isKilled = c.status === 'KILLED' || c.status === 'INACTIVE' || c.status === 'DELETED';
 
       // clientSubTab Filter: LIVE vs ARCHIVED
       if (clientSubTab === 'LIVE') {
-        // Live = Only Active clients (not killed, not expired)
+        // Live = Only Active clients (not killed/deleted, not expired)
         if (isKilled || (isExp && c.planType !== 'LIFETIME')) return false;
       } else if (clientSubTab === 'ARCHIVED') {
         // Archived = Only deleted / killed / expired members
@@ -1422,7 +1433,7 @@ export default function AdminDashboard({ onLogout }) {
                     Live Clients ({clients.filter(c => {
                       const d = calculateDaysLeft(c.expiresAt);
                       const isExp = d <= 0;
-                      const isK = c.status === 'KILLED' || c.status === 'INACTIVE';
+                      const isK = c.status === 'KILLED' || c.status === 'INACTIVE' || c.status === 'DELETED';
                       return !isK && (!isExp || c.planType === 'LIFETIME');
                     }).length})
                   </button>
@@ -1439,7 +1450,7 @@ export default function AdminDashboard({ onLogout }) {
                     Archived Clients ({clients.filter(c => {
                       const d = calculateDaysLeft(c.expiresAt);
                       const isExp = d <= 0;
-                      const isK = c.status === 'KILLED' || c.status === 'INACTIVE';
+                      const isK = c.status === 'KILLED' || c.status === 'INACTIVE' || c.status === 'DELETED';
                       return isK || (isExp && c.planType !== 'LIFETIME');
                     }).length})
                   </button>
