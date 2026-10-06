@@ -571,6 +571,108 @@ async function requestPairingCode(phoneNumber) {
   }
 }
 
+/**
+ * Send Automated WhatsApp Notification to Client for Account Events
+ */
+async function sendClientNotification(client, eventType, extraInfo = {}) {
+  if (!client || !client.phone) return { success: false, reason: 'Client phone number missing' };
+  const jid = formatJid(client.phone);
+  if (!jid) return { success: false, reason: 'Invalid phone number' };
+
+  if (!sock || !isConnected) {
+    return { success: false, reason: 'WhatsApp engine not connected' };
+  }
+
+  const shopName = client.clientName || 'Client Shop';
+  const owner = client.ownerName || 'Valued Partner';
+  const formattedExpiry = client.expiresAt ? new Date(client.expiresAt).toLocaleDateString('en-IN') : 'N/A';
+
+  let messageText = '';
+
+  if (eventType === 'STATUS_CHANGE') {
+    const statusLabel = extraInfo.newStatus === 'ACTIVE' ? '✅ सक्रिय (ACTIVE)' : extraInfo.newStatus === 'KILLED' ? '🚫 ब्लॉक / सस्पेंड (KILLED)' : extraInfo.newStatus;
+    messageText = `🏪 *अपना डिजिटल हब - खाता स्थिति अपडेट* 🏪
+------------------------------------
+नमस्ते *${owner}* (${shopName}),
+
+आपके सॉफ़्टवेयर खाते की स्थिति अपडेट की गई है:
+
+वर्तमान स्थिति: *${statusLabel}*
+वैधता तिथि: *${formattedExpiry}*
+प्लांट प्रकार: *${client.planType || 'MONTHLY'}*
+
+${extraInfo.newStatus === 'ACTIVE' ? 'आपका सॉफ़्टवेयर अब पूर्ण रूप से सक्रिय है।' : 'यदि कोई प्रश्न हो तो मास्टर एडमिन से संपर्क करें।'}
+
+धन्यवाद!`;
+  } else if (eventType === 'EXPIRED') {
+    messageText = `⚠️ *अपना डिजिटल हब - प्लान समाप्त (EXPIRED)* ⚠️
+------------------------------------
+नमस्ते *${owner}* (${shopName}),
+
+आपकी सॉफ़्टवेयर सदस्यता *${formattedExpiry}* को समाप्त हो चुकी है।
+
+प्लांट प्रकार: *${client.planType || 'MONTHLY'}*
+स्थिति: *EXPIRED*
+
+सॉफ़्टवेयर सेवाएँ निरन्तर जारी रखने के लिए कृपया अपनी सदस्यता का नवीनीकरण (Renew) करवाएं।
+
+धन्यवाद!`;
+  } else if (eventType === 'KILLED') {
+    messageText = `🚫 *अपना डिजिटल हब - खाता ब्लॉक (ACCOUNT KILLED)* 🚫
+------------------------------------
+नमस्ते *${owner}* (${shopName}),
+
+सुरक्षा / प्रशासकीय कारणों से आपका सॉफ़्टवेयर खाता अस्थायी रूप से ब्लॉक कर दिया गया है।
+
+हार्डवेयर आईडी (HWID): *${client.hwid || 'N/A'}*
+स्थिति: *BLOCKED / KILLED*
+
+खाता पुन: सक्रिय करवाने के लिए मास्टर एडमिन से तुरंत संपर्क करें।
+
+धन्यवाद!`;
+  } else if (eventType === 'PROFILE_UPDATE') {
+    messageText = `⚙️ *अपना डिजिटल हब - प्रोफाइल अपडेट* ⚙️
+------------------------------------
+नमस्ते *${owner}* (${shopName}),
+
+आपके सॉफ़्टवेयर क्लाइंट प्रोफाइल विवरण में बदलाव किया गया है:
+
+दुकान का नाम: *${shopName}*
+मालिक का नाम: *${owner}*
+प्लान प्रकार: *${client.planType || 'MONTHLY'}*
+मान्य तिथि: *${formattedExpiry}*
+कुल अनुमत PC: *${client.allowedPcs || 1}*
+
+धन्यवाद!`;
+  } else if (eventType === 'HWID_UPDATE') {
+    const hwidList = Array.isArray(client.hwids) ? client.hwids.join('\n- ') : client.hwid;
+    messageText = `💻 *अपना डिजिटल हब - Hardware ID (PC) अपडेट* 💻
+------------------------------------
+नमस्ते *${owner}* (${shopName}),
+
+आपके खाते की रजिस्टर्ड PC Hardware ID (HWID) सूची अपडेट कर दी गई है:
+
+अनुमत PC संख्या: *${client.allowedPcs || 1}*
+रजिस्टर्ड HWID:
+- *${hwidList}*
+
+अब आप केवल इन्हीं रजिस्टर्ड PC से लॉगिन कर सकते हैं।
+
+धन्यवाद!`;
+  }
+
+  if (!messageText) return { success: false, reason: 'Unknown event type' };
+
+  try {
+    const res = await enqueueMessage(() => sock.sendMessage(jid, { text: messageText }));
+    console.log(`🚀 CLIENT NOTIFICATION WHATSAPP SENT to ${client.phone} for event [${eventType}]`);
+    return { success: true, messageId: res?.key?.id || 'SENT' };
+  } catch (err) {
+    console.error(`Failed to send client notification [${eventType}]:`, err);
+    return { success: false, error: err.message };
+  }
+}
+
 module.exports = {
   initWhatsApp,
   logoutWhatsApp,
@@ -581,5 +683,6 @@ module.exports = {
   sendPDFDocument: (mobile, pdfFilePath, cert) => enqueueMessage(() => sendPDFDocument(mobile, pdfFilePath, cert)),
   getWhatsAppStatus,
   sendTestWhatsAppMessage,
+  sendClientNotification,
 };
 

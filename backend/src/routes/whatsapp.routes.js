@@ -49,6 +49,21 @@ router.post('/test-message', async (req, res) => {
   }
 });
 
+// Send Automated Client Notification (STATUS_CHANGE, EXPIRED, KILLED, PROFILE_UPDATE, HWID_UPDATE)
+router.post('/notify-client', async (req, res) => {
+  try {
+    const { sendClientNotification } = require('../services/whatsapp.service');
+    const { client, eventType, extraInfo } = req.body;
+    if (!client || !client.phone || !eventType) {
+      return res.status(400).json({ success: false, error: 'Client details & eventType required' });
+    }
+    const result = await sendClientNotification(client, eventType, extraInfo);
+    res.json(result);
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
 // Logout / Unlink WhatsApp Device
 router.post('/logout', async (req, res) => {
   try {

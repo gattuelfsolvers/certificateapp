@@ -416,6 +416,16 @@ export default function AdminDashboard({ onLogout }) {
       await saveClientToFirebase(payload);
       setIsModalOpen(false);
       showToast('success', 'Client Saved', `Client ${payload.clientName} saved successfully with ${payload.hwids.length} Whitelisted HWID(s)!`);
+
+      // Auto-dispatch WhatsApp Notification to Client
+      try {
+        const eventType = editingClient ? 'PROFILE_UPDATE' : 'STATUS_CHANGE';
+        fetch('/api/whatsapp/notify-client', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ client: payload, eventType, extraInfo: { newStatus: payload.status } })
+        }).catch(() => {});
+      } catch (e) {}
     } catch (err) {
       showToast('error', 'Error Saving Client', err.message);
     }
@@ -423,6 +433,7 @@ export default function AdminDashboard({ onLogout }) {
 
   const handleToggleStatus = async (hwid, currentStatus) => {
     const newStatus = currentStatus === 'ACTIVE' ? 'KILLED' : 'ACTIVE';
+    const targetClient = clients.find(c => (c.hwid === hwid || c.id === hwid));
     try {
       await updateClientStatusOnFirebase(hwid, newStatus);
       showToast(
@@ -430,6 +441,19 @@ export default function AdminDashboard({ onLogout }) {
         'Status Changed', 
         `Client license status set to ${newStatus}`
       );
+
+      // Auto-dispatch WhatsApp Notification for KILLED / ACTIVE toggle
+      if (targetClient) {
+        fetch('/api/whatsapp/notify-client', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            client: { ...targetClient, status: newStatus },
+            eventType: newStatus === 'KILLED' ? 'KILLED' : 'STATUS_CHANGE',
+            extraInfo: { newStatus }
+          })
+        }).catch(() => {});
+      }
     } catch (err) {
       showToast('error', 'Update Failed', err.message);
     }
@@ -459,12 +483,21 @@ export default function AdminDashboard({ onLogout }) {
       const newHwid = `HWID-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
       const newKey = generateLicenseKey(newHwid, client.planType || 'MONTHLY').licenseKey;
 
-      await saveClientToFirebase({
+      const updated = {
         ...client,
         hwid: newHwid,
+        hwids: [newHwid],
         licenseKey: newKey
-      });
+      };
+      await saveClientToFirebase(updated);
       showToast('info', 'HWID Reset Complete', `Device lock reset for ${client.clientName}. Ready for formatted PC re-activation!`);
+
+      // Auto-dispatch WhatsApp Notification for HWID Reset
+      fetch('/api/whatsapp/notify-client', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ client: updated, eventType: 'HWID_UPDATE' })
+      }).catch(() => {});
     } catch (err) {
       showToast('error', 'Reset Failed', err.message);
     }
