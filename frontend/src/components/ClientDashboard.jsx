@@ -181,6 +181,7 @@ export default function ClientDashboard({ clientData, onLogout }) {
   const totalRecords = certificates.length;
   const underProcessCount = certificates.filter(c => c.currentStatus && c.currentStatus.includes('UNDER_PROCESS')).length;
   const deliveredCount = certificates.filter(c => c.currentStatus && c.currentStatus.includes('DELIVERED')).length;
+  const rejectedCount = certificates.filter(c => c.currentStatus && c.currentStatus.includes('REJECTED')).length;
   const totalFees = certificates.reduce((sum, c) => sum + (parseFloat(c.totalFee) || 0), 0);
   const totalDues = certificates.reduce((sum, c) => sum + (parseFloat(c.duesAmount) || 0), 0);
 
@@ -360,7 +361,7 @@ export default function ClientDashboard({ clientData, onLogout }) {
       <main className="w-full px-6 md:px-10 py-8 flex-1 space-y-8">
         
         {/* KPI Metric Summary Cards - FULL PAGE WIDTH */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 w-full">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3.5 w-full">
           <div className="bg-blue-50/70 border border-blue-200/80 rounded-2xl p-4 shadow-sm flex items-center justify-between">
             <div>
               <p className="text-xs font-bold text-blue-700 mb-1">Total Records</p>
@@ -388,6 +389,16 @@ export default function ClientDashboard({ clientData, onLogout }) {
             </div>
             <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
               <CheckCircle2 className="w-5 h-5" />
+            </div>
+          </div>
+
+          <div className="bg-amber-50/70 border border-amber-200/80 rounded-2xl p-4 shadow-sm flex items-center justify-between">
+            <div>
+              <p className="text-xs font-bold text-amber-700 mb-1">Rejected</p>
+              <h3 className="text-2xl font-extrabold text-amber-900">{rejectedCount}</h3>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold">
+              <XCircle className="w-5 h-5" />
             </div>
           </div>
 
