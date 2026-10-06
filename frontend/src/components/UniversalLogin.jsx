@@ -331,7 +331,7 @@ export default function UniversalLogin({ onLoginSuccess }) {
           return;
         }
 
-        // Multi-HWID Whitelisting Verification
+        // Strict Multi-HWID Whitelisting Verification
         const whitelistedHwids = Array.isArray(matchedClient.hwids) && matchedClient.hwids.length > 0 
           ? matchedClient.hwids.map(h => h.toUpperCase())
           : [(matchedClient.hwid || '').toUpperCase()];
@@ -342,21 +342,18 @@ export default function UniversalLogin({ onLoginSuccess }) {
           const cleanCurrentHwid = currentSystemHwid.toUpperCase();
           const isWhitelisted = whitelistedHwids.includes(cleanCurrentHwid);
 
-          if (!isWhitelisted && whitelistedHwids.length < maxPcs) {
-            // Auto-bind / Whitelist current real System HWID to Client account
-            const updatedHwids = [...whitelistedHwids, cleanCurrentHwid];
-            matchedClient.hwid = cleanCurrentHwid;
-            matchedClient.hwids = updatedHwids;
-            saveClientToFirebase(matchedClient).catch(() => {});
-          } else if (!isWhitelisted && whitelistedHwids.length >= maxPcs) {
-            // Replace placeholder if single PC and contains generic REQ / HWID placeholder
-            const hasPlaceholder = whitelistedHwids.some(h => h.startsWith('REQ-') || h.startsWith('LIC-') || h.startsWith('HWID-'));
-            if (hasPlaceholder) {
+          if (!isWhitelisted) {
+            // Check if current whitelisted list contains unassigned placeholder REQ- keys from fresh web registrations
+            const isFreshRegistrationPlaceholder = whitelistedHwids.length === 1 && (whitelistedHwids[0].startsWith('REQ-') || whitelistedHwids[0].startsWith('LIC-REQ-'));
+            
+            if (isFreshRegistrationPlaceholder) {
+              // Bind first real PC HWID for fresh web registration account
               matchedClient.hwid = cleanCurrentHwid;
               matchedClient.hwids = [cleanCurrentHwid];
               saveClientToFirebase(matchedClient).catch(() => {});
             } else {
-              setError(`Login Blocked: This System Hardware ID (${cleanCurrentHwid}) is not Whitelisted! Plan allows maximum ${maxPcs} PC(s). Please contact Admin.`);
+              // Strictly Block login on any unregistered/un-whitelisted PC
+              setError(`Login Blocked: This PC Hardware ID (${cleanCurrentHwid}) is NOT whitelisted for this account! Your plan limit is ${maxPcs} PC(s). Please contact Admin (7781931880) to add this PC or reset device lock.`);
               setLoading(false);
               return;
             }
