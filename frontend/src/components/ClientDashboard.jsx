@@ -955,16 +955,16 @@ export default function ClientDashboard({ clientData, onLogout }) {
 
           <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm w-full">
             <div className="overflow-x-auto w-full">
-              <table className="w-full text-left border-collapse">
+              <table className="w-full text-center border-collapse">
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">
-                    <th className="px-6 py-4">Ref Number</th>
-                    <th className="px-6 py-4">Applicant & Phone</th>
-                    <th className="px-6 py-4">Cert Type</th>
-                    <th className="px-6 py-4">Entry Date</th>
-                    <th className="px-6 py-4">Status</th>
-                    <th className="px-6 py-4">Fees / Dues</th>
-                    <th className="px-6 py-4 text-right">Actions</th>
+                    <th className="px-6 py-4 text-center">Ref Number</th>
+                    <th className="px-6 py-4 text-center">Applicant & Phone</th>
+                    <th className="px-6 py-4 text-center">Cert Type</th>
+                    <th className="px-6 py-4 text-center">Entry Date</th>
+                    <th className="px-6 py-4 text-center">Status</th>
+                    <th className="px-6 py-4 text-center">Fees / Dues</th>
+                    <th className="px-6 py-4 text-center">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-xs font-medium">
@@ -983,27 +983,27 @@ export default function ClientDashboard({ clientData, onLogout }) {
                   ) : (
                     filteredCertificates.map((cert) => (
                       <tr key={cert.id} className="hover:bg-blue-50/20 transition">
-                        <td className="px-6 py-4 font-mono font-bold text-blue-700">
+                        <td className="px-6 py-4 font-mono font-bold text-blue-700 text-center">
                           {cert.refNo}
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="px-6 py-4 text-center">
                           <div className="font-bold text-slate-900">{cert.applicantName}</div>
                           <div className="text-[11px] text-slate-500 font-mono">{cert.mobile}</div>
                         </td>
-                        <td className="px-6 py-4">
-                          <span className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 border border-slate-200 text-[10px] font-black">
+                        <td className="px-6 py-4 text-center">
+                          <span className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 border border-slate-200 text-[10px] font-black inline-block">
                             {cert.certType}
                           </span>
                         </td>
-                        <td className="px-6 py-4 text-slate-600 font-mono font-semibold">
+                        <td className="px-6 py-4 text-slate-600 font-mono font-semibold text-center">
                           {formatDateDDMMYYYY(cert.entryDate)}
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="px-6 py-4 text-center">
                           <span className={`px-3 py-1 rounded-full text-[10px] uppercase font-black inline-block tracking-tight ${getStatusBadgeStyle(cert.currentStatus)}`}>
                             {cert.currentStatus || 'INITIATED'}
                           </span>
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="px-6 py-4 text-center">
                           <div className="font-bold text-slate-900">Paid: ₹{cert.paidAmount} / ₹{cert.totalFee}</div>
                           {cert.duesAmount > 0 ? (
                             <div className="text-[10px] text-rose-600 font-bold">Dues: ₹{cert.duesAmount}</div>
@@ -1011,8 +1011,8 @@ export default function ClientDashboard({ clientData, onLogout }) {
                             <div className="text-[10px] text-emerald-600 font-bold">Fully Paid</div>
                           )}
                         </td>
-                        <td className="px-6 py-4 text-right">
-                          <div className="flex items-center justify-end gap-1.5">
+                        <td className="px-6 py-4 text-center">
+                          <div className="flex items-center justify-center gap-1.5">
                             {/* 1. Sync Status Bot */}
                             <button
                               onClick={() => handleSyncSingle(cert)}
