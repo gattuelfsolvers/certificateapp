@@ -99,6 +99,22 @@ export default function ClientDashboard({ clientData, onLogout }) {
   const [draftList, setDraftList] = useState([]);
   const [paidAmountInput, setPaidAmountInput] = useState(100);
 
+  // View & Edit Modal States
+  const [viewingCert, setViewingCert] = useState(null);
+  const [editingCert, setEditingCert] = useState(null);
+  const [editFormData, setEditFormData] = useState({
+    id: '',
+    refNo: '',
+    applicantName: '',
+    mobile: '',
+    address: '',
+    certType: 'JHIC',
+    entryDate: '',
+    currentStatus: 'INITIATED',
+    totalFee: 100,
+    paidAmount: 100
+  });
+
   useEffect(() => {
     loadCertificates();
   }, []);
@@ -262,6 +278,54 @@ export default function ClientDashboard({ clientData, onLogout }) {
       showToast('success', 'Records Saved', `${itemsToSave.length} Certificate record(s) saved successfully!`);
     } catch (err) {
       showToast('error', 'Save Failed', err.message);
+    }
+  };
+
+  const handleOpenViewModal = (cert) => {
+    setViewingCert(cert);
+  };
+
+  const handleOpenEditModal = (cert) => {
+    setEditingCert(cert);
+    setEditFormData({
+      id: cert.id,
+      refNo: cert.refNo || '',
+      applicantName: cert.applicantName || '',
+      mobile: cert.mobile || '',
+      address: cert.address || '',
+      certType: cert.certType || 'JHIC',
+      entryDate: cert.entryDate || new Date().toISOString().split('T')[0],
+      currentStatus: cert.currentStatus || 'INITIATED',
+      totalFee: cert.totalFee || 100,
+      paidAmount: cert.paidAmount || 100
+    });
+  };
+
+  const handleSaveEditCertificate = async (e) => {
+    e.preventDefault();
+    try {
+      const total = parseFloat(editFormData.totalFee) || 0;
+      const paid = parseFloat(editFormData.paidAmount) || 0;
+      const dues = Math.max(0, total - paid);
+
+      const payload = {
+        ...editFormData,
+        refNo: editFormData.refNo.trim().toUpperCase(),
+        applicantName: editFormData.applicantName.trim(),
+        mobile: editFormData.mobile.trim(),
+        address: editFormData.address ? editFormData.address.trim() : '',
+        totalFee: total,
+        paidAmount: paid,
+        duesAmount: dues,
+        updatedAt: new Date().toISOString()
+      };
+
+      await saveCertificateToFirebase(payload);
+      setEditingCert(null);
+      loadCertificates();
+      showToast('success', 'Entry Updated', `Certificate ${payload.refNo} updated successfully!`);
+    } catch (err) {
+      showToast('error', 'Update Failed', err.message);
     }
   };
 
@@ -717,21 +781,39 @@ export default function ClientDashboard({ clientData, onLogout }) {
                         </td>
                         <td className="px-6 py-4 text-right">
                           <div className="flex items-center justify-end gap-1.5">
-                            {/* Sync Status Bot Button */}
+                            {/* 1. Sync Status Bot */}
                             <button
                               onClick={() => handleSyncSingle(cert)}
                               disabled={syncingId === cert.id}
                               title="Sync Jharsewa Status"
-                              className="p-2 rounded-xl bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 transition shadow-sm"
+                              className="p-2 rounded-xl bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 transition shadow-xs"
                             >
                               <RefreshCw className={`w-4 h-4 ${syncingId === cert.id ? 'animate-spin' : ''}`} />
                             </button>
 
-                            {/* Delete */}
+                            {/* 2. View Entry */}
+                            <button
+                              onClick={() => handleOpenViewModal(cert)}
+                              title="View Details"
+                              className="p-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 transition shadow-xs"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+
+                            {/* 3. Edit Entry */}
+                            <button
+                              onClick={() => handleOpenEditModal(cert)}
+                              title="Edit Entry"
+                              className="p-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 transition shadow-xs"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+
+                            {/* 4. Delete Entry */}
                             <button
                               onClick={() => handleDeleteCertificate(cert.id, cert.refNo)}
                               title="Delete Entry"
-                              className="p-2 rounded-xl bg-slate-100 hover:bg-rose-100 text-rose-600 border border-slate-200 transition shadow-sm"
+                              className="p-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 transition shadow-xs"
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
@@ -1003,6 +1085,233 @@ export default function ClientDashboard({ clientData, onLogout }) {
                 >
                   <FileText className="w-4 h-4" />
                   Save Certificate Record(s)
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* VIEW CERTIFICATE MODAL */}
+      {viewingCert && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 max-w-xl w-full shadow-2xl space-y-5 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 font-extrabold">
+                  <Eye className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-extrabold text-slate-900">Certificate Details</h3>
+                  <p className="text-xs text-blue-600 font-mono font-bold">{viewingCert.refNo}</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setViewingCert(null)}
+                className="p-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4 text-xs font-semibold">
+              <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                <div>
+                  <p className="text-slate-400 font-bold mb-0.5">Applicant Name</p>
+                  <p className="text-sm font-bold text-slate-900">{viewingCert.applicantName}</p>
+                </div>
+                <div>
+                  <p className="text-slate-400 font-bold mb-0.5">WhatsApp Mobile</p>
+                  <p className="text-sm font-mono font-bold text-slate-900 flex items-center gap-1.5">
+                    <Smartphone className="w-4 h-4 text-emerald-600" />
+                    {viewingCert.mobile}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-slate-400 font-bold mb-0.5">Village / Address</p>
+                  <p className="text-slate-800">{viewingCert.address || 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="text-slate-400 font-bold mb-0.5">Application Date</p>
+                  <p className="text-slate-800 font-mono">{viewingCert.entryDate ? new Date(viewingCert.entryDate).toLocaleDateString() : 'N/A'}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3 bg-blue-50/50 p-4 rounded-2xl border border-blue-100">
+                <div>
+                  <p className="text-slate-500 font-bold mb-0.5">Cert Sub-Type</p>
+                  <span className="px-2.5 py-1 rounded-lg bg-blue-600 text-white font-black text-[10px]">
+                    {viewingCert.certType}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-slate-500 font-bold mb-0.5">Status</p>
+                  <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 font-extrabold text-[10px]">
+                    {viewingCert.currentStatus || 'INITIATED'}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-slate-500 font-bold mb-0.5">Fees & Dues</p>
+                  <p className="text-slate-900 font-bold">Paid: ₹{viewingCert.paidAmount} / ₹{viewingCert.totalFee}</p>
+                  {viewingCert.duesAmount > 0 ? (
+                    <p className="text-rose-600 font-bold text-[11px]">Dues: ₹{viewingCert.duesAmount}</p>
+                  ) : (
+                    <p className="text-emerald-600 font-bold text-[11px]">Fully Paid</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+              <button
+                onClick={() => setViewingCert(null)}
+                className="px-5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs"
+              >
+                Close
+              </button>
+              <button
+                onClick={() => {
+                  const target = viewingCert;
+                  setViewingCert(null);
+                  handleOpenEditModal(target);
+                }}
+                className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm"
+              >
+                <Edit className="w-4 h-4" />
+                Edit Entry
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT CERTIFICATE MODAL */}
+      {editingCert && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 max-w-lg w-full shadow-2xl space-y-4 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                <Edit className="w-5 h-5 text-amber-600" />
+                Edit Certificate Entry
+              </h3>
+              <button 
+                onClick={() => setEditingCert(null)}
+                className="text-slate-400 hover:text-slate-700 text-2xl font-bold"
+              >
+                &times;
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditCertificate} className="space-y-3 text-xs font-medium">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-700 font-bold mb-1">Certificate Sub-Type</label>
+                  <select
+                    value={editFormData.certType}
+                    onChange={(e) => setEditFormData(prev => ({ ...prev, certType: e.target.value }))}
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-900 font-bold"
+                  >
+                    {CERTIFICATE_CATEGORIES.flatMap(c => c.subServices).map(s => (
+                      <option key={s.code} value={s.code}>{s.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-slate-700 font-bold mb-1">Reference Number *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editFormData.refNo}
+                    onChange={(e) => setEditFormData(prev => ({ ...prev, refNo: e.target.value }))}
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-blue-700 font-mono font-bold"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-700 font-bold mb-1">Applicant Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editFormData.applicantName}
+                    onChange={(e) => setEditFormData(prev => ({ ...prev, applicantName: e.target.value }))}
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-900 font-semibold"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-700 font-bold mb-1">WhatsApp Mobile No *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editFormData.mobile}
+                    onChange={(e) => setEditFormData(prev => ({ ...prev, mobile: e.target.value }))}
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-900 font-mono font-semibold"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-slate-700 font-bold mb-1">Village / Address</label>
+                <input
+                  type="text"
+                  value={editFormData.address}
+                  onChange={(e) => setEditFormData(prev => ({ ...prev, address: e.target.value }))}
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-900"
+                />
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-slate-700 font-bold mb-1">Total Fee (₹)</label>
+                  <input
+                    type="number"
+                    value={editFormData.totalFee}
+                    onChange={(e) => setEditFormData(prev => ({ ...prev, totalFee: e.target.value }))}
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-900 font-bold"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-700 font-bold mb-1">Paid Amount (₹)</label>
+                  <input
+                    type="number"
+                    value={editFormData.paidAmount}
+                    onChange={(e) => setEditFormData(prev => ({ ...prev, paidAmount: e.target.value }))}
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-900 font-bold"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-700 font-bold mb-1">Application Status</label>
+                  <select
+                    value={editFormData.currentStatus}
+                    onChange={(e) => setEditFormData(prev => ({ ...prev, currentStatus: e.target.value }))}
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-900 font-bold text-xs"
+                  >
+                    <option value="INITIATED">INITIATED</option>
+                    <option value="UNDER_PROCESS">UNDER_PROCESS</option>
+                    <option value="DELIVERED">DELIVERED</option>
+                    <option value="REJECTED">REJECTED</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setEditingCert(null)}
+                  className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold shadow"
+                >
+                  Update Entry
                 </button>
               </div>
             </form>
