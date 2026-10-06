@@ -853,15 +853,15 @@ export default function ClientDashboard({ clientData, onLogout }) {
               </span>
             </button>
 
-            {/* Category Buttons: JHIC, CST, RES, OBC, EWS, MRG, PAN CARD */}
+            {/* Category Buttons with Custom Vibrant Themes */}
             {[
-              { id: 'income', label: 'JHIC' },
-              { id: 'caste', label: 'CST' },
-              { id: 'residential', label: 'RES' },
-              { id: 'obc', label: 'OBC' },
-              { id: 'ews', label: 'EWS' },
-              { id: 'marriage', label: 'MRG' },
-              { id: 'pancard', label: 'PAN CARD' }
+              { id: 'income', label: 'JHIC', activeBg: 'bg-emerald-600 text-white border-emerald-600', inactiveBg: 'bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border-emerald-200', badgeActive: 'bg-white/20 text-white', badgeInactive: 'bg-emerald-200/80 text-emerald-900' },
+              { id: 'caste', label: 'CST', activeBg: 'bg-purple-600 text-white border-purple-600', inactiveBg: 'bg-purple-50 hover:bg-purple-100 text-purple-900 border-purple-200', badgeActive: 'bg-white/20 text-white', badgeInactive: 'bg-purple-200/80 text-purple-900' },
+              { id: 'residential', label: 'RES', activeBg: 'bg-blue-600 text-white border-blue-600', inactiveBg: 'bg-blue-50 hover:bg-blue-100 text-blue-900 border-blue-200', badgeActive: 'bg-white/20 text-white', badgeInactive: 'bg-blue-200/80 text-blue-900' },
+              { id: 'obc', label: 'OBC', activeBg: 'bg-fuchsia-600 text-white border-fuchsia-600', inactiveBg: 'bg-fuchsia-50 hover:bg-fuchsia-100 text-fuchsia-900 border-fuchsia-200', badgeActive: 'bg-white/20 text-white', badgeInactive: 'bg-fuchsia-200/80 text-fuchsia-900' },
+              { id: 'ews', label: 'EWS', activeBg: 'bg-teal-600 text-white border-teal-600', inactiveBg: 'bg-teal-50 hover:bg-teal-100 text-teal-900 border-teal-200', badgeActive: 'bg-white/20 text-white', badgeInactive: 'bg-teal-200/80 text-teal-900' },
+              { id: 'marriage', label: 'MRG', activeBg: 'bg-rose-600 text-white border-rose-600', inactiveBg: 'bg-rose-50 hover:bg-rose-100 text-rose-900 border-rose-200', badgeActive: 'bg-white/20 text-white', badgeInactive: 'bg-rose-200/80 text-rose-900' },
+              { id: 'pancard', label: 'PAN CARD', activeBg: 'bg-amber-600 text-white border-amber-600', inactiveBg: 'bg-amber-50 hover:bg-amber-100 text-amber-900 border-amber-200', badgeActive: 'bg-white/20 text-white', badgeInactive: 'bg-amber-200/80 text-amber-900' }
             ].map((catItem) => {
               const count = getCategoryRecordCount(catItem.id);
               const isActive = categoryFilter === catItem.id;
@@ -871,14 +871,12 @@ export default function ClientDashboard({ clientData, onLogout }) {
                   key={catItem.id}
                   onClick={() => setCategoryFilter(isActive ? 'ALL' : catItem.id)}
                   className={`w-full flex items-center justify-center gap-1.5 px-2 py-2 rounded-xl text-xs font-extrabold transition border ${
-                    isActive
-                      ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
-                      : 'bg-white hover:bg-slate-50 text-slate-800 border-slate-200'
+                    isActive ? catItem.activeBg : catItem.inactiveBg
                   }`}
                 >
                   <span>{catItem.label}</span>
                   <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
-                    isActive ? 'bg-white/20 text-white' : 'bg-blue-50 text-blue-800 border border-blue-100'
+                    isActive ? catItem.badgeActive : catItem.badgeInactive
                   }`}>
                     {count}
                   </span>
@@ -924,9 +922,9 @@ export default function ClientDashboard({ clientData, onLogout }) {
               <button 
                 onClick={loadCertificates}
                 title="Refresh Records List"
-                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-xs font-bold transition shadow-xs"
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-cyan-50 hover:bg-cyan-100 text-cyan-800 border border-cyan-200 text-xs font-extrabold transition shadow-xs"
               >
-                <RefreshCw className={`w-4 h-4 text-slate-500 ${loading ? 'animate-spin' : ''}`} />
+                <RefreshCw className={`w-4 h-4 text-cyan-600 ${loading ? 'animate-spin' : ''}`} />
                 <span>Sync List</span>
               </button>
 
