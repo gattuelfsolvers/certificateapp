@@ -889,6 +889,13 @@ export default function AdminDashboard({ onLogout }) {
   const pendingRequests = clients.filter(c => c.status === 'PENDING');
   const pendingCount = pendingRequests.length;
 
+  const calculateDaysLeft = (expiresAtStr) => {
+    if (!expiresAtStr) return 0;
+    const diffTime = new Date(expiresAtStr) - new Date();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+  };
+
   // Filtered & Sorted Clients according to clientSubTab & statusFilter
   const filteredClients = clients
     .filter(c => {
@@ -929,13 +936,6 @@ export default function AdminDashboard({ onLogout }) {
       }
       return 0;
     });
-
-  const calculateDaysLeft = (expiresAtStr) => {
-    if (!expiresAtStr) return 0;
-    const diffTime = new Date(expiresAtStr) - new Date();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays;
-  };
 
   return (
     <div className="min-h-screen bg-slate-100 text-slate-800 flex font-sans w-full">
