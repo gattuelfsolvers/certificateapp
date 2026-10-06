@@ -894,12 +894,8 @@ export default function AdminDashboard({ onLogout }) {
 
   // Access Requests Notification (All New Registrations with status PENDING)
   const accessRequests = clients.filter(c => {
-    const id = c.hwid || c.id;
-    if (dismissedRequests.includes(id)) return false;
-    
     // Any registration account with status PENDING (Paid or Free Demo)
     if (c.status === 'PENDING') return true;
-    
     return false;
   });
 
