@@ -125,19 +125,55 @@ export default function AdminDashboard({ onLogout }) {
     let isMounted = true;
     const checkWaStatus = async () => {
       try {
-        const res = await fetch('/api/whatsapp/status');
-        if (!res.ok) throw new Error('API offline');
-        const data = await res.json();
-        if (data.success && isMounted) {
-          if (data.isConnected) {
+        let isConn = false;
+        let phone = null;
+        let qrData = null;
+
+        // 1. First check cloud backend API status
+        try {
+          const res = await fetch('/api/whatsapp/status');
+          if (res.ok) {
+            const data = await res.json();
+            if (data.success && data.isConnected) {
+              isConn = true;
+              phone = data.connectedPhone;
+            } else if (data.qrCodeData) {
+              qrData = data.qrCodeData;
+            }
+          }
+        } catch (e) {}
+
+        // 2. If cloud is disconnected, check Local PC Gateway Engine on localhost:5000
+        if (!isConn) {
+          try {
+            const localRes = await fetch('http://localhost:5000/api/whatsapp/status');
+            if (localRes.ok) {
+              const localData = await localRes.json();
+              if (localData.success && localData.isConnected) {
+                isConn = true;
+                phone = localData.connectedPhone;
+              } else if (localData.qrCodeData) {
+                qrData = localData.qrCodeData;
+              }
+            }
+          } catch (e) {}
+        }
+
+        if (isMounted) {
+          if (isConn) {
             setWhatsappConfig(prev => ({
               ...prev,
               instanceStatus: 'CONNECTED',
-              connectedPhone: data.connectedPhone || prev.connectedPhone || '919876543210'
+              connectedPhone: phone || prev.connectedPhone || '917781931880'
             }));
           } else {
-            if (data.qrCodeData && data.qrCodeData.startsWith('data:image')) {
-              setBackendQrUri(data.qrCodeData);
+            setWhatsappConfig(prev => ({
+              ...prev,
+              instanceStatus: 'DISCONNECTED',
+              connectedPhone: 'NOT_LINKED'
+            }));
+            if (qrData && qrData.startsWith('data:image')) {
+              setBackendQrUri(qrData);
             } else {
               setBackendQrUri('/public/whatsapp-qr.png');
             }
