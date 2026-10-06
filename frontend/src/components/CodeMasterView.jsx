@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Code, Plus, Edit, Trash2, Check, RefreshCw, Layers, Shield, Tag, 
-  IndianRupee, FileText, Search, AlertCircle, CheckCircle2, RotateCcw
+  IndianRupee, FileText, Search, AlertCircle, CheckCircle2, RotateCcw, FolderPlus
 } from 'lucide-react';
 import { CERTIFICATE_CATEGORIES as DEFAULT_CATEGORIES } from '../constants/certificateTypes';
 
@@ -18,9 +18,18 @@ export default function CodeMasterView({ showToast }) {
   const [search, setSearch] = useState('');
   const [selectedCatId, setSelectedCatId] = useState('ALL');
 
-  // Modal States
+  // Modal States for Code Sub-Services
   const [isAddSubModalOpen, setIsAddSubModalOpen] = useState(false);
   const [editingSubService, setEditingSubService] = useState(null); // { catId, sub }
+
+  // Modal States for Parent Categories (Add & Edit)
+  const [isCatModalOpen, setIsCatModalOpen] = useState(false);
+  const [editingCat, setEditingCat] = useState(null); // category object or null
+  const [catForm, setCatForm] = useState({
+    name: '',
+    title: '',
+    color: 'emerald'
+  });
 
   // Form State for Add / Edit Sub-Service
   const [subForm, setSubForm] = useState({
@@ -38,14 +47,88 @@ export default function CodeMasterView({ showToast }) {
 
   // Handle resetting back to original system defaults
   const handleResetToDefaults = () => {
-    if (window.confirm('Are you sure you want to reset all Code Master settings to original system defaults? Custom added codes will be removed.')) {
+    if (window.confirm('Are you sure you want to reset all Code Master settings to original system defaults? Custom added categories and codes will be restored to default.')) {
       setCategories(DEFAULT_CATEGORIES);
       localStorage.removeItem('CUSTOM_CERT_CATEGORIES');
       if (showToast) showToast('info', 'Code Master Reset', 'Restored original default certificate categories and codes.');
     }
   };
 
-  // Open Modal for Add
+  // --- PARENT CATEGORY MANAGEMENT HANDLERS ---
+  const handleOpenAddCategory = () => {
+    setCatForm({
+      name: '',
+      title: '',
+      color: 'blue'
+    });
+    setEditingCat(null);
+    setIsCatModalOpen(true);
+  };
+
+  const handleOpenEditCategory = (cat) => {
+    setCatForm({
+      name: cat.name,
+      title: cat.title,
+      color: cat.color || 'blue'
+    });
+    setEditingCat(cat);
+    setIsCatModalOpen(true);
+  };
+
+  const handleSaveCategory = (e) => {
+    e.preventDefault();
+    if (!catForm.name.trim()) {
+      if (showToast) showToast('error', 'Category Name Required', 'Please enter Category Name (e.g. PASSPORT)');
+      return;
+    }
+
+    const cleanName = catForm.name.trim().toUpperCase();
+    const cleanId = editingCat ? editingCat.id : cleanName.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+    if (editingCat) {
+      // Edit Category
+      setCategories(prev => prev.map(cat => {
+        if (cat.id === editingCat.id) {
+          return {
+            ...cat,
+            name: cleanName,
+            title: catForm.title.trim() || `${cleanName} Services`,
+            color: catForm.color || 'blue'
+          };
+        }
+        return cat;
+      }));
+      if (showToast) showToast('success', 'Category Updated', `Parent category ${cleanName} updated successfully.`);
+    } else {
+      // Add New Category
+      if (categories.some(c => c.id === cleanId)) {
+        if (showToast) showToast('error', 'Category Exists', 'A category with this name already exists.');
+        return;
+      }
+      const newCatObj = {
+        id: cleanId,
+        name: cleanName,
+        title: catForm.title.trim() || `${cleanName} Services`,
+        icon: 'Layers',
+        color: catForm.color || 'blue',
+        subServices: []
+      };
+      setCategories(prev => [...prev, newCatObj]);
+      if (showToast) showToast('success', 'Category Created', `Parent category ${cleanName} created!`);
+    }
+
+    setIsCatModalOpen(false);
+  };
+
+  const handleDeleteCategory = (catId, catName) => {
+    if (!window.confirm(`Are you sure you want to delete Parent Category "${catName}"? All codes under this category will be removed.`)) return;
+
+    setCategories(prev => prev.filter(c => c.id !== catId));
+    if (selectedCatId === catId) setSelectedCatId('ALL');
+    if (showToast) showToast('info', 'Category Deleted', `Parent category ${catName} removed.`);
+  };
+
+  // --- SUB-SERVICE CODE MANAGEMENT HANDLERS ---
   const handleOpenAdd = () => {
     const defaultCat = categories[0] ? categories[0].id : 'income';
     setSubForm({
@@ -59,7 +142,6 @@ export default function CodeMasterView({ showToast }) {
     setIsAddSubModalOpen(true);
   };
 
-  // Open Modal for Edit
   const handleOpenEdit = (catId, sub) => {
     setSubForm({
       parentCatId: catId,
@@ -72,7 +154,6 @@ export default function CodeMasterView({ showToast }) {
     setIsAddSubModalOpen(true);
   };
 
-  // Handle Parent Category selection in Form -> auto update prefix
   const handleFormCategoryChange = (catId) => {
     setSubForm(prev => {
       const codePart = prev.code ? prev.code.toUpperCase() : 'NEW';
@@ -84,7 +165,6 @@ export default function CodeMasterView({ showToast }) {
     });
   };
 
-  // Handle Code Change in Form -> auto update prefix
   const handleFormCodeChange = (val) => {
     const cleanCode = val.toUpperCase().replace(/[^A-Z0-9]/g, '');
     setSubForm(prev => ({
@@ -94,7 +174,6 @@ export default function CodeMasterView({ showToast }) {
     }));
   };
 
-  // Save Sub-Service (Add or Update)
   const handleSaveSubService = (e) => {
     e.preventDefault();
     if (!subForm.code.trim()) {
@@ -111,7 +190,6 @@ export default function CodeMasterView({ showToast }) {
     const feeNum = parseFloat(subForm.defaultFee) || 100;
 
     const newCategories = categories.map(cat => {
-      // Remove old sub-service if moving categories or updating
       let updatedSubServices = cat.subServices.filter(s => {
         if (editingSubService) {
           return s.code !== editingSubService.oldCode;
@@ -119,7 +197,6 @@ export default function CodeMasterView({ showToast }) {
         return s.code !== cleanCode;
       });
 
-      // Add to new parent category
       if (cat.id === subForm.parentCatId) {
         updatedSubServices.push({
           code: cleanCode,
@@ -142,7 +219,6 @@ export default function CodeMasterView({ showToast }) {
     }
   };
 
-  // Delete Sub-Service
   const handleDeleteSubService = (catId, code) => {
     if (!window.confirm(`Are you sure you want to delete certificate code ${code} from Code Master?`)) return;
 
@@ -170,7 +246,6 @@ export default function CodeMasterView({ showToast }) {
     }))
   );
 
-  // Filtered List
   const filteredSubServices = allSubServices.filter(item => {
     const matchesCat = selectedCatId === 'ALL' || item.parentCatId === selectedCatId;
     const matchesSearch = 
@@ -196,64 +271,114 @@ export default function CodeMasterView({ showToast }) {
               </span>
             </h2>
             <p className="text-xs text-slate-400 mt-1 max-w-xl">
-              Add, edit, or remove certificate sub-types, custom prefix codes (e.g., <span className="text-emerald-300 font-mono">JHIC/2026/</span>), and default service fees across all categories.
+              Add, edit, or remove parent categories, certificate sub-types, custom prefix codes (e.g., <span className="text-emerald-300 font-mono">JHIC/2026/</span>), and default fees.
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3 w-full md:w-auto">
+        <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto justify-end">
           <button
             onClick={handleResetToDefaults}
             title="Reset to Original Defaults"
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs font-bold transition shadow-sm"
+            className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs font-bold transition shadow-sm"
           >
             <RotateCcw className="w-4 h-4 text-amber-400" />
             <span>Reset Defaults</span>
           </button>
 
           <button
-            onClick={handleOpenAdd}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs shadow-lg transition cursor-pointer"
+            onClick={handleOpenAddCategory}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-md transition cursor-pointer"
           >
-            <Plus className="w-4.5 h-4.5" />
-            <span>+ Add New Certificate Code</span>
+            <FolderPlus className="w-4 h-4" />
+            <span>+ Add Parent Category</span>
+          </button>
+
+          <button
+            onClick={handleOpenAdd}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs shadow-lg transition cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>+ Add Certificate Code</span>
           </button>
         </div>
       </div>
 
-      {/* Category Overview Stats Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2.5 w-full">
-        <button
-          onClick={() => setSelectedCatId('ALL')}
-          className={`p-3 rounded-2xl border transition text-center flex flex-col items-center justify-center ${
-            selectedCatId === 'ALL'
-              ? 'bg-slate-900 text-white border-slate-900 shadow-md'
-              : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200 shadow-xs'
-          }`}
-        >
-          <span className="text-[10px] font-black uppercase text-slate-400">TOTAL CODES</span>
-          <span className="text-xl font-extrabold mt-0.5">{allSubServices.length}</span>
-        </button>
+      {/* Parent Category Cards Management Section */}
+      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+            <Layers className="w-4 h-4 text-blue-600" />
+            Parent Category Cards ({categories.length})
+          </h3>
+          <button
+            onClick={handleOpenAddCategory}
+            className="text-xs text-blue-600 font-bold hover:underline flex items-center gap-1"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            Add New Parent Category
+          </button>
+        </div>
 
-        {categories.map((cat) => {
-          const count = cat.subServices.length;
-          const isActive = selectedCatId === cat.id;
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2.5 w-full">
+          <button
+            onClick={() => setSelectedCatId('ALL')}
+            className={`p-3 rounded-2xl border transition text-center flex flex-col items-center justify-center relative group ${
+              selectedCatId === 'ALL'
+                ? 'bg-slate-900 text-white border-slate-900 shadow-md'
+                : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
+            }`}
+          >
+            <span className="text-[10px] font-black uppercase text-slate-400">TOTAL CODES</span>
+            <span className="text-xl font-extrabold mt-0.5">{allSubServices.length}</span>
+          </button>
 
-          return (
-            <button
-              key={cat.id}
-              onClick={() => setSelectedCatId(isActive ? 'ALL' : cat.id)}
-              className={`p-3 rounded-2xl border transition text-center flex flex-col items-center justify-center ${
-                isActive
-                  ? 'bg-blue-600 text-white border-blue-600 shadow-md'
-                  : 'bg-white hover:bg-slate-50 text-slate-800 border-slate-200 shadow-xs'
-              }`}
-            >
-              <span className={`text-[10px] font-black uppercase ${isActive ? 'text-blue-100' : 'text-slate-500'}`}>{cat.name}</span>
-              <span className="text-xl font-extrabold mt-0.5">{count}</span>
-            </button>
-          );
-        })}
+          {categories.map((cat) => {
+            const count = cat.subServices.length;
+            const isActive = selectedCatId === cat.id;
+
+            return (
+              <div
+                key={cat.id}
+                className={`p-2.5 rounded-2xl border transition flex flex-col justify-between relative group ${
+                  isActive
+                    ? 'bg-blue-600 text-white border-blue-600 shadow-md'
+                    : 'bg-white hover:bg-slate-50 text-slate-800 border-slate-200 shadow-2xs'
+                }`}
+              >
+                <div 
+                  onClick={() => setSelectedCatId(isActive ? 'ALL' : cat.id)}
+                  className="cursor-pointer text-center flex-1 flex flex-col items-center justify-center py-1"
+                >
+                  <span className={`text-[10px] font-black uppercase truncate max-w-full ${isActive ? 'text-blue-100' : 'text-slate-700'}`}>{cat.name}</span>
+                  <span className="text-lg font-extrabold mt-0.5">{count}</span>
+                </div>
+
+                {/* Edit & Delete Action Hover Buttons for Category */}
+                <div className="flex items-center justify-center gap-1.5 pt-1.5 border-t border-slate-200/50 mt-1">
+                  <button
+                    onClick={() => handleOpenEditCategory(cat)}
+                    title="Edit Parent Category"
+                    className={`p-1 rounded-lg transition text-[10px] ${
+                      isActive ? 'bg-white/20 hover:bg-white/30 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                    }`}
+                  >
+                    <Edit className="w-3 h-3" />
+                  </button>
+                  <button
+                    onClick={() => handleDeleteCategory(cat.id, cat.name)}
+                    title="Delete Category"
+                    className={`p-1 rounded-lg transition text-[10px] ${
+                      isActive ? 'bg-rose-500/80 hover:bg-rose-600 text-white' : 'bg-rose-50 hover:bg-rose-100 text-rose-600'
+                    }`}
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {/* Table Toolbar Container */}
@@ -352,7 +477,75 @@ export default function CodeMasterView({ showToast }) {
         </div>
       </div>
 
-      {/* ADD / EDIT CERTIFICATE CODE MODAL */}
+      {/* MODAL 1: ADD / EDIT PARENT CATEGORY */}
+      {isCatModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl space-y-6 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 border border-blue-200 flex items-center justify-center font-black">
+                  <FolderPlus className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900">
+                    {editingCat ? 'Edit Parent Category' : 'Add Parent Category'}
+                  </h3>
+                  <p className="text-xs text-slate-500">Manage top-level certificate grouping</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsCatModalOpen(false)}
+                className="text-slate-400 hover:text-slate-700 text-2xl font-bold"
+              >
+                &times;
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveCategory} className="space-y-4 text-xs font-medium">
+              <div>
+                <label className="block text-slate-700 font-bold mb-1">Category Code / Name *</label>
+                <input
+                  type="text"
+                  required
+                  value={catForm.name}
+                  onChange={(e) => setCatForm(prev => ({ ...prev, name: e.target.value.toUpperCase() }))}
+                  placeholder="e.g. PASSPORT, DRIVING"
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-900 font-mono font-black uppercase focus:ring-2 focus:ring-blue-500/20"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-700 font-bold mb-1">Full Title Description</label>
+                <input
+                  type="text"
+                  value={catForm.title}
+                  onChange={(e) => setCatForm(prev => ({ ...prev, title: e.target.value }))}
+                  placeholder="e.g. Passport Services (पासपोर्ट सेवा)"
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-900 font-semibold focus:ring-2 focus:ring-blue-500/20"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setIsCatModalOpen(false)}
+                  className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black shadow-md transition"
+                >
+                  Save Category
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 2: ADD / EDIT CERTIFICATE CODE */}
       {isAddSubModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white border border-slate-200 rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-2xl space-y-6 animate-in zoom-in-95 duration-200">
@@ -378,7 +571,19 @@ export default function CodeMasterView({ showToast }) {
 
             <form onSubmit={handleSaveSubService} className="space-y-4 text-xs font-medium">
               <div>
-                <label className="block text-slate-700 font-bold mb-1">Parent Category *</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-slate-700 font-bold">Parent Category *</label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsAddSubModalOpen(false);
+                      handleOpenAddCategory();
+                    }}
+                    className="text-[11px] text-blue-600 font-bold hover:underline flex items-center gap-1"
+                  >
+                    <Plus className="w-3 h-3" /> Add New Category
+                  </button>
+                </div>
                 <select
                   value={subForm.parentCatId}
                   onChange={(e) => handleFormCategoryChange(e.target.value)}
