@@ -158,51 +158,48 @@ export default function ProfileSettingsView({ clientData, showToast }) {
 
           <form onSubmit={handleSaveProfile} className="space-y-4 text-xs font-medium">
             <div>
-              <label className="block text-slate-700 font-bold mb-1">Shop / Business Name *</label>
+              <label className="block text-slate-700 font-bold mb-1">Shop / Business Name (Locked)</label>
               <div className="relative">
                 <Store className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
-                  required
+                  readOnly
                   value={profile.clientName}
-                  onChange={(e) => setProfile(prev => ({ ...prev, clientName: e.target.value }))}
-                  className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-10 pr-3 py-2 text-slate-900 font-bold focus:ring-2 focus:ring-blue-500/20"
+                  className="w-full bg-slate-100 border border-slate-300 rounded-xl pl-10 pr-3 py-2 text-slate-700 font-bold cursor-not-allowed select-none"
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-slate-700 font-bold mb-1">Owner / CSC Partner Name *</label>
+                <label className="block text-slate-700 font-bold mb-1">Owner / CSC Partner Name (Locked)</label>
                 <div className="relative">
                   <User className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
                     type="text"
-                    required
+                    readOnly
                     value={profile.ownerName}
-                    onChange={(e) => setProfile(prev => ({ ...prev, ownerName: e.target.value }))}
-                    className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-10 pr-3 py-2 text-slate-900 font-semibold focus:ring-2 focus:ring-blue-500/20"
+                    className="w-full bg-slate-100 border border-slate-300 rounded-xl pl-10 pr-3 py-2 text-slate-700 font-semibold cursor-not-allowed select-none"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-slate-700 font-bold mb-1">Registered Phone / WhatsApp *</label>
+                <label className="block text-slate-700 font-bold mb-1">Registered Phone / WhatsApp (Locked)</label>
                 <div className="relative">
                   <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
                     type="text"
-                    required
+                    readOnly
                     value={profile.phone}
-                    onChange={(e) => setProfile(prev => ({ ...prev, phone: e.target.value }))}
-                    className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-10 pr-3 py-2 text-slate-900 font-mono font-bold focus:ring-2 focus:ring-blue-500/20"
+                    className="w-full bg-slate-100 border border-slate-300 rounded-xl pl-10 pr-3 py-2 text-slate-700 font-mono font-bold cursor-not-allowed select-none"
                   />
                 </div>
               </div>
             </div>
 
             <div>
-              <label className="block text-slate-700 font-bold mb-1">Center / Shop Address</label>
+              <label className="block text-slate-700 font-bold mb-1">Center / Shop Address (Editable)</label>
               <div className="relative">
                 <MapPin className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
                 <textarea
@@ -215,7 +212,7 @@ export default function ProfileSettingsView({ clientData, showToast }) {
             </div>
 
             <div className="pt-2 border-t border-slate-100">
-              <label className="block text-slate-700 font-bold mb-1">Change Account Password (Optional)</label>
+              <label className="block text-slate-700 font-bold mb-1">Change Account Password (Editable)</label>
               <div className="relative">
                 <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
@@ -234,6 +231,11 @@ export default function ProfileSettingsView({ clientData, showToast }) {
                 </button>
               </div>
             </div>
+
+            <p className="text-[11px] text-amber-700 font-semibold bg-amber-50 border border-amber-200/80 p-2.5 rounded-xl flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+              <span>Shop Name, Owner Name, और Registered Mobile Number बदलने के लिए अपने Admin से संपर्क करें। आप केवल Address और Password ही बदल सकते हैं।</span>
+            </p>
 
             <div className="flex justify-end pt-2">
               <button
