@@ -34,6 +34,21 @@ router.post('/pair-code', async (req, res) => {
   }
 });
 
+// Send Test WhatsApp Message
+router.post('/test-message', async (req, res) => {
+  try {
+    const { sendTestWhatsAppMessage } = require('../services/whatsapp.service');
+    const { mobile, message } = req.body;
+    if (!mobile) {
+      return res.status(400).json({ success: false, error: 'Mobile number is required' });
+    }
+    const result = await sendTestWhatsAppMessage(mobile, message);
+    res.json(result);
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
 // Logout / Unlink WhatsApp Device
 router.post('/logout', async (req, res) => {
   try {

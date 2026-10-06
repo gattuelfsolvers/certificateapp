@@ -87,6 +87,55 @@ export default function AdminDashboard({ onLogout }) {
   const [pairingCodeResult, setPairingCodeResult] = useState('');
   const [loadingPairingCode, setLoadingPairingCode] = useState(false);
 
+  // Test WhatsApp Dispatcher State
+  const [testPhoneInput, setTestPhoneInput] = useState('');
+  const [sendingTestMessage, setSendingTestMessage] = useState(false);
+
+  const handleSendTestMessage = async () => {
+    if (!testPhoneInput.trim()) {
+      showToast('error', 'Phone Required', 'Please enter a test mobile number.');
+      return;
+    }
+    setSendingTestMessage(true);
+    try {
+      // Try local gateway first, fallback to cloud route
+      let url = '/api/whatsapp/test-message';
+      let targetRes = null;
+      try {
+        targetRes = await fetch('http://localhost:5000/api/whatsapp/test-message', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            mobile: testPhoneInput,
+            message: '🚀 *TEST WHATSAPP MESSAGE* 🚀\n------------------------------------\nHello! WhatsApp Gateway linking is working 100% successfully from your Master Admin Dashboard.'
+          })
+        });
+      } catch (err) {}
+
+      if (!targetRes || !targetRes.ok) {
+        targetRes = await fetch('/api/whatsapp/test-message', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            mobile: testPhoneInput,
+            message: '🚀 *TEST WHATSAPP MESSAGE* 🚀\n------------------------------------\nHello! WhatsApp Gateway linking is working 100% successfully from your Master Admin Dashboard.'
+          })
+        });
+      }
+
+      const data = await targetRes.json();
+      if (data.success) {
+        showToast('success', 'Test Message Sent', `WhatsApp test message dispatched to ${testPhoneInput}!`);
+      } else {
+        showToast('error', 'Dispatch Failed', data.error || data.reason || 'Failed to send test message.');
+      }
+    } catch (e) {
+      showToast('error', 'WhatsApp Test', e.message);
+    } finally {
+      setSendingTestMessage(false);
+    }
+  };
+
   const handleRequestPairingCode = async () => {
     if (!pairingPhone.trim()) {
       showToast('error', 'Phone Required', 'Please enter your WhatsApp phone number.');
@@ -1122,18 +1171,34 @@ export default function AdminDashboard({ onLogout }) {
                     </div>
                   </div>
 
-                  {/* Local Gateway PC Engine Launcher Guidance */}
-                  <div className="p-3.5 bg-slate-900 border border-slate-800 rounded-2xl text-white space-y-1.5">
-                    <div className="flex items-center justify-between text-xs font-bold">
-                      <span className="flex items-center gap-1.5 text-emerald-400">
-                        <Smartphone className="w-4 h-4" />
-                        Local PC Hybrid Gateway Setup
+                  {/* TEST WHATSAPP CONNECTION DISPATCHER */}
+                  <div className="p-4 bg-emerald-950/10 border border-emerald-500/30 rounded-2xl space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-extrabold text-slate-800 flex items-center gap-2">
+                        <Send className="w-4 h-4 text-emerald-600" />
+                        Test WhatsApp Gateway Connection
                       </span>
-                      <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-mono">Fast & Resilient</span>
+                      <span className="text-[10px] text-slate-500 font-medium">Verify live message dispatch</span>
                     </div>
-                    <p className="text-[11px] text-slate-300 leading-relaxed">
-                      QR / 8-Digit Code instant scan ke liye project folder mein <code className="bg-slate-800 text-yellow-300 px-1.5 py-0.5 rounded font-mono">Start-Local-WhatsApp-Gateway.bat</code> ko double-click karke run karein.
-                    </p>
+
+                    <div className="flex items-center gap-2">
+                      <input 
+                        type="text" 
+                        placeholder="Enter Test Phone No (e.g. 9876543210)"
+                        value={testPhoneInput}
+                        onChange={(e) => setTestPhoneInput(e.target.value)}
+                        className="flex-1 bg-white border border-slate-300 text-slate-900 placeholder-slate-400 text-xs rounded-xl px-3.5 py-2 font-mono focus:outline-none focus:border-emerald-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleSendTestMessage}
+                        disabled={sendingTestMessage}
+                        className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-sm transition shrink-0 flex items-center gap-1.5 disabled:opacity-50"
+                      >
+                        <Send className="w-3.5 h-3.5" />
+                        {sendingTestMessage ? 'Sending...' : 'Send Test Message'}
+                      </button>
+                    </div>
                   </div>
 
                   {/* Automatic Message Trigger Controls */}
