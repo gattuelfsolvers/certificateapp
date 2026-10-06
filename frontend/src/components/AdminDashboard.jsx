@@ -130,7 +130,7 @@ export default function AdminDashboard({ onLogout }) {
     {
       id: 'LIFETIME',
       name: 'Lifetime Plan',
-      days: 36500,
+      days: 364635,
       originalPrice: 5999,
       price: 2999,
       entriesLimit: 'Unlimited',
@@ -508,10 +508,16 @@ export default function AdminDashboard({ onLogout }) {
     e.preventDefault();
     try {
       let daysToAdd = 30;
-      if (formData.planType === 'FREE_TRIAL') daysToAdd = 7;
-      else if (formData.planType === 'MONTHLY') daysToAdd = 30;
-      else if (formData.planType === 'HALF_YEARLY') daysToAdd = 180;
-      else if (formData.planType === 'YEARLY') daysToAdd = 365;
+      const targetPlan = plans.find(p => p.id === formData.planType);
+      if (targetPlan) {
+        daysToAdd = targetPlan.days;
+      } else {
+        if (formData.planType === 'FREE_TRIAL') daysToAdd = 7;
+        else if (formData.planType === 'MONTHLY') daysToAdd = 30;
+        else if (formData.planType === 'HALF_YEARLY') daysToAdd = 180;
+        else if (formData.planType === 'YEARLY') daysToAdd = 365;
+        else if (formData.planType === 'LIFETIME') daysToAdd = 364635;
+      }
 
       // Always calculate fresh expiry from Today when saving/updating plan
       let expiresAt = new Date();
@@ -1088,7 +1094,7 @@ export default function AdminDashboard({ onLogout }) {
                                   </span>
                                 ) : (
                                   <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 text-[10px] font-extrabold">
-                                    <CheckCircle2 className="w-3 h-3 text-emerald-600" /> ACTIVE ({daysLeft} Days Left)
+                                    <CheckCircle2 className="w-3 h-3 text-emerald-600" /> ACTIVE ({client.planType === 'LIFETIME' || daysLeft > 3000 ? 'Lifetime' : `${daysLeft} Days Left`})
                                   </span>
                                 )}
                               </td>
