@@ -488,13 +488,17 @@ export default function AdminDashboard({ onLogout }) {
     if (planId === 'YEARLY') pcs = 5;
     if (planId === 'LIFETIME') pcs = 10;
 
+    const currentHwidsCount = formData.hwids ? formData.hwids.length : 1;
+    const finalAllowedPcs = Math.max(pcs, currentHwidsCount);
+
     const generated = generateLicenseKey(formData.hwid || 'DEFAULT', planId);
     setFormData(prev => ({
       ...prev,
       planType: planId,
       customDays: days,
-      allowedPcs: pcs,
-      licenseKey: generated.licenseKey
+      allowedPcs: finalAllowedPcs,
+      licenseKey: generated.licenseKey,
+      hwids: prev.hwids && prev.hwids.length > 0 ? prev.hwids : [prev.hwid || 'DEFAULT']
     }));
   };
 
@@ -524,11 +528,13 @@ export default function AdminDashboard({ onLogout }) {
       expiresAt.setDate(expiresAt.getDate() + daysToAdd);
 
       const primaryHwid = (formData.hwids && formData.hwids.length > 0 ? formData.hwids[0] : formData.hwid).trim().toUpperCase();
+      const validHwids = formData.hwids && formData.hwids.length > 0 ? formData.hwids : [primaryHwid];
+      const finalAllowedPcs = Math.max(parseInt(formData.allowedPcs || 1), validHwids.length);
 
       const payload = {
         hwid: primaryHwid,
-        hwids: formData.hwids && formData.hwids.length > 0 ? formData.hwids : [primaryHwid],
-        allowedPcs: parseInt(formData.allowedPcs || 2),
+        hwids: validHwids,
+        allowedPcs: finalAllowedPcs,
         clientName: formData.clientName.trim(),
         ownerName: formData.ownerName.trim(),
         phone: formData.phone.trim(),
