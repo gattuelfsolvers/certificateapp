@@ -379,6 +379,74 @@ export default function ClientDashboard({ clientData, onLogout }) {
     }
   };
 
+  const [isSyncingAll, setIsSyncingAll] = useState(false);
+
+  const handleExportCSV = () => {
+    if (filteredCertificates.length === 0) {
+      showToast('info', 'No Data', 'No certificate records to export');
+      return;
+    }
+
+    const headers = ['Ref No', 'Applicant Name', 'Mobile', 'Address', 'Cert Type', 'Entry Date', 'Status', 'Total Fee', 'Paid Amount', 'Dues Amount'];
+    const rows = filteredCertificates.map(c => [
+      `"${c.refNo || ''}"`,
+      `"${c.applicantName || ''}"`,
+      `"${c.mobile || ''}"`,
+      `"${c.address || ''}"`,
+      `"${c.certType || ''}"`,
+      `"${formatDateDDMMYYYY(c.entryDate)}"`,
+      `"${c.currentStatus || 'INITIATED'}"`,
+      c.totalFee || 0,
+      c.paidAmount || 0,
+      c.duesAmount || 0
+    ]);
+
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `certificates_export_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    showToast('success', 'Data Downloaded', `${filteredCertificates.length} certificate record(s) exported to CSV!`);
+  };
+
+  const handleSyncAll = async () => {
+    const toSync = certificates.filter(c => !c.currentStatus || (!c.currentStatus.includes('DELIVERED') && !c.currentStatus.includes('REJECTED')));
+    if (toSync.length === 0) {
+      showToast('info', 'Nothing to Sync', 'All certificate records are already delivered or finalized.');
+      return;
+    }
+
+    setIsSyncingAll(true);
+    showToast('info', 'Sync Started', `Syncing live status for ${toSync.length} certificate(s)...`);
+
+    let count = 0;
+    for (const cert of toSync) {
+      try {
+        let res;
+        try {
+          res = await axios.post(`${API_BASE}/certificates/${cert.id}/sync-jharsewa`);
+        } catch (e1) {
+          if (API_BASE !== 'http://localhost:5000/api') {
+            res = await axios.post(`http://localhost:5000/api/certificates/${cert.id}/sync-jharsewa`);
+          } else {
+            throw e1;
+          }
+        }
+        if (res && res.data && res.data.success) count++;
+      } catch (err) {
+        console.error('Sync failed for cert:', cert.id, err);
+      }
+    }
+
+    setIsSyncingAll(false);
+    loadCertificates();
+    showToast('success', 'Sync Completed', `Synced status for ${count} of ${toSync.length} certificate records.`);
+  };
+
   const handleSyncSingle = async (cert) => {
     try {
       setSyncingId(cert.id);
@@ -748,25 +816,65 @@ export default function ClientDashboard({ clientData, onLogout }) {
 
         {/* Certificate Table Section - FULL PAGE WIDTH */}
         <section className="space-y-4 w-full">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm w-full">
-            <div className="relative w-full md:w-96">
+          <div className="flex flex-col lg:flex-row items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm w-full">
+            {/* Search Box */}
+            <div className="relative w-full lg:w-72">
               <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search Ref No, Applicant Name, Phone..."
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 font-medium"
+                placeholder="Search Ref No, Name, Phone..."
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 font-medium"
               />
             </div>
 
-            <div className="flex items-center gap-3">
+            {/* Toolbar Action Controls: Status Dropdown, Download Data, Sync All, Refresh List */}
+            <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto justify-end">
+              {/* Filter List by Status Dropdown */}
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-extrabold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer"
+              >
+                <option value="ALL">All Status ({certificates.length})</option>
+                <option value="INITIATED">Initiated</option>
+                <option value="UNDER_PROCESS">Under Process</option>
+                <option value="DELIVERED">Delivered</option>
+                <option value="REJECTED">Rejected</option>
+                <option value="HOLD">Hold</option>
+                <option value="WAITING">Waiting</option>
+              </select>
+
+              {/* Download Data Button */}
+              <button
+                onClick={handleExportCSV}
+                title="Download / Export Data (CSV)"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-bold transition shadow-xs"
+              >
+                <Download className="w-4 h-4 text-emerald-600" />
+                <span className="hidden sm:inline">Export</span>
+              </button>
+
+              {/* Sync All Button */}
+              <button
+                onClick={handleSyncAll}
+                disabled={isSyncingAll}
+                title="Sync All Active Certificates"
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold transition shadow-xs disabled:opacity-50"
+              >
+                <Zap className={`w-4 h-4 ${isSyncingAll ? 'animate-spin' : ''}`} />
+                <span>{isSyncingAll ? 'Syncing All...' : 'Sync All'}</span>
+              </button>
+
+              {/* Sync List / Refresh List Button */}
               <button 
                 onClick={loadCertificates}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-xs font-bold transition"
+                title="Refresh Records List"
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-xs font-bold transition shadow-xs"
               >
-                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                Refresh List
+                <RefreshCw className={`w-4 h-4 text-slate-500 ${loading ? 'animate-spin' : ''}`} />
+                <span>Refresh List</span>
               </button>
             </div>
           </div>
