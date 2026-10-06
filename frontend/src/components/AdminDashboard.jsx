@@ -15,7 +15,10 @@ import {
   generateLicenseKey,
   subscribeClientsFromFirebase,
   fetchCertificatesFromFirebase,
-  syncBulkCertificatesToFirebase
+  syncBulkCertificatesToFirebase,
+  fetchPlansFromFirebase,
+  subscribePlansFromFirebase,
+  savePlanToFirebase
 } from '../firebase';
 
 export default function AdminDashboard({ onLogout }) {
@@ -376,9 +379,20 @@ export default function AdminDashboard({ onLogout }) {
 
   useEffect(() => {
     setLoading(true);
-    const unsubscribe = subscribeClientsFromFirebase((updatedClients) => {
+    const unsubscribeClients = subscribeClientsFromFirebase((updatedClients) => {
       setClients(updatedClients || []);
       setLoading(false);
+    });
+
+    const unsubscribePlans = subscribePlansFromFirebase((cloudPlans) => {
+      if (cloudPlans && cloudPlans.length > 0) {
+        setPlans(prevPlans => {
+          return prevPlans.map(defaultPlan => {
+            const matchedCloud = cloudPlans.find(cp => cp.id === defaultPlan.id);
+            return matchedCloud ? { ...defaultPlan, ...matchedCloud } : defaultPlan;
+          });
+        });
+      }
     });
 
     // Fetch cloud certificates for Data Master backup
@@ -386,7 +400,10 @@ export default function AdminDashboard({ onLogout }) {
       setCertificates(certs || []);
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribeClients();
+      unsubscribePlans();
+    };
   }, []);
 
   const handleDownloadClientCSVBackup = (shopClient, clientCerts) => {
@@ -2894,10 +2911,11 @@ export default function AdminDashboard({ onLogout }) {
               </button>
               <button
                 type="button"
-                onClick={() => {
+                onClick={async () => {
                   setPlans(prev => prev.map(p => p.id === editingPlan.id ? editingPlan : p));
+                  await savePlanToFirebase(editingPlan);
                   setPlanModalOpen(false);
-                  showToast('success', 'Plan Details Updated', `Plan "${editingPlan.name}" updated successfully!`);
+                  showToast('success', 'Plan Details Updated', `Plan "${editingPlan.name}" pricing & details saved to cloud!`);
                 }}
                 className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md transition"
               >

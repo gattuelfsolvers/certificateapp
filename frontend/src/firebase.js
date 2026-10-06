@@ -185,13 +185,43 @@ export async function fetchMastersFromFirebase() {
   }
 }
 
-// Save Master Category to Firebase Cloud
-export async function saveMasterToFirebase(masterData) {
+// Fetch Subscription Plans from Firebase Cloud
+export async function fetchPlansFromFirebase() {
   try {
-    const masterId = masterData.id ? String(masterData.id) : String(Date.now());
-    const masterRef = doc(db, "masters", masterId);
-    await setDoc(masterRef, { ...masterData, id: masterId, updatedAt: new Date().toISOString() }, { merge: true });
+    const plansRef = collection(db, "subscription_plans");
+    const snapshot = await getDocs(plansRef);
+    const cloudPlans = [];
+    snapshot.forEach(docSnap => {
+      cloudPlans.push({ id: docSnap.id, ...docSnap.data() });
+    });
+    return cloudPlans;
   } catch (error) {
-    console.error("Error saving master to Firebase:", error);
+    console.error("Error fetching subscription plans from Firebase:", error);
+    return [];
+  }
+}
+
+// Real-time subscribe to Subscription Plans
+export function subscribePlansFromFirebase(onUpdate) {
+  const plansRef = collection(db, "subscription_plans");
+  return onSnapshot(plansRef, (snapshot) => {
+    const cloudPlans = [];
+    snapshot.forEach(docSnap => {
+      cloudPlans.push({ id: docSnap.id, ...docSnap.data() });
+    });
+    onUpdate(cloudPlans);
+  }, (error) => {
+    console.error("Error subscribing to subscription plans:", error);
+  });
+}
+
+// Save Subscription Plan to Firebase Cloud
+export async function savePlanToFirebase(planData) {
+  try {
+    const planId = planData.id;
+    const planRef = doc(db, "subscription_plans", planId);
+    await setDoc(planRef, { ...planData, id: planId, updatedAt: new Date().toISOString() }, { merge: true });
+  } catch (error) {
+    console.error("Error saving subscription plan to Firebase:", error);
   }
 }

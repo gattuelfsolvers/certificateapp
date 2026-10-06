@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ShieldCheck, Lock, User, KeyRound, AlertCircle, ArrowRight, UserPlus, Sparkles, Shield, Cpu } from 'lucide-react';
-import { fetchClientsFromFirebase, saveClientToFirebase } from '../firebase';
+import { fetchClientsFromFirebase, saveClientToFirebase, subscribePlansFromFirebase } from '../firebase';
 
 export default function UniversalLogin({ onLoginSuccess }) {
   const [userId, setUserId] = useState('');
@@ -21,8 +21,8 @@ export default function UniversalLogin({ onLoginSuccess }) {
   const [submittingReg, setSubmittingReg] = useState(false);
   const [registeredAccountInfo, setRegisteredAccountInfo] = useState(null);
 
-  // Registration Plans List (Excludes LIFETIME)
-  const registrationPlans = [
+  // Dynamic Registration Plans List (Excludes LIFETIME)
+  const [registrationPlans, setRegistrationPlans] = useState([
     {
       id: 'FREE_TRIAL',
       name: 'Free Trial',
@@ -71,7 +71,37 @@ export default function UniversalLogin({ onLoginSuccess }) {
       features: ['Unlimited Entries', 'Multi-PC Sync (5 PCs)', 'VIP Priority Backup', 'WhatsApp Integration', '24/7 Priority Support'],
       highlight: false
     }
-  ];
+  ]);
+
+  // Subscribe to Dynamic Cloud Plans on Component Mount
+  useEffect(() => {
+    const unsubscribe = subscribePlansFromFirebase((cloudPlans) => {
+      if (cloudPlans && cloudPlans.length > 0) {
+        setRegistrationPlans(prev => {
+          return prev.map(p => {
+            const cp = cloudPlans.find(c => c.id === p.id);
+            if (!cp) return p;
+            return {
+              ...p,
+              name: cp.name || p.name,
+              price: `₹${cp.price !== undefined ? cp.price : p.price}`,
+              originalPrice: cp.originalPrice && cp.originalPrice > 0 ? `₹${cp.originalPrice}` : null,
+              duration: cp.days >= 36500 ? 'Lifetime Validity' : `${cp.days || 30} Days Validity`,
+              pcs: cp.usersText || `${cp.allowedPcs || 1} PC Allowed`,
+              features: [
+                cp.entriesLimit || (p.id === 'YEARLY' ? 'Unlimited Entries' : 'Certificate Entries'),
+                'WhatsApp Integration',
+                cp.facilities?.jharsewaSync !== false ? 'Jharsewa Auto Sync' : 'Standard Sync',
+                cp.facilities?.backupAllowed !== false ? 'Daily Cloud Backup' : 'Local Backup'
+              ]
+            };
+          });
+        });
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const handleNextStep1 = (e) => {
     e.preventDefault();
@@ -487,8 +517,8 @@ export default function UniversalLogin({ onLoginSuccess }) {
 
       {/* MULTI-STEP REGISTER FOR NEW USER MODAL */}
       {isRequestModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4">
-          <div className={`bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 w-full shadow-2xl space-y-6 transition-all duration-300 ${regStep === 2 ? 'max-w-4xl' : 'max-w-2xl'}`}>
+        <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 md:p-8 overflow-y-auto">
+          <div className={`bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 w-full shadow-2xl space-y-6 transition-all duration-300 ${regStep === 2 ? 'max-w-6xl' : 'max-w-2xl'}`}>
             
             {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-slate-800 pb-4">
