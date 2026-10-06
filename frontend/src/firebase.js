@@ -59,6 +59,7 @@ export async function saveClientToFirebase(clientData) {
     status: status || 'ACTIVE',
     expiresAt: expiresAt ? new Date(expiresAt).toISOString() : new Date(Date.now() + 30 * 86400000).toISOString(),
     licenseKey: licenseKey || `CERT-KEY-${Date.now()}`,
+    createdAt: clientData.createdAt || new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
 

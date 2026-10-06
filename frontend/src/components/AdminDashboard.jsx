@@ -541,6 +541,7 @@ export default function AdminDashboard({ onLogout }) {
         planType: formData.planType,
         status: formData.status,
         licenseKey: formData.licenseKey,
+        createdAt: (editingClient && editingClient.createdAt) ? editingClient.createdAt : new Date().toISOString(),
         expiresAt: expiresAt.toISOString()
       };
 
@@ -1157,7 +1158,10 @@ export default function AdminDashboard({ onLogout }) {
                     <thead>
                       <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">
                         <th className="px-6 py-4">Shop & Owner Name</th>
-                        <th className="px-6 py-4">Hardware ID (HWID)</th>
+                        <th className="px-6 py-4">
+                          <div>HARDWARE ID (HWID)</div>
+                          <div className="text-[9px] font-semibold text-blue-600 lowercase tracking-normal">allowed pc count & whitelisted hwids</div>
+                        </th>
                         <th className="px-6 py-4">License Key</th>
                         <th className="px-6 py-4">Reg. Date</th>
                         <th className="px-6 py-4">Expiry Date</th>
@@ -1185,9 +1189,15 @@ export default function AdminDashboard({ onLogout }) {
                           const isKilled = client.status === 'KILLED' || client.status === 'INACTIVE';
                           const isPending = client.status === 'PENDING';
                           const isLifetime = client.planType === 'LIFETIME' || daysLeft > 3000;
-                          const regDate = client.createdAt ? new Date(client.createdAt).toLocaleDateString('en-IN') : 'N/A';
+                          
+                          // Reg Date: Date when license key was created/activated
+                          const rawCreated = client.createdAt || client.updatedAt;
+                          const regDate = rawCreated ? new Date(rawCreated).toLocaleDateString('en-IN') : new Date().toLocaleDateString('en-IN');
+                          
                           const expDate = isLifetime ? 'Lifetime (आजीवन)' : (client.expiresAt ? new Date(client.expiresAt).toLocaleDateString('en-IN') : 'N/A');
-                          const hwidDisplay = Array.isArray(client.hwids) && client.hwids.length > 0 ? client.hwids.join(', ') : (client.hwid || 'N/A');
+                          const hwidList = Array.isArray(client.hwids) && client.hwids.length > 0 ? client.hwids : [client.hwid || 'N/A'];
+                          const hwidDisplay = hwidList.join(', ');
+                          const pcCount = client.allowedPcs || hwidList.length;
 
                           return (
                             <tr key={client.hwid || client.id} className="hover:bg-blue-50/30 transition">
@@ -1200,11 +1210,18 @@ export default function AdminDashboard({ onLogout }) {
                                 </div>
                               </td>
 
-                              {/* Hardware ID (HWID) */}
-                              <td className="px-6 py-4 font-mono font-semibold text-slate-700 max-w-[200px] truncate" title={hwidDisplay}>
-                                <span className="px-2 py-1 rounded bg-slate-100 border border-slate-200 text-[11px] text-slate-800">
-                                  {hwidDisplay}
-                                </span>
+                              {/* Hardware ID (HWID) & PC Count */}
+                              <td className="px-6 py-4 space-y-1">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="px-2 py-0.5 rounded bg-blue-100 border border-blue-200 text-blue-900 text-[10px] font-extrabold font-mono">
+                                    {hwidList.length} / {pcCount} PC Allowed
+                                  </span>
+                                </div>
+                                <div className="font-mono font-semibold text-slate-700 max-w-[220px] truncate" title={hwidDisplay}>
+                                  <span className="px-2 py-1 rounded bg-slate-100 border border-slate-200 text-[11px] text-slate-800 inline-block max-w-full truncate">
+                                    {hwidDisplay}
+                                  </span>
+                                </div>
                               </td>
 
                               {/* License Key */}
