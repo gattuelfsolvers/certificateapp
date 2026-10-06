@@ -518,6 +518,24 @@ router.post('/sync-all-jharsewa', async (req, res) => {
         try {
           await sendStatusUpdateNotification(updated, item.oldStatus, item.newStatus);
         } catch (e) {}
+
+        // Live Real-Time Firebase Cloud Firestore Sync
+        try {
+          const firestoreUrl = `https://firestore.googleapis.com/v1/projects/certificate-master-db/databases/(default)/documents/certificates/${item.certId}?updateMask.fieldPaths=currentStatus&updateMask.fieldPaths=status&updateMask.fieldPaths=lastSyncedAt`;
+          await fetch(firestoreUrl, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              fields: {
+                currentStatus: { stringValue: item.newStatus },
+                status: { stringValue: item.newStatus },
+                lastSyncedAt: { stringValue: new Date().toISOString() }
+              }
+            })
+          });
+        } catch (fbErr) {
+          console.error('Firebase sync error during bulk status sync:', fbErr);
+        }
       } else {
         await prisma.certificate.update({
           where: { id: item.certId },
