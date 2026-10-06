@@ -27,6 +27,7 @@ export default function AdminDashboard({ onLogout }) {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [clientSubTab, setClientSubTab] = useState('LIVE'); // 'LIVE' | 'ARCHIVED'
   const [licenseSubTab, setLicenseSubTab] = useState('ACTIVE'); // 'ACTIVE' | 'ARCHIVED'
   
   // WhatsApp Master Templates State
@@ -871,21 +872,46 @@ export default function AdminDashboard({ onLogout }) {
   const pendingRequests = clients.filter(c => c.status === 'PENDING');
   const pendingCount = pendingRequests.length;
 
-  // Filtered Clients
-  const filteredClients = clients.filter(c => {
-    const matchesSearch = 
-      (c.clientName && c.clientName.toLowerCase().includes(search.toLowerCase())) ||
-      (c.ownerName && c.ownerName.toLowerCase().includes(search.toLowerCase())) ||
-      (c.phone && c.phone.includes(search)) ||
-      (c.licenseKey && c.licenseKey.toLowerCase().includes(search.toLowerCase()));
+  // Filtered & Sorted Clients according to clientSubTab & statusFilter
+  const filteredClients = clients
+    .filter(c => {
+      const matchesSearch = 
+        (c.clientName && c.clientName.toLowerCase().includes(search.toLowerCase())) ||
+        (c.ownerName && c.ownerName.toLowerCase().includes(search.toLowerCase())) ||
+        (c.phone && c.phone.includes(search)) ||
+        (c.licenseKey && c.licenseKey.toLowerCase().includes(search.toLowerCase()));
 
-    if (statusFilter === 'ALL') return matchesSearch;
-    if (statusFilter === 'ACTIVE') return matchesSearch && c.status === 'ACTIVE' && new Date(c.expiresAt) > new Date();
-    if (statusFilter === 'EXPIRED') return matchesSearch && (new Date(c.expiresAt) <= new Date() || c.status === 'EXPIRED');
-    if (statusFilter === 'KILLED') return matchesSearch && (c.status === 'KILLED' || c.status === 'INACTIVE');
-    if (statusFilter === 'PENDING') return matchesSearch && c.status === 'PENDING';
-    return matchesSearch;
-  });
+      if (!matchesSearch) return false;
+
+      const daysLeft = calculateDaysLeft(c.expiresAt);
+      const isExp = daysLeft <= 0;
+      const isKilled = c.status === 'KILLED' || c.status === 'INACTIVE';
+
+      // clientSubTab Filter: LIVE vs ARCHIVED
+      if (clientSubTab === 'LIVE') {
+        // Live = Only Active clients (not killed, not expired)
+        if (isKilled || (isExp && c.planType !== 'LIFETIME')) return false;
+      } else if (clientSubTab === 'ARCHIVED') {
+        // Archived = Only deleted / killed / expired members
+        if (!isKilled && (!isExp || c.planType === 'LIFETIME')) return false;
+      }
+
+      if (statusFilter === 'ALL') return true;
+      if (statusFilter === 'ACTIVE') return c.status === 'ACTIVE' && !isExp;
+      if (statusFilter === 'EXPIRED') return isExp || c.status === 'EXPIRED';
+      if (statusFilter === 'KILLED') return isKilled;
+      if (statusFilter === 'PENDING') return c.status === 'PENDING';
+      return true;
+    })
+    .sort((a, b) => {
+      // Sort LIVE clients by License Expiry Days (nearest expiry date first)
+      if (clientSubTab === 'LIVE') {
+        const daysA = calculateDaysLeft(a.expiresAt);
+        const daysB = calculateDaysLeft(b.expiresAt);
+        return daysA - daysB;
+      }
+      return 0;
+    });
 
   const calculateDaysLeft = (expiresAtStr) => {
     if (!expiresAtStr) return 0;
@@ -1265,6 +1291,52 @@ export default function AdminDashboard({ onLogout }) {
           {/* TAB 0: OVERVIEW DASHBOARD VIEW */}
           {(activeTab === 'dashboard' || activeTab === 'clients') && (
             <div className="space-y-4 w-full">
+              {/* Sub-Navigation Tabs: Live vs Archived Clients */}
+              <div className="bg-white border border-slate-200/80 rounded-2xl p-3 shadow-sm flex items-center justify-between gap-4 w-full">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-extrabold text-slate-800 flex items-center gap-1.5 pl-2">
+                    <Users className="w-4 h-4 text-blue-600" />
+                    Client Sub-Filter:
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2 p-1 bg-slate-100 rounded-xl border border-slate-200 shrink-0">
+                  <button
+                    onClick={() => setClientSubTab('LIVE')}
+                    className={`px-5 py-2 rounded-xl text-xs font-extrabold transition flex items-center gap-2 ${
+                      clientSubTab === 'LIVE'
+                        ? 'bg-emerald-600 text-white shadow-md'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                    }`}
+                  >
+                    <CheckCircle2 className="w-4 h-4" />
+                    Live Clients ({clients.filter(c => {
+                      const d = calculateDaysLeft(c.expiresAt);
+                      const isExp = d <= 0;
+                      const isK = c.status === 'KILLED' || c.status === 'INACTIVE';
+                      return !isK && (!isExp || c.planType === 'LIFETIME');
+                    }).length})
+                  </button>
+
+                  <button
+                    onClick={() => setClientSubTab('ARCHIVED')}
+                    className={`px-5 py-2 rounded-xl text-xs font-extrabold transition flex items-center gap-2 ${
+                      clientSubTab === 'ARCHIVED'
+                        ? 'bg-amber-600 text-white shadow-md'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                    }`}
+                  >
+                    <Clock className="w-4 h-4" />
+                    Archived Clients ({clients.filter(c => {
+                      const d = calculateDaysLeft(c.expiresAt);
+                      const isExp = d <= 0;
+                      const isK = c.status === 'KILLED' || c.status === 'INACTIVE';
+                      return isK || (isExp && c.planType !== 'LIFETIME');
+                    }).length})
+                  </button>
+                </div>
+              </div>
+
               <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm w-full">
                 <div className="relative w-full md:w-96">
                   <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
