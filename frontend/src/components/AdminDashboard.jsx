@@ -2059,8 +2059,14 @@ export default function AdminDashboard({ onLogout }) {
                         <p className="text-[11px] text-slate-500 font-medium">Auto-dispatch client notifications via WhatsApp</p>
                       </div>
                     </div>
-                    <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black uppercase flex items-center gap-1">
-                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase flex items-center gap-1 border ${
+                      whatsappConfig.instanceStatus === 'CONNECTED'
+                        ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                        : 'bg-rose-100 text-rose-800 border-rose-200'
+                    }`}>
+                      <span className={`w-2 h-2 rounded-full ${
+                        whatsappConfig.instanceStatus === 'CONNECTED' ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'
+                      }`}></span>
                       {whatsappConfig.instanceStatus}
                     </span>
                   </div>
