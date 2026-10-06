@@ -1124,6 +1124,7 @@ export default function AdminDashboard({ onLogout }) {
                 {activeTab === 'plans' && '💎 Plan Master & Pricing'}
                 {activeTab === 'data_master' && '🗄️ Client Data Master & Cloud Backups'}
                 {activeTab === 'whatsapp_master' && '💬 WhatsApp Master Templates'}
+                {activeTab === 'account' && '⚙️ Manage Account & System Settings'}
                 <span className="px-2.5 py-0.5 rounded-full bg-yellow-400 text-slate-900 text-[11px] font-black tracking-wider uppercase shadow">PRO</span>
               </h1>
               <p className="text-xs text-blue-100 font-medium">Multi-Tenant SaaS Licensing & Client Control Engine</p>
