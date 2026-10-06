@@ -17,12 +17,45 @@ import {
 } from '../firebase';
 
 export default function AdminDashboard({ onLogout }) {
-  const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard' | 'clients' | 'licenses' | 'plans'
+  const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard' | 'clients' | 'licenses' | 'plans' | 'whatsapp_master'
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  
+  // WhatsApp Master Templates State
+  const [whatsappTemplates, setWhatsappTemplates] = useState([
+    {
+      templateKey: 'CLIENT_STATUS_UPDATE',
+      title: '1. Client Status Update Template (Active / Blocked / Renewal)',
+      category: 'CLIENT_ALERT',
+      messageText: `🏪 *अपना डिजिटल हब - खाता स्थिति अपडेट* 🏪\n------------------------------------\nनमस्ते *{ownerName}* ({shopName}),\n\nआपके सॉफ़्टवेयर खाते की स्थिति अपडेट की गई है:\n\nवर्तमान स्थिति: *{status}*\nवैधता तिथि: *{expiresAt}*\nप्लांट प्रकार: *{planType}*\n\nधन्यवाद!`
+    },
+    {
+      templateKey: 'CLIENT_KILLED_ALERT',
+      title: '2. Client Account Killed Alert Template',
+      category: 'CLIENT_ALERT',
+      messageText: `🚫 *अपना डिजिटल हब - खाता ब्लॉक (ACCOUNT KILLED)* 🚫\n------------------------------------\nनमस्ते *{ownerName}* ({shopName}),\n\nसुरक्षा / प्रशासकीय कारणों से आपका सॉफ़्टवेयर खाता अस्थायी रूप से ब्लॉक कर दिया गया है।\n\nहार्डवेयर आईडी (HWID): *{hwid}*\nस्थिति: *BLOCKED / KILLED*\n\nखाता पुन: सक्रिय करवाने के लिए मास्टर एडमिन से तुरंत संपर्क करें।\n\nधन्यवाद!`
+    },
+    {
+      templateKey: 'LICENSE_EXPIRY_WARNING',
+      title: '3. License Expiry Warning Template',
+      category: 'CLIENT_ALERT',
+      messageText: `⚠️ *अपना डिजिटल हब - प्लान समाप्त (EXPIRED)* ⚠️\n------------------------------------\nनमस्ते *{ownerName}* ({shopName}),\n\nआपकी सॉफ़्टवेयर सदस्यता *{expiresAt}* को समाप्त हो चुकी है।\n\nप्लांट प्रकार: *{planType}*\nस्थिति: *EXPIRED*\n\nसॉफ़्टवेयर सेवाएँ निरन्तर जारी रखने के लिए कृपया अपनी सदस्यता का नवीनीकरण (Renew) करवाएं।\n\nधन्यवाद!`
+    },
+    {
+      templateKey: 'HWID_UPDATE',
+      title: '4. HWID / Registered PC Update Template',
+      category: 'CLIENT_ALERT',
+      messageText: `💻 *अपना डिजिटल हब - Hardware ID (PC) अपडेट* 💻\n------------------------------------\nनमस्ते *{ownerName}* ({shopName}),\n\nआपके खाते की रजिस्टर्ड PC Hardware ID (HWID) सूची अपडेट कर दी गई है:\n\nअनुमत PC संख्या: *{allowedPcs}*\nरजिस्टर्ड HWID: *{hwid}*\n\nअब आप केवल इन्हीं रजिस्टर्ड PC से लॉगिन कर सकते हैं।\n\nधन्यवाद!`
+    }
+  ]);
+
+  const [editingTemplate, setEditingTemplate] = useState(null);
+  const [templateModalOpen, setTemplateModalOpen] = useState(false);
+  const [testTemplatePhone, setTestTemplatePhone] = useState('');
+  const [templateFormData, setTemplateFormData] = useState({ templateKey: '', title: '', messageText: '' });
   
   // Plans Master State with Max Allowed PCs
   const [plans, setPlans] = useState([
@@ -667,6 +700,22 @@ export default function AdminDashboard({ onLogout }) {
                   <span className="text-sm font-bold whitespace-nowrap">Plan Master</span>
                 </div>
                 <span className="px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 text-[10px]">{plans.length}</span>
+              </button>
+
+              {/* 💬 WHATSAPP MASTER TAB */}
+              <button
+                onClick={() => setActiveTab('whatsapp_master')}
+                className={`w-full flex items-center justify-between px-4 py-3 rounded-xl font-bold text-xs transition ${
+                  activeTab === 'whatsapp_master'
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
+                    : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <span className="w-5 text-center text-sm font-bold">💬</span>
+                  <span className="text-sm font-bold whitespace-nowrap">WhatsApp Master</span>
+                </div>
+                <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-extrabold">{whatsappTemplates.length || 5}</span>
               </button>
 
               {/* ⚙️ MANAGE ACCOUNT (ADMIN PASSWORD & WHATSAPP AUTOMATION) */}
@@ -1335,6 +1384,129 @@ export default function AdminDashboard({ onLogout }) {
                 </div>
               </div>
             </div>
+          {/* TAB: WHATSAPP MASTER TEMPLATE SUITE */}
+          {activeTab === 'whatsapp_master' && (
+            <div className="space-y-6 w-full">
+              {/* Header Banner */}
+              <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 text-xl font-bold shadow-sm">
+                    💬
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-extrabold text-slate-900">WhatsApp Master (Message Formats)</h3>
+                    <p className="text-xs text-slate-500 font-medium">Manage, customize, and preview all automated WhatsApp message templates</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      setEditingTemplate(null);
+                      setTemplateFormData({
+                        templateKey: `CUSTOM_${Date.now()}`,
+                        title: 'New Custom WhatsApp Template',
+                        messageText: `🏪 *अपना डिजिटल हब*\n------------------------------------\nनमस्ते *{ownerName}*,\n\nआपका संदेश विवरण यहाँ लिखें...\n\nधन्यवाद!`
+                      });
+                      setTemplateModalOpen(true);
+                    }}
+                    className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-md transition flex items-center gap-2"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add New Template
+                  </button>
+                </div>
+              </div>
+
+              {/* Template Cards Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
+                {whatsappTemplates.map((tpl) => (
+                  <div key={tpl.templateKey} className="bg-white border border-slate-200/90 rounded-3xl p-6 shadow-sm hover:shadow-md transition space-y-4 flex flex-col justify-between">
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                        <h4 className="text-sm font-extrabold text-slate-900">{tpl.title}</h4>
+                        <span className="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[10px] font-mono font-bold uppercase">
+                          {tpl.templateKey}
+                        </span>
+                      </div>
+
+                      {/* Template Raw Text Box */}
+                      <div className="p-4 bg-slate-900 border border-slate-800 rounded-2xl text-slate-200 text-xs font-mono whitespace-pre-wrap leading-relaxed max-h-48 overflow-y-auto shadow-inner select-all">
+                        {tpl.messageText}
+                      </div>
+
+                      {/* Supported Tags Guide */}
+                      <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-[11px] text-slate-600 space-y-1">
+                        <span className="font-extrabold text-slate-800 text-[10px] uppercase tracking-wide">Available Live Tags:</span>
+                        <div className="flex flex-wrap gap-1.5 font-mono text-[10px] pt-0.5">
+                          <span className="px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 border border-blue-200">{"{ownerName}"}</span>
+                          <span className="px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 border border-blue-200">{"{shopName}"}</span>
+                          <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-200">{"{status}"}</span>
+                          <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-200">{"{expiresAt}"}</span>
+                          <span className="px-1.5 py-0.5 rounded bg-purple-100 text-purple-800 border border-purple-200">{"{hwid}"}</span>
+                          <span className="px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-800 border border-indigo-200">{"{planType}"}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                      <button
+                        onClick={() => {
+                          setEditingTemplate(tpl);
+                          setTemplateFormData({
+                            templateKey: tpl.templateKey,
+                            title: tpl.title,
+                            messageText: tpl.messageText
+                          });
+                          setTemplateModalOpen(true);
+                        }}
+                        className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs transition flex items-center gap-1.5"
+                      >
+                        <Edit className="w-3.5 h-3.5 text-blue-600" />
+                        Edit Format
+                      </button>
+
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          placeholder="Test Phone No"
+                          value={testTemplatePhone}
+                          onChange={(e) => setTestTemplatePhone(e.target.value)}
+                          className="w-32 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-800 font-mono focus:outline-none focus:border-emerald-500"
+                        />
+                        <button
+                          onClick={async () => {
+                            if (!testTemplatePhone.trim()) {
+                              showToast('error', 'Phone Required', 'Enter phone number to preview test dispatch.');
+                              return;
+                            }
+                            try {
+                              const res = await fetch('http://localhost:5000/api/whatsapp/test-message', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ mobile: testTemplatePhone, message: tpl.messageText })
+                              });
+                              const data = await res.json();
+                              if (data.success) {
+                                showToast('success', 'Test Sent', `Template preview dispatched to ${testTemplatePhone}!`);
+                              } else {
+                                showToast('error', 'Test Failed', data.error || 'Failed to dispatch test message.');
+                              }
+                            } catch (e) {
+                              showToast('error', 'Test Error', e.message);
+                            }
+                          }}
+                          className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-sm transition flex items-center gap-1 shrink-0"
+                        >
+                          <Send className="w-3.5 h-3.5" />
+                          Test
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
 
         </main>
@@ -1575,6 +1747,86 @@ export default function AdminDashboard({ onLogout }) {
             >
               Done / Close Window
             </button>
+          </div>
+        </div>
+      )}
+      {/* Edit / Add WhatsApp Template Modal */}
+      {templateModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 max-w-xl w-full shadow-2xl space-y-5">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
+                <MessageSquare className="w-5 h-5 text-emerald-600" />
+                {editingTemplate ? 'Edit WhatsApp Message Format' : 'Add New Custom WhatsApp Template'}
+              </h3>
+              <button onClick={() => setTemplateModalOpen(false)} className="text-slate-400 hover:text-slate-700 text-2xl font-bold">&times;</button>
+            </div>
+
+            <div className="space-y-4 text-xs font-medium">
+              <div>
+                <label className="block text-slate-700 font-bold mb-1">Template Title / Name *</label>
+                <input
+                  type="text"
+                  required
+                  value={templateFormData.title}
+                  onChange={(e) => setTemplateFormData(prev => ({ ...prev, title: e.target.value }))}
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-slate-900 font-semibold"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-700 font-bold mb-1">WhatsApp Message Text Format *</label>
+                <textarea
+                  rows={8}
+                  required
+                  value={templateFormData.messageText}
+                  onChange={(e) => setTemplateFormData(prev => ({ ...prev, messageText: e.target.value }))}
+                  placeholder="Enter message text with placeholders like {ownerName}, {shopName}, {status}, {expiresAt}, {hwid}..."
+                  className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3.5 text-slate-100 font-mono text-xs leading-relaxed focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+                ></textarea>
+              </div>
+
+              {/* Supported Live Tags Helper */}
+              <div className="p-3 bg-blue-50/80 border border-blue-200 rounded-xl space-y-1">
+                <span className="font-extrabold text-blue-900 text-[10px] uppercase tracking-wide">Supported Placeholders:</span>
+                <p className="text-[11px] text-blue-800 leading-normal font-mono">
+                  {"{ownerName}"}, {"{shopName}"}, {"{status}"}, {"{expiresAt}"}, {"{hwid}"}, {"{planType}"}, {"{allowedPcs}"}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setTemplateModalOpen(false)}
+                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!templateFormData.messageText.trim()) {
+                    showToast('error', 'Required Field', 'Message text format cannot be empty!');
+                    return;
+                  }
+                  setWhatsappTemplates(prev => {
+                    const idx = prev.findIndex(t => t.templateKey === templateFormData.templateKey);
+                    if (idx >= 0) {
+                      const copy = [...prev];
+                      copy[idx] = { ...copy[idx], title: templateFormData.title, messageText: templateFormData.messageText };
+                      return copy;
+                    }
+                    return [...prev, templateFormData];
+                  });
+                  setTemplateModalOpen(false);
+                  showToast('success', 'Template Updated', 'WhatsApp message format updated successfully!');
+                }}
+                className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md transition"
+              >
+                Save Message Format
+              </button>
+            </div>
           </div>
         </div>
       )}
