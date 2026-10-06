@@ -77,25 +77,27 @@ export default function ClientDashboard({ clientData, onLogout }) {
   const [isSideMenuOpen, setIsSideMenuOpen] = useState(false); // Auto-hide by default
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   
-  // Modal States
+  // Modal States & Multi-Item Draft List
   const [isEntryModalOpen, setIsEntryModalOpen] = useState(false);
   const [syncingId, setSyncingId] = useState(null);
   const [toast, setToast] = useState(null);
 
-  // Form State
-  const [formData, setFormData] = useState({
-    id: '',
-    refNo: '',
+  // Form States
+  const [applicantInfo, setApplicantInfo] = useState({
     applicantName: '',
     mobile: '',
-    address: '',
-    certType: 'JHIC',
-    entryDate: new Date().toISOString().split('T')[0],
-    currentStatus: 'INITIATED',
-    totalFee: 100,
-    paidAmount: 100,
-    remarks: ''
+    address: ''
   });
+
+  const [itemForm, setItemForm] = useState({
+    certType: 'JHIC',
+    refNo: 'JHIC/2026/',
+    entryDate: new Date().toISOString().split('T')[0],
+    totalFee: 100
+  });
+
+  const [draftList, setDraftList] = useState([]);
+  const [paidAmountInput, setPaidAmountInput] = useState(100);
 
   useEffect(() => {
     loadCertificates();
@@ -123,62 +125,141 @@ export default function ClientDashboard({ clientData, onLogout }) {
     const prefix = subObj ? subObj.prefix : 'JHIC/2026/';
     const fee = subObj ? subObj.defaultFee : 100;
 
-    setFormData({
-      id: String(Date.now()),
-      refNo: prefix,
-      applicantName: '',
-      mobile: '',
-      address: '',
+    setApplicantInfo({ applicantName: '', mobile: '', address: '' });
+    setItemForm({
       certType: defaultType,
+      refNo: prefix,
       entryDate: new Date().toISOString().split('T')[0],
-      currentStatus: 'INITIATED',
-      totalFee: fee,
-      paidAmount: fee,
-      remarks: ''
+      totalFee: fee
     });
+    setDraftList([]);
+    setPaidAmountInput(fee);
     setIsEntryModalOpen(true);
   };
 
-  const handleCertTypeChange = (code) => {
+  const handleItemCertTypeChange = (code) => {
     const subObj = CERTIFICATE_CATEGORIES.flatMap(c => c.subServices).find(s => s.code === code);
     const prefix = subObj ? subObj.prefix : 'JHIC/2026/';
     const fee = subObj ? subObj.defaultFee : 100;
 
-    setFormData(prev => ({
+    setItemForm(prev => ({
       ...prev,
       certType: code,
       refNo: prefix,
-      totalFee: fee,
-      paidAmount: fee
+      totalFee: fee
     }));
+  };
+
+  const handleAddToList = () => {
+    if (!itemForm.refNo || !itemForm.refNo.trim()) {
+      showToast('error', 'Reference Number Required', 'Please enter Reference Number before adding to list');
+      return;
+    }
+
+    const fee = parseFloat(itemForm.totalFee) || 0;
+    const newItem = {
+      id: String(Date.now() + Math.random()),
+      certType: itemForm.certType,
+      refNo: itemForm.refNo.trim().toUpperCase(),
+      entryDate: itemForm.entryDate,
+      totalFee: fee
+    };
+
+    const newDrafts = [...draftList, newItem];
+    setDraftList(newDrafts);
+
+    const grandTotal = newDrafts.reduce((sum, item) => sum + item.totalFee, 0);
+    setPaidAmountInput(grandTotal);
+
+    const subObj = CERTIFICATE_CATEGORIES.flatMap(c => c.subServices).find(s => s.code === itemForm.certType);
+    setItemForm(prev => ({
+      ...prev,
+      refNo: subObj ? subObj.prefix : 'JHIC/2026/'
+    }));
+  };
+
+  const handleRemoveFromList = (id) => {
+    const newDrafts = draftList.filter(item => item.id !== id);
+    setDraftList(newDrafts);
+    const grandTotal = newDrafts.reduce((sum, item) => sum + item.totalFee, 0);
+    setPaidAmountInput(grandTotal);
+  };
+
+  const handleResetForm = () => {
+    const subObj = CERTIFICATE_CATEGORIES.flatMap(c => c.subServices).find(s => s.code === 'JHIC');
+    setApplicantInfo({ applicantName: '', mobile: '', address: '' });
+    setItemForm({
+      certType: 'JHIC',
+      refNo: subObj ? subObj.prefix : 'JHIC/2026/',
+      entryDate: new Date().toISOString().split('T')[0],
+      totalFee: 100
+    });
+    setDraftList([]);
+    setPaidAmountInput(100);
   };
 
   const handleSaveCertificate = async (e) => {
     e.preventDefault();
+
+    if (!applicantInfo.applicantName.trim()) {
+      showToast('error', 'Applicant Name Required', 'Please enter Applicant Name');
+      return;
+    }
+    if (!applicantInfo.mobile.trim()) {
+      showToast('error', 'Mobile Required', 'Please enter WhatsApp Mobile Number');
+      return;
+    }
+
+    let itemsToSave = [...draftList];
+
+    if (itemsToSave.length === 0) {
+      if (itemForm.refNo && itemForm.refNo.trim()) {
+        itemsToSave.push({
+          id: String(Date.now()),
+          certType: itemForm.certType,
+          refNo: itemForm.refNo.trim().toUpperCase(),
+          entryDate: itemForm.entryDate,
+          totalFee: parseFloat(itemForm.totalFee) || 0
+        });
+      } else {
+        showToast('error', 'No Certificates Added', 'Please add at least one certificate item to list');
+        return;
+      }
+    }
+
     try {
-      const extra = 0;
-      const total = parseFloat(formData.totalFee) || 0;
-      const paid = parseFloat(formData.paidAmount) || 0;
-      const dues = Math.max(0, total - paid);
+      const grandTotalFee = itemsToSave.reduce((sum, item) => sum + (parseFloat(item.totalFee) || 0), 0);
+      const totalPaid = parseFloat(paidAmountInput) || 0;
 
-      const payload = {
-        ...formData,
-        id: formData.id || String(Date.now()),
-        refNo: formData.refNo.trim().toUpperCase(),
-        applicantName: formData.applicantName.trim(),
-        mobile: formData.mobile.trim(),
-        address: formData.address ? formData.address.trim() : '',
-        additionalCharge: extra,
-        totalFee: total,
-        paidAmount: paid,
-        duesAmount: dues,
-        updatedAt: new Date().toISOString()
-      };
+      for (let i = 0; i < itemsToSave.length; i++) {
+        const item = itemsToSave[i];
+        const itemPaid = itemsToSave.length === 1 
+          ? totalPaid 
+          : Math.round((item.totalFee / (grandTotalFee || 1)) * totalPaid);
+        const itemDues = Math.max(0, item.totalFee - itemPaid);
 
-      await saveCertificateToFirebase(payload);
+        const payload = {
+          id: item.id || String(Date.now() + i),
+          refNo: item.refNo.trim().toUpperCase(),
+          applicantName: applicantInfo.applicantName.trim(),
+          mobile: applicantInfo.mobile.trim(),
+          address: applicantInfo.address ? applicantInfo.address.trim() : '',
+          certType: item.certType,
+          entryDate: item.entryDate,
+          currentStatus: 'INITIATED',
+          additionalCharge: 0,
+          totalFee: item.totalFee,
+          paidAmount: itemPaid,
+          duesAmount: itemDues,
+          updatedAt: new Date().toISOString()
+        };
+
+        await saveCertificateToFirebase(payload);
+      }
+
       setIsEntryModalOpen(false);
       loadCertificates();
-      showToast('success', 'Entry Saved', `Certificate ${payload.refNo} saved successfully!`);
+      showToast('success', 'Records Saved', `${itemsToSave.length} Certificate record(s) saved successfully!`);
     } catch (err) {
       showToast('error', 'Save Failed', err.message);
     }
@@ -666,132 +747,262 @@ export default function ClientDashboard({ clientData, onLogout }) {
         </section>
       </main>
 
-      {/* Entry Modal */}
+      {/* Entry Modal - ENHANCED BATCH & MULTI-ITEM LIST MODAL (MAX-W-4XL) */}
       {isEntryModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 rounded-3xl p-6 max-w-lg w-full shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                <FileText className="w-5 h-5 text-blue-600" />
-                New Certificate Entry
-              </h3>
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 md:p-8 max-w-4xl w-full shadow-2xl space-y-6 my-8 animate-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 font-extrabold shadow-xs">
+                  <FileText className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-extrabold text-slate-900 tracking-tight">New Certificate Entry</h3>
+                  <p className="text-xs text-slate-500 font-medium">Add applicant & certificate entries to list before saving</p>
+                </div>
+              </div>
               <button 
                 onClick={() => setIsEntryModalOpen(false)}
-                className="text-slate-400 hover:text-slate-700 text-2xl font-bold"
+                className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 transition"
+                title="Close"
               >
-                &times;
+                <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSaveCertificate} className="space-y-3 text-xs font-medium">
-              <div className="grid grid-cols-2 gap-3">
+            <form onSubmit={handleSaveCertificate} className="space-y-6 text-xs font-medium">
+              
+              {/* 1. Applicant Details */}
+              <div className="bg-slate-50/80 border border-slate-200 rounded-2xl p-4 space-y-3">
+                <h4 className="text-xs font-extrabold text-blue-800 uppercase tracking-wider flex items-center gap-2">
+                  <User className="w-4 h-4 text-blue-600" />
+                  Applicant Details
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-slate-700 font-bold mb-1">Applicant Name *</label>
+                    <input
+                      type="text"
+                      required
+                      value={applicantInfo.applicantName}
+                      onChange={(e) => setApplicantInfo(prev => ({ ...prev, applicantName: e.target.value }))}
+                      placeholder="e.g. Ramesh Kumar"
+                      className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-slate-900 font-semibold focus:ring-2 focus:ring-blue-500/20"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-700 font-bold mb-1">WhatsApp Mobile No *</label>
+                    <input
+                      type="text"
+                      required
+                      value={applicantInfo.mobile}
+                      onChange={(e) => setApplicantInfo(prev => ({ ...prev, mobile: e.target.value }))}
+                      placeholder="e.g. 9876543210"
+                      className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-slate-900 font-mono font-semibold focus:ring-2 focus:ring-blue-500/20"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-700 font-bold mb-1">Village / Address</label>
+                    <input
+                      type="text"
+                      value={applicantInfo.address}
+                      onChange={(e) => setApplicantInfo(prev => ({ ...prev, address: e.target.value }))}
+                      placeholder="e.g. Village Address"
+                      className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-slate-900 focus:ring-2 focus:ring-blue-500/20"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* 2. Certificate Details Entry & Add to List */}
+              <div className="bg-blue-50/50 border border-blue-200/80 rounded-2xl p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-extrabold text-blue-900 uppercase tracking-wider flex items-center gap-2">
+                    <Tag className="w-4 h-4 text-blue-600" />
+                    Certificate Details
+                  </h4>
+                  <span className="text-[11px] text-blue-600 font-bold">Add item to list</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 items-end">
+                  <div>
+                    <label className="block text-slate-700 font-bold mb-1">Certificate Sub-Type</label>
+                    <select
+                      value={itemForm.certType}
+                      onChange={(e) => handleItemCertTypeChange(e.target.value)}
+                      className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-slate-900 font-bold"
+                    >
+                      {CERTIFICATE_CATEGORIES.flatMap(c => c.subServices).map(s => (
+                        <option key={s.code} value={s.code}>{s.name}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-700 font-bold mb-1">Reference Number *</label>
+                    <input
+                      type="text"
+                      value={itemForm.refNo}
+                      onChange={(e) => setItemForm(prev => ({ ...prev, refNo: e.target.value }))}
+                      placeholder="e.g. JHIC/2026/12345"
+                      className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-blue-700 font-mono font-bold"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-700 font-bold mb-1">Application Date</label>
+                    <input
+                      type="date"
+                      value={itemForm.entryDate}
+                      onChange={(e) => setItemForm(prev => ({ ...prev, entryDate: e.target.value }))}
+                      className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-slate-900"
+                    />
+                  </div>
+
+                  <div>
+                    <button
+                      type="button"
+                      onClick={handleAddToList}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold shadow-sm transition"
+                    >
+                      <PlusCircle className="w-4 h-4" />
+                      Add to List
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* 3. Certificate Added List Table */}
+              <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs space-y-2 p-3">
+                <div className="flex items-center justify-between px-2 pb-1 border-b border-slate-100">
+                  <h4 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                    <Layers className="w-4 h-4 text-blue-600" />
+                    Certificate Added List ({draftList.length > 0 ? draftList.length : (itemForm.refNo ? 1 : 0)})
+                  </h4>
+                  <span className="text-[11px] text-slate-400 font-medium">Items ready to be saved</span>
+                </div>
+
+                <div className="border border-slate-100 rounded-xl overflow-x-auto max-h-48">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-50 text-slate-600 font-bold border-b border-slate-200">
+                      <tr>
+                        <th className="px-3 py-2">#</th>
+                        <th className="px-3 py-2">Sub-Type</th>
+                        <th className="px-3 py-2">Reference Number</th>
+                        <th className="px-3 py-2">Date</th>
+                        <th className="px-3 py-2">Fee (₹)</th>
+                        <th className="px-3 py-2 text-right">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 font-semibold text-slate-800">
+                      {draftList.length === 0 ? (
+                        itemForm.refNo ? (
+                          <tr className="bg-blue-50/30">
+                            <td className="px-3 py-2 text-slate-400">1</td>
+                            <td className="px-3 py-2 font-bold text-blue-700">{itemForm.certType}</td>
+                            <td className="px-3 py-2 font-mono font-bold text-slate-900">{itemForm.refNo}</td>
+                            <td className="px-3 py-2 text-slate-600">{itemForm.entryDate}</td>
+                            <td className="px-3 py-2 font-bold text-slate-900">₹{itemForm.totalFee}</td>
+                            <td className="px-3 py-2 text-right text-slate-400 italic">Form Entry</td>
+                          </tr>
+                        ) : (
+                          <tr>
+                            <td colSpan="6" className="px-4 py-4 text-center text-slate-400 font-medium italic">
+                              No certificates added yet. Fill details above and click "+ Add to List".
+                            </td>
+                          </tr>
+                        )
+                      ) : (
+                        draftList.map((item, idx) => (
+                          <tr key={item.id} className="hover:bg-slate-50">
+                            <td className="px-3 py-2 text-slate-500 font-bold">{idx + 1}</td>
+                            <td className="px-3 py-2 font-bold text-blue-700">{item.certType}</td>
+                            <td className="px-3 py-2 font-mono font-bold text-slate-900">{item.refNo}</td>
+                            <td className="px-3 py-2 text-slate-600">{item.entryDate}</td>
+                            <td className="px-3 py-2 font-bold text-slate-900">₹{item.totalFee}</td>
+                            <td className="px-3 py-2 text-right">
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveFromList(item.id)}
+                                className="p-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 transition"
+                                title="Remove item"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* 4. Payment & Totals Summary */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 bg-slate-50 border border-slate-200 rounded-2xl p-4">
                 <div>
-                  <label className="block text-slate-700 font-bold mb-1">Certificate Sub-Type</label>
-                  <select
-                    value={formData.certType}
-                    onChange={(e) => handleCertTypeChange(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-900 font-bold"
+                  <label className="block text-slate-600 font-bold mb-1">Total Fee Count / Sum (₹)</label>
+                  <div className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-slate-900 font-extrabold text-sm flex items-center justify-between">
+                    <span>₹{draftList.length > 0 ? draftList.reduce((sum, item) => sum + item.totalFee, 0) : (parseFloat(itemForm.totalFee) || 0)}</span>
+                    <span className="text-[10px] text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full font-bold">
+                      {draftList.length > 0 ? draftList.length : 1} Item(s)
+                    </span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-slate-700 font-bold mb-1">Paid Amount (₹) *</label>
+                  <input
+                    type="number"
+                    value={paidAmountInput}
+                    onChange={(e) => setPaidAmountInput(e.target.value)}
+                    className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-emerald-800 font-extrabold text-sm focus:ring-2 focus:ring-emerald-500/20"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-600 font-bold mb-1">Calculated Dues (₹)</label>
+                  {(() => {
+                    const totalSum = draftList.length > 0 ? draftList.reduce((sum, item) => sum + item.totalFee, 0) : (parseFloat(itemForm.totalFee) || 0);
+                    const dues = Math.max(0, totalSum - (parseFloat(paidAmountInput) || 0));
+                    return (
+                      <div className={`w-full bg-white border border-slate-300 rounded-xl px-3 py-2 font-extrabold text-sm ${dues > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
+                        ₹{dues}
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
+
+              {/* 5. Footer Buttons */}
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-slate-100">
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <button
+                    type="button"
+                    onClick={handleResetForm}
+                    className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold flex items-center gap-1.5 transition"
                   >
-                    {CERTIFICATE_CATEGORIES.flatMap(c => c.subServices).map(s => (
-                      <option key={s.code} value={s.code}>{s.name}</option>
-                    ))}
-                  </select>
+                    <RefreshCw className="w-4 h-4 text-slate-500" />
+                    Reset
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsEntryModalOpen(false)}
+                    className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold transition"
+                  >
+                    Close
+                  </button>
                 </div>
 
-                <div>
-                  <label className="block text-slate-700 font-bold mb-1">Reference Number *</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.refNo}
-                    onChange={(e) => setFormData(prev => ({ ...prev, refNo: e.target.value }))}
-                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-blue-700 font-mono font-bold"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-slate-700 font-bold mb-1">Applicant Name *</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.applicantName}
-                    onChange={(e) => setFormData(prev => ({ ...prev, applicantName: e.target.value }))}
-                    placeholder="e.g. Ramesh Kumar"
-                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-900 font-semibold"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-slate-700 font-bold mb-1">WhatsApp Mobile No *</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.mobile}
-                    onChange={(e) => setFormData(prev => ({ ...prev, mobile: e.target.value }))}
-                    placeholder="e.g. 9876543210"
-                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-900 font-mono font-semibold"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-slate-700 font-bold mb-1">Village / Address</label>
-                <input
-                  type="text"
-                  value={formData.address}
-                  onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
-                  placeholder="e.g. Village Address"
-                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-900"
-                />
-              </div>
-
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-slate-700 font-bold mb-1">Total Fee (₹)</label>
-                  <input
-                    type="number"
-                    value={formData.totalFee}
-                    onChange={(e) => setFormData(prev => ({ ...prev, totalFee: e.target.value }))}
-                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-900 font-bold"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-slate-700 font-bold mb-1">Paid Amount (₹)</label>
-                  <input
-                    type="number"
-                    value={formData.paidAmount}
-                    onChange={(e) => setFormData(prev => ({ ...prev, paidAmount: e.target.value }))}
-                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-900 font-bold"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-slate-700 font-bold mb-1">Application Date</label>
-                  <input
-                    type="date"
-                    value={formData.entryDate}
-                    onChange={(e) => setFormData(prev => ({ ...prev, entryDate: e.target.value }))}
-                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-900"
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setIsEntryModalOpen(false)}
-                  className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold"
-                >
-                  Cancel
-                </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow"
+                  className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold shadow-md shadow-blue-500/20 transition flex items-center justify-center gap-2 text-sm"
                 >
-                  Save Certificate Record
+                  <FileText className="w-4 h-4" />
+                  Save Certificate Record(s)
                 </button>
               </div>
             </form>
