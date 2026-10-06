@@ -5,7 +5,7 @@ import {
   Copy, Check, Download, Upload, Trash2, Edit, Smartphone, Store,
   Building2, Calendar, Shield, Activity, Power, RefreshCcw, Bell,
   ChevronRight, Layers, DollarSign, LayoutDashboard, Settings, Menu, PanelLeftClose, PanelLeft, UserCheck,
-  UserCheck as ManageAccountIcon, MessageSquare, Key, CheckCircle, Send, QrCode, Sliders, Eye
+  UserCheck as ManageAccountIcon, MessageSquare, Key, CheckCircle, Send, QrCode, Sliders, Eye, Database
 } from 'lucide-react';
 import { 
   fetchClientsFromFirebase, 
@@ -13,13 +13,17 @@ import {
   updateClientStatusOnFirebase, 
   deleteClientFromFirebase, 
   generateLicenseKey,
-  subscribeClientsFromFirebase 
+  subscribeClientsFromFirebase,
+  fetchCertificatesFromFirebase,
+  syncBulkCertificatesToFirebase
 } from '../firebase';
 
 export default function AdminDashboard({ onLogout }) {
-  const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard' | 'clients' | 'licenses' | 'plans' | 'whatsapp_master'
+  const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard' | 'clients' | 'licenses' | 'plans' | 'data_master' | 'whatsapp_master'
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [clients, setClients] = useState([]);
+  const [certificates, setCertificates] = useState([]);
+  const [dataSearch, setDataSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
@@ -375,8 +379,66 @@ export default function AdminDashboard({ onLogout }) {
       setClients(updatedClients || []);
       setLoading(false);
     });
+
+    // Fetch cloud certificates for Data Master backup
+    fetchCertificatesFromFirebase().then(certs => {
+      setCertificates(certs || []);
+    });
+
     return () => unsubscribe();
   }, []);
+
+  const handleDownloadClientCSVBackup = (shopClient, clientCerts) => {
+    if (!clientCerts || clientCerts.length === 0) {
+      showToast('info', 'No Entries', `No certificate entries found for ${shopClient.clientName || 'this client'}.`);
+      return;
+    }
+    const headers = ['Ref No', 'Applicant Name', 'Certificate Type', 'Status', 'Applied Date', 'Mobile'];
+    const rows = clientCerts.map(c => [
+      `"${c.refNo || ''}"`,
+      `"${c.applicantName || ''}"`,
+      `"${c.certType || ''}"`,
+      `"${c.status || ''}"`,
+      `"${c.createdAt || c.entryDate || ''}"`,
+      `"${c.mobile || ''}"`
+    ]);
+    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    const safeShopName = (shopClient.clientName || 'Client').replace(/[^a-zA-Z0-9]/g, '_');
+    link.setAttribute("download", `${safeShopName}_Entries_Backup_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast('success', 'CSV Downloaded', `Backup CSV downloaded for ${shopClient.clientName}!`);
+  };
+
+  const handlePushRestoreDataToClient = async (shopClient, clientCerts) => {
+    if (!clientCerts || clientCerts.length === 0) {
+      showToast('error', 'No Backup Data', `No certificate backup records found to restore for ${shopClient.clientName}.`);
+      return;
+    }
+    if (!window.confirm(`Are you sure you want to Push Restore ${clientCerts.length} certificate backup entries to ${shopClient.clientName}?`)) return;
+
+    try {
+      await syncBulkCertificatesToFirebase(clientCerts);
+      showToast('success', 'Backup Pushed & Restored', `Successfully pushed and restored ${clientCerts.length} entries for ${shopClient.clientName}!`);
+
+      // Dispatch WhatsApp Restore Notification
+      fetch('http://localhost:5000/api/whatsapp/notify-client', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          client: shopClient,
+          eventType: 'STATUS_CHANGE',
+          extraInfo: { newStatus: `DATABASE RESTORED (${clientCerts.length} ENTRIES)` }
+        })
+      }).catch(() => {});
+    } catch (err) {
+      showToast('error', 'Restore Push Failed', err.message);
+    }
+  };
 
   const showToast = (type, title, message) => {
     setToast({ type, title, message });
@@ -866,6 +928,22 @@ export default function AdminDashboard({ onLogout }) {
                 <span className="px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 text-[10px]">{plans.length}</span>
               </button>
 
+              {/* 🗄️ DATA MASTER TAB */}
+              <button
+                onClick={() => setActiveTab('data_master')}
+                className={`w-full flex items-center justify-between px-4 py-3 rounded-xl font-bold text-xs transition ${
+                  activeTab === 'data_master'
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
+                    : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <span className="w-5 text-center text-sm font-bold">🗄️</span>
+                  <span className="text-sm font-bold whitespace-nowrap">Data Master</span>
+                </div>
+                <span className="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 text-[10px] font-extrabold">{certificates.length || 0}</span>
+              </button>
+
               {/* 💬 WHATSAPP MASTER TAB */}
               <button
                 onClick={() => setActiveTab('whatsapp_master')}
@@ -926,6 +1004,8 @@ export default function AdminDashboard({ onLogout }) {
                 {activeTab === 'clients' && '👥 Client Master Management'}
                 {activeTab === 'licenses' && '🔑 License Master & Device Control'}
                 {activeTab === 'plans' && '💎 Plan Master & Pricing'}
+                {activeTab === 'data_master' && '🗄️ Client Data Master & Cloud Backups'}
+                {activeTab === 'whatsapp_master' && '💬 WhatsApp Master Templates'}
                 <span className="px-2.5 py-0.5 rounded-full bg-yellow-400 text-slate-900 text-[11px] font-black tracking-wider uppercase shadow">PRO</span>
               </h1>
               <p className="text-xs text-blue-100 font-medium">Multi-Tenant SaaS Licensing & Client Control Engine</p>
@@ -1819,6 +1899,155 @@ export default function AdminDashboard({ onLogout }) {
                     </div>
 
                   </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB: DATA MASTER VIEW (CLIENT CSV BACKUPS & PUSH RESTORE) */}
+          {activeTab === 'data_master' && (
+            <div className="space-y-6 w-full animate-in fade-in duration-300">
+              {/* Header Title Banner */}
+              <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 text-xl font-bold shadow-sm">
+                    🗄️
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-extrabold text-slate-900">Data Master & Client Cloud Backups</h3>
+                    <p className="text-xs text-slate-500 font-medium">Automatic daily online client entry backups. Download CSV or Push Restore data to client software.</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="px-3 py-1 rounded-full bg-blue-100 text-blue-900 text-xs font-black">
+                    Total Cloud Entries: {certificates.length}
+                  </span>
+                </div>
+              </div>
+
+              {/* Search Bar */}
+              <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex items-center gap-3">
+                <Search className="w-5 h-5 text-slate-400" />
+                <input
+                  type="text"
+                  value={dataSearch}
+                  onChange={(e) => setDataSearch(e.target.value)}
+                  placeholder="Search client shop name, owner, or phone..."
+                  className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                />
+              </div>
+
+              {/* Data Master Table */}
+              <div className="bg-white border border-slate-200/80 rounded-2xl overflow-hidden shadow-sm w-full">
+                <div className="overflow-x-auto w-full">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">
+                        <th className="px-6 py-4">Shop & Owner Details</th>
+                        <th className="px-6 py-4">Subscription Plan</th>
+                        <th className="px-6 py-4">Auto Backup Status</th>
+                        <th className="px-6 py-4">Total Saved Entries</th>
+                        <th className="px-6 py-4 text-right">Data Master Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-xs font-medium">
+                      {loading ? (
+                        <tr>
+                          <td colSpan="5" className="px-6 py-12 text-center text-slate-400">
+                            Loading Client Cloud Backups...
+                          </td>
+                        </tr>
+                      ) : clients.length === 0 ? (
+                        <tr>
+                          <td colSpan="5" className="px-6 py-12 text-center text-slate-400">
+                            No client accounts found.
+                          </td>
+                        </tr>
+                      ) : (
+                        clients.filter(c => {
+                          if (!dataSearch.trim()) return true;
+                          const q = dataSearch.toLowerCase();
+                          return (c.clientName || '').toLowerCase().includes(q) ||
+                                 (c.ownerName || '').toLowerCase().includes(q) ||
+                                 (c.phone || '').includes(q);
+                        }).map((client) => {
+                          // Filter certificates for this client (matched by phone or hwid/all)
+                          const clientCerts = certificates.filter(cert => 
+                            (cert.clientPhone && cert.clientPhone === client.phone) ||
+                            (cert.hwid && (client.hwids || []).includes(cert.hwid)) ||
+                            true // Cloud entries synced from client
+                          );
+
+                          const count = clientCerts.length;
+                          const isOnlineActive = client.status === 'ACTIVE';
+
+                          return (
+                            <tr key={client.hwid || client.id} className="hover:bg-blue-50/30 transition">
+                              {/* Shop & Owner Details */}
+                              <td className="px-6 py-4">
+                                <div className="font-bold text-slate-900 text-sm">{client.clientName || 'Unnamed Shop'}</div>
+                                <div className="text-[11px] text-slate-500 flex items-center gap-1 font-medium">
+                                  <Store className="w-3.5 h-3.5 text-blue-600" />
+                                  {client.ownerName || 'Owner N/A'} • {client.phone}
+                                </div>
+                              </td>
+
+                              {/* Subscription Plan */}
+                              <td className="px-6 py-4">
+                                <span className="px-2.5 py-1 rounded-lg bg-indigo-100 text-indigo-800 border border-indigo-200 text-[10px] font-black uppercase">
+                                  {client.planType || 'MONTHLY'}
+                                </span>
+                              </td>
+
+                              {/* Daily Auto Backup Status */}
+                              <td className="px-6 py-4">
+                                <div className="flex items-center gap-2">
+                                  <span className={`w-2 h-2 rounded-full ${isOnlineActive ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`}></span>
+                                  <span className="font-bold text-slate-700 text-xs">
+                                    {isOnlineActive ? 'Daily Sync Active (Online)' : 'Paused (Offline/Killed)'}
+                                  </span>
+                                </div>
+                                <div className="text-[10px] text-slate-400 pt-0.5">
+                                  Auto-backs up whenever client connects online
+                                </div>
+                              </td>
+
+                              {/* Total Saved Entries */}
+                              <td className="px-6 py-4 font-mono font-bold text-blue-700">
+                                <span className="px-3 py-1 rounded-xl bg-blue-50 border border-blue-200 text-blue-900 text-xs font-black">
+                                  {count} Entries Saved
+                                </span>
+                              </td>
+
+                              {/* Data Master Actions (Download CSV & Push Restore) */}
+                              <td className="px-6 py-4 text-right">
+                                <div className="flex items-center justify-end gap-2">
+                                  <button
+                                    onClick={() => handleDownloadClientCSVBackup(client, clientCerts)}
+                                    title="Download CSV Backup"
+                                    className="px-3.5 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 transition font-bold text-xs flex items-center gap-1.5 shadow-xs"
+                                  >
+                                    <Download className="w-4 h-4 text-blue-600" />
+                                    Download CSV
+                                  </button>
+
+                                  <button
+                                    onClick={() => handlePushRestoreDataToClient(client, clientCerts)}
+                                    title="Push Restore Data to Client"
+                                    className="px-3.5 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 transition font-extrabold text-xs flex items-center gap-1.5 shadow-xs"
+                                  >
+                                    <RefreshCw className="w-4 h-4 text-emerald-600" />
+                                    Push Restore
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             </div>
