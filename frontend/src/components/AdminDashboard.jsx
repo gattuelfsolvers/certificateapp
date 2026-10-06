@@ -1030,7 +1030,7 @@ export default function AdminDashboard({ onLogout }) {
                 }`}
               >
                 <div className="flex items-center gap-2.5">
-                  <span className="w-5 text-center text-sm font-bold">💎</span>
+                  <span className="w-5 text-center text-sm font-black text-emerald-400">₹</span>
                   <span className="text-sm font-bold whitespace-nowrap">Plan Master</span>
                 </div>
                 <span className="px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 text-[10px]">{plans.length}</span>
@@ -1246,8 +1246,8 @@ export default function AdminDashboard({ onLogout }) {
                 onClick={() => setActiveTab('plans')}
                 className="flex flex-col items-center justify-center p-3 rounded-xl bg-emerald-50/80 hover:bg-emerald-100/80 text-emerald-900 border border-emerald-100 hover:border-emerald-300 transition group shadow-xs hover:shadow-md"
               >
-                <div className="w-10 h-10 rounded-lg bg-emerald-600 text-white flex items-center justify-center mb-2 group-hover:scale-110 transition-transform shadow-sm shadow-emerald-500/30">
-                  <DollarSign className="w-5 h-5" />
+                <div className="w-10 h-10 rounded-lg bg-emerald-600 text-white flex items-center justify-center mb-2 group-hover:scale-110 transition-transform shadow-sm shadow-emerald-500/30 text-lg font-black">
+                  ₹
                 </div>
                 <span className="text-xs font-bold text-center">Plan Master</span>
               </button>
