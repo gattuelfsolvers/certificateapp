@@ -20,6 +20,7 @@ export default function UniversalLogin({ onLoginSuccess }) {
   const [selectedPlanId, setSelectedPlanId] = useState('HALF_YEARLY'); // Default Selected Plan
   const [submittingReg, setSubmittingReg] = useState(false);
   const [registeredAccountInfo, setRegisteredAccountInfo] = useState(null);
+  const [duplicateModalData, setDuplicateModalData] = useState(null); // { isOpen: boolean, phone: string, status: string, isReactivation: boolean, message: string }
 
   // Dynamic Registration Plans List (Excludes LIFETIME)
   const [registrationPlans, setRegistrationPlans] = useState([
