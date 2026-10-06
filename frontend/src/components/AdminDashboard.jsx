@@ -1373,17 +1373,12 @@ export default function AdminDashboard({ onLogout }) {
                       </label>
                     </div>
 
-                    <button 
-                      onClick={() => showToast('success', 'WhatsApp Gateway Saved', 'Automated message triggers & gateway settings updated!')}
-                      className="w-full py-3 mt-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-md transition flex items-center justify-center gap-2"
-                    >
-                      <Send className="w-4 h-4" />
-                      Save WhatsApp Automation Settings
-                    </button>
                   </div>
                 </div>
               </div>
             </div>
+          )}
+
           {/* TAB: WHATSAPP MASTER TEMPLATE SUITE */}
           {activeTab === 'whatsapp_master' && (
             <div className="space-y-6 w-full">
