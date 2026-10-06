@@ -37,39 +37,54 @@ export default function UniversalLogin({ onLoginSuccess }) {
       return;
     }
 
-    // 2. Check Client License Key or Mobile in Firebase Cloud with Multi-HWID Whitelisting
+    // 2. Check Client Mobile Number / License Key in Firebase Cloud with Password & HWID Whitelisting
     try {
       const clients = await fetchClientsFromFirebase();
       const currentSystemHwid = localStorage.getItem('CLIENT_SYSTEM_HWID') || '';
       
       const matchedClient = (clients || []).find(c => {
-        const keyMatch = c.licenseKey && c.licenseKey.trim().toUpperCase() === cleanUser.toUpperCase();
         const phoneMatch = c.phone && c.phone.trim() === cleanUser;
-        const primaryHwidMatch = c.hwid && c.hwid.trim().toUpperCase() === cleanUser.toUpperCase();
-        const arrayHwidMatch = Array.isArray(c.hwids) && c.hwids.some(h => h.trim().toUpperCase() === cleanUser.toUpperCase());
-        return keyMatch || phoneMatch || primaryHwidMatch || arrayHwidMatch;
+        const keyMatch = c.licenseKey && c.licenseKey.trim().toUpperCase() === cleanUser.toUpperCase();
+        return phoneMatch || keyMatch;
       });
 
       if (matchedClient) {
+        // Password Check: Default password is phone number or client.password or master fallback if set
+        const validPassword = matchedClient.password ? matchedClient.password.trim() : (matchedClient.phone ? matchedClient.phone.trim() : cleanUser);
+        
+        if (cleanPass !== validPassword && cleanPass !== matchedClient.licenseKey) {
+          setError('Invalid Password! Please enter the correct password for your account.');
+          setLoading(false);
+          return;
+        }
+
+        // Account Status Check
         if (matchedClient.status === 'KILLED' || matchedClient.status === 'INACTIVE') {
-          setError('Your account license has been terminated or blocked. Please contact Admin.');
+          setError('Your account license has been terminated or blocked by Admin.');
           setLoading(false);
           return;
         }
 
-        const expiresAt = new Date(matchedClient.expiresAt);
-        if (expiresAt <= new Date()) {
-          setError('Your subscription license has expired. Please contact Admin to renew.');
+        if (matchedClient.status === 'PENDING') {
+          setError('Your account registration is currently PENDING approval from Admin.');
           setLoading(false);
           return;
         }
 
-        // Multi-HWID Whitelisting Enforcement
+        // Expiry Date Check
+        const daysLeft = Math.ceil((new Date(matchedClient.expiresAt) - new Date()) / (1000 * 60 * 60 * 24));
+        if (daysLeft <= 0 && matchedClient.planType !== 'LIFETIME') {
+          setError('Your subscription license has EXPIRED. Please contact Admin to renew.');
+          setLoading(false);
+          return;
+        }
+
+        // Multi-HWID Whitelisting Verification
         const whitelistedHwids = Array.isArray(matchedClient.hwids) && matchedClient.hwids.length > 0 
           ? matchedClient.hwids.map(h => h.toUpperCase())
           : [(matchedClient.hwid || '').toUpperCase()];
           
-        const maxPcs = matchedClient.allowedPcs || 2;
+        const maxPcs = matchedClient.allowedPcs || 1;
 
         if (currentSystemHwid) {
           const cleanCurrentHwid = currentSystemHwid.toUpperCase();
@@ -86,7 +101,7 @@ export default function UniversalLogin({ onLoginSuccess }) {
         localStorage.setItem('ACTIVE_CLIENT_DATA', JSON.stringify(matchedClient));
         onLoginSuccess('CLIENT', matchedClient);
       } else {
-        setError('Invalid User ID, License Key or Password! Please check and try again.');
+        setError('Mobile Number / User ID not registered! Please check or Request Access.');
       }
     } catch (err) {
       setError('Connection error: Unable to verify credentials with Firebase Cloud.');
