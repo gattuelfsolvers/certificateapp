@@ -74,6 +74,20 @@ export async function saveClientToFirebase(clientData) {
   return payload;
 }
 
+// Master Admin / Client: Update HWID List on Firebase Cloud
+export async function updateClientHwidsOnFirebase(hwid, newHwidsArray) {
+  const cleanHwid = hwid.trim().toUpperCase();
+  const clientRef = doc(db, "clients", cleanHwid);
+  const cleanList = Array.from(new Set(newHwidsArray.map(h => (h || '').trim().toUpperCase()).filter(Boolean)));
+  
+  await setDoc(clientRef, { 
+    hwids: cleanList, 
+    hwid: cleanList[0] || cleanHwid,
+    updatedAt: new Date().toISOString() 
+  }, { merge: true });
+  return cleanList;
+}
+
 // Master Admin: Toggle Client Status (ACTIVE / KILLED / EXPIRED)
 export async function updateClientStatusOnFirebase(hwid, newStatus) {
   const cleanHwid = hwid.trim().toUpperCase();

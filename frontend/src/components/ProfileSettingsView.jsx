@@ -4,6 +4,8 @@ import {
   Lock, Smartphone, CheckCircle2, MessageSquare, AlertCircle, Save, Eye, EyeOff, QrCode, RefreshCw, Zap, Send, FileEdit, Plus, Trash2, Edit, Monitor
 } from 'lucide-react';
 
+import { updateClientHwidsOnFirebase } from '../firebase';
+
 export default function ProfileSettingsView({ clientData, showToast }) {
   // 1. Client Personal & Business Details State
   const [profile, setProfile] = useState(() => {
@@ -375,7 +377,7 @@ export default function ProfileSettingsView({ clientData, showToast }) {
                 </div>
                 <button
                   type="button"
-                  onClick={() => {
+                  onClick={async () => {
                     if (!newHwidInput.trim()) {
                       if (showToast) showToast('error', 'HWID Required', 'Please enter Hardware ID (HWID)');
                       return;
@@ -393,7 +395,21 @@ export default function ProfileSettingsView({ clientData, showToast }) {
                     const updated = [...hwidList, cleanHwid];
                     setHwidList(updated);
                     setNewHwidInput('');
-                    if (showToast) showToast('success', 'HWID Added', `Hardware ID ${cleanHwid} added to registered list.`);
+
+                    // Sync to Firebase & LocalStorage
+                    const primaryKey = clientData?.hwid || hwidList[0] || localStorage.getItem('CLIENT_SYSTEM_HWID');
+                    await updateClientHwidsOnFirebase(primaryKey, updated);
+                    
+                    const activeData = localStorage.getItem('ACTIVE_CLIENT_DATA');
+                    if (activeData) {
+                      try {
+                        const parsed = JSON.parse(activeData);
+                        parsed.hwids = updated;
+                        localStorage.setItem('ACTIVE_CLIENT_DATA', JSON.stringify(parsed));
+                      } catch (err) {}
+                    }
+
+                    if (showToast) showToast('success', 'HWID Added', `Hardware ID ${cleanHwid} added & saved to database.`);
                   }}
                   className="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold text-xs transition shadow-xs flex items-center gap-1.5 shrink-0 cursor-pointer"
                 >
@@ -416,14 +432,28 @@ export default function ProfileSettingsView({ clientData, showToast }) {
                         />
                         <button
                           type="button"
-                          onClick={() => {
+                          onClick={async () => {
                             if (!editHwidInput.trim()) return;
                             const clean = editHwidInput.trim().toUpperCase();
                             const newList = [...hwidList];
                             newList[idx] = clean;
                             setHwidList(newList);
                             setEditingHwidIndex(null);
-                            if (showToast) showToast('success', 'HWID Updated', 'Hardware ID updated.');
+
+                            // Sync to Firebase & LocalStorage
+                            const primaryKey = clientData?.hwid || hwidList[0] || localStorage.getItem('CLIENT_SYSTEM_HWID');
+                            await updateClientHwidsOnFirebase(primaryKey, newList);
+
+                            const activeData = localStorage.getItem('ACTIVE_CLIENT_DATA');
+                            if (activeData) {
+                              try {
+                                const parsed = JSON.parse(activeData);
+                                parsed.hwids = newList;
+                                localStorage.setItem('ACTIVE_CLIENT_DATA', JSON.stringify(parsed));
+                              } catch (err) {}
+                            }
+
+                            if (showToast) showToast('success', 'HWID Updated', 'Hardware ID updated & saved to database.');
                           }}
                           className="px-2.5 py-1 rounded-lg bg-emerald-600 text-white font-extrabold text-xs"
                         >
@@ -460,7 +490,7 @@ export default function ProfileSettingsView({ clientData, showToast }) {
                           </button>
                           <button
                             type="button"
-                            onClick={() => {
+                            onClick={async () => {
                               if (hwidList.length <= 1) {
                                 if (showToast) showToast('error', 'Cannot Delete', 'At least 1 registered HWID must remain.');
                                 return;
@@ -468,7 +498,21 @@ export default function ProfileSettingsView({ clientData, showToast }) {
                               if (!window.confirm(`Are you sure you want to remove HWID ${hwidItem}?`)) return;
                               const newList = hwidList.filter((_, i) => i !== idx);
                               setHwidList(newList);
-                              if (showToast) showToast('info', 'HWID Removed', 'Hardware ID removed from list.');
+
+                              // Sync to Firebase & LocalStorage
+                              const primaryKey = clientData?.hwid || hwidList[0] || localStorage.getItem('CLIENT_SYSTEM_HWID');
+                              await updateClientHwidsOnFirebase(primaryKey, newList);
+
+                              const activeData = localStorage.getItem('ACTIVE_CLIENT_DATA');
+                              if (activeData) {
+                                try {
+                                  const parsed = JSON.parse(activeData);
+                                  parsed.hwids = newList;
+                                  localStorage.setItem('ACTIVE_CLIENT_DATA', JSON.stringify(parsed));
+                                } catch (err) {}
+                              }
+
+                              if (showToast) showToast('info', 'HWID Removed', 'Hardware ID removed and updated on database.');
                             }}
                             title="Delete HWID"
                             className="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 transition"
