@@ -103,7 +103,10 @@ export default function UniversalLogin({ onLoginSuccess }) {
     return () => unsubscribe();
   }, []);
 
-  const handleNextStep1 = (e) => {
+  // State for Registration Duplicate Mobile Check Popup Modal
+  const [duplicateModalData, setDuplicateModalData] = useState(null); // { isOpen: boolean, phone: string, status: string, isReactivation: boolean, message: string }
+
+  const handleNextStep1 = async (e) => {
     e.preventDefault();
     const cleanPhone = requestForm.phone.trim();
     if (!requestForm.shopName.trim() || !requestForm.ownerName.trim() || !cleanPhone) {
@@ -114,6 +117,36 @@ export default function UniversalLogin({ onLoginSuccess }) {
       alert('Please enter a valid 10-digit mobile number!');
       return;
     }
+
+    // Check duplicate mobile registration across all clients from Firebase Firestore
+    try {
+      const clients = await fetchClientsFromFirebase();
+      const existingClient = (clients || []).find(c => c.phone && c.phone.trim() === cleanPhone);
+
+      if (existingClient) {
+        const clientStatus = existingClient.status || 'ACTIVE';
+        const isReactivationNeeded = clientStatus === 'EXPIRED' || clientStatus === 'KILLED' || clientStatus === 'INACTIVE' || clientStatus === 'DELETED';
+
+        let customMsg = '';
+        if (isReactivationNeeded) {
+          customMsg = `Your number (${cleanPhone}) is already registered with us and it is in "${clientStatus}" status. Please contact the Admin at 7781931880 for reactivating your account.`;
+        } else {
+          customMsg = `Your number (${cleanPhone}) is already registered with us and it is in "${clientStatus}" status. Please login with your user ID and password.`;
+        }
+
+        setDuplicateModalData({
+          isOpen: true,
+          phone: cleanPhone,
+          status: clientStatus,
+          isReactivation: isReactivationNeeded,
+          message: customMsg
+        });
+        return;
+      }
+    } catch (err) {
+      console.error("Duplicate mobile check error:", err);
+    }
+
     setRegStep(2);
   };
 
@@ -526,6 +559,82 @@ export default function UniversalLogin({ onLoginSuccess }) {
               <button
                 onClick={() => setIsHwidModalOpen(false)}
                 className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs rounded-xl transition"
+              >
+                Close Window
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* DUPLICATE MOBILE NUMBER REGISTRATION WARNING MODAL */}
+      {duplicateModalData && duplicateModalData.isOpen && (
+        <div className="fixed inset-0 z-[60] bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-amber-500/40 rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-2xl space-y-6 text-center relative animate-in fade-in zoom-in-95 duration-200">
+            <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center mx-auto text-amber-400 shadow-lg">
+              <AlertCircle className="w-8 h-8" />
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="text-xl font-black text-white tracking-tight">
+                Mobile Number Already Registered
+              </h3>
+              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 text-slate-200 text-xs font-medium leading-relaxed space-y-2 text-left">
+                <p>
+                  Your number <span className="font-mono font-bold text-amber-300">({duplicateModalData.phone})</span> is already registered with us and it is in <span className="font-extrabold uppercase text-emerald-400">"{duplicateModalData.status}"</span> status.
+                </p>
+
+                {duplicateModalData.isReactivation ? (
+                  <p className="text-rose-300 font-semibold border-t border-slate-800 pt-2">
+                    Please contact the Admin at <span className="font-bold font-mono text-white select-all">7781931880</span> for reactivating your account.
+                  </p>
+                ) : (
+                  <p className="text-blue-300 font-semibold border-t border-slate-800 pt-2">
+                    Please login with your user ID and password. If you forgot your user ID and password, you can reset it using your mobile number.
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-3 pt-2">
+              {!duplicateModalData.isReactivation ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <button
+                    onClick={() => {
+                      setUserId(duplicateModalData.phone);
+                      setPassword(duplicateModalData.phone);
+                      setDuplicateModalData(null);
+                      setIsRequestModalOpen(false);
+                    }}
+                    className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-xs rounded-xl shadow-md transition"
+                  >
+                    Login to Account
+                  </button>
+                  <button
+                    onClick={() => {
+                      setUserId(duplicateModalData.phone);
+                      setPassword('');
+                      setDuplicateModalData(null);
+                      setIsRequestModalOpen(false);
+                      alert(`Password Reset Guide:\n\nDefault Password for your mobile (${duplicateModalData.phone}) is set to your Mobile Number: ${duplicateModalData.phone}.\n\nPlease try logging in with User ID: ${duplicateModalData.phone} and Password: ${duplicateModalData.phone}. If you need further help, call Admin 7781931880.`);
+                    }}
+                    className="w-full py-3 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 font-extrabold text-xs rounded-xl transition"
+                  >
+                    Click Here to Reset
+                  </button>
+                </div>
+              ) : (
+                <a
+                  href="tel:7781931880"
+                  className="block w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs rounded-xl shadow-md transition text-center"
+                >
+                  📞 Call Admin (7781931880)
+                </a>
+              )}
+
+              <button
+                onClick={() => setDuplicateModalData(null)}
+                className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white font-bold text-xs rounded-xl transition"
               >
                 Close Window
               </button>
