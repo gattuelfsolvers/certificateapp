@@ -420,11 +420,19 @@ export default function AdminDashboard({ onLogout }) {
       // Auto-dispatch WhatsApp Notification to Client
       try {
         const eventType = editingClient ? 'PROFILE_UPDATE' : 'STATUS_CHANGE';
-        fetch('/api/whatsapp/notify-client', {
+        const notifBody = JSON.stringify({ client: payload, eventType, extraInfo: { newStatus: payload.status } });
+
+        fetch('http://localhost:5000/api/whatsapp/notify-client', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ client: payload, eventType, extraInfo: { newStatus: payload.status } })
-        }).catch(() => {});
+          body: notifBody
+        }).catch(() => {
+          fetch('/api/whatsapp/notify-client', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: notifBody
+          }).catch(() => {});
+        });
       } catch (e) {}
     } catch (err) {
       showToast('error', 'Error Saving Client', err.message);
@@ -444,15 +452,24 @@ export default function AdminDashboard({ onLogout }) {
 
       // Auto-dispatch WhatsApp Notification for KILLED / ACTIVE toggle
       if (targetClient) {
-        fetch('/api/whatsapp/notify-client', {
+        const payload = {
+          client: { ...targetClient, status: newStatus },
+          eventType: newStatus === 'KILLED' ? 'KILLED' : 'STATUS_CHANGE',
+          extraInfo: { newStatus }
+        };
+
+        // Try local gateway first, fallback to cloud route
+        fetch('http://localhost:5000/api/whatsapp/notify-client', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            client: { ...targetClient, status: newStatus },
-            eventType: newStatus === 'KILLED' ? 'KILLED' : 'STATUS_CHANGE',
-            extraInfo: { newStatus }
-          })
-        }).catch(() => {});
+          body: JSON.stringify(payload)
+        }).catch(() => {
+          fetch('/api/whatsapp/notify-client', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          }).catch(() => {});
+        });
       }
     } catch (err) {
       showToast('error', 'Update Failed', err.message);
