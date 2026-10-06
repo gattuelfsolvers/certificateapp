@@ -12,4 +12,18 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    chunkSizeWarningLimit: 1600,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('lucide-react')) return 'vendor-icons';
+            if (id.includes('react')) return 'vendor-react';
+            return 'vendor-libs';
+          }
+        }
+      }
+    }
+  }
 });
