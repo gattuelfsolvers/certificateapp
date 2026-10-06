@@ -105,8 +105,13 @@ export default function UniversalLogin({ onLoginSuccess }) {
 
   const handleNextStep1 = (e) => {
     e.preventDefault();
-    if (!requestForm.shopName.trim() || !requestForm.ownerName.trim() || !requestForm.phone.trim()) {
+    const cleanPhone = requestForm.phone.trim();
+    if (!requestForm.shopName.trim() || !requestForm.ownerName.trim() || !cleanPhone) {
       alert('Please fill in all mandatory fields (*)');
+      return;
+    }
+    if (!/^[0-9]{10}$/.test(cleanPhone)) {
+      alert('Please enter a valid 10-digit mobile number!');
       return;
     }
     setRegStep(2);
@@ -583,8 +588,12 @@ export default function UniversalLogin({ onLoginSuccess }) {
                     <input
                       type="text"
                       required
+                      maxLength={10}
                       value={requestForm.phone}
-                      onChange={(e) => setRequestForm(prev => ({ ...prev, phone: e.target.value }))}
+                      onChange={(e) => {
+                        const digitsOnly = e.target.value.replace(/\D/g, '').slice(0, 10);
+                        setRequestForm(prev => ({ ...prev, phone: digitsOnly }));
+                      }}
                       placeholder="e.g. 9876543210"
                       className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white text-sm font-mono focus:border-blue-500 focus:outline-none transition"
                     />

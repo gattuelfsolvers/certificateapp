@@ -2515,7 +2515,18 @@ export default function AdminDashboard({ onLogout }) {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-slate-700 font-bold mb-1.5 text-xs">WhatsApp Mobile No *</label>
-                  <input type="text" required value={formData.phone} onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))} placeholder="e.g. 9876543210" className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-slate-900 font-mono font-semibold disabled:bg-slate-100 disabled:text-slate-800" />
+                  <input 
+                    type="text" 
+                    required 
+                    maxLength={10}
+                    value={formData.phone} 
+                    onChange={(e) => {
+                      const digitsOnly = e.target.value.replace(/\D/g, '').slice(0, 10);
+                      setFormData(prev => ({ ...prev, phone: digitsOnly }));
+                    }} 
+                    placeholder="e.g. 9876543210" 
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-slate-900 font-mono font-semibold disabled:bg-slate-100 disabled:text-slate-800" 
+                  />
                 </div>
                 <div>
                   <label className="block text-slate-700 font-bold mb-1.5 text-xs">Subscription Plan</label>
