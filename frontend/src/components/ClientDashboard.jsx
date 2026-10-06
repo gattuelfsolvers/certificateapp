@@ -834,12 +834,12 @@ export default function ClientDashboard({ clientData, onLogout }) {
         </section>
 
         {/* Category Quick Filter Bar with Certificate Counts */}
-        <div className="bg-white/90 backdrop-blur-md p-3 rounded-2xl border border-slate-200/80 shadow-xs w-full flex items-center justify-between gap-2 overflow-x-auto">
-          <div className="flex items-center gap-2 w-full overflow-x-auto py-0.5">
+        <div className="bg-white/90 backdrop-blur-md p-3 rounded-2xl border border-slate-200/80 shadow-xs w-full">
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2 w-full">
             {/* ALL Category */}
             <button
               onClick={() => setCategoryFilter('ALL')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-extrabold transition whitespace-nowrap border ${
+              className={`w-full flex items-center justify-center gap-1.5 px-2 py-2 rounded-xl text-xs font-extrabold transition border ${
                 categoryFilter === 'ALL'
                   ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
                   : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
@@ -870,7 +870,7 @@ export default function ClientDashboard({ clientData, onLogout }) {
                 <button
                   key={catItem.id}
                   onClick={() => setCategoryFilter(isActive ? 'ALL' : catItem.id)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-extrabold transition whitespace-nowrap border ${
+                  className={`w-full flex items-center justify-center gap-1.5 px-2 py-2 rounded-xl text-xs font-extrabold transition border ${
                     isActive
                       ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
                       : 'bg-white hover:bg-slate-50 text-slate-800 border-slate-200'
