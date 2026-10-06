@@ -6,7 +6,7 @@ export const CERTIFICATE_CATEGORIES = [
     icon: 'FileText',
     color: 'emerald',
     subServices: [
-      { code: 'JHIC', name: 'Income Certificate (JHIC)', prefix: 'JHIC/2026/', defaultFee: 100 }
+      { code: 'JHIC', name: 'INC (Income Certificate)', prefix: 'JHIC/2026/', defaultFee: 100 }
     ]
   },
   {
@@ -16,10 +16,10 @@ export const CERTIFICATE_CATEGORIES = [
     icon: 'Shield',
     color: 'purple',
     subServices: [
-      { code: 'JHCBC', name: 'Caste Certificate BC-1 / BC-2 (JHCBC)', prefix: 'JHCBC/2026/', defaultFee: 100 },
-      { code: 'JHNBC', name: 'Non-Creamy Layer Certificate (JHNBC)', prefix: 'JHNBC/2026/', defaultFee: 100 },
-      { code: 'JHCSC', name: 'Scheduled Caste Certificate SC (JHCSC)', prefix: 'JHCSC/2026/', defaultFee: 100 },
-      { code: 'JHCST', name: 'Scheduled Tribe Certificate ST (JHCST)', prefix: 'JHCST/2026/', defaultFee: 100 }
+      { code: 'JHCBC', name: 'JHCBC (Caste Certificate BC-1 / BC-2)', prefix: 'JHCBC/2026/', defaultFee: 100 },
+      { code: 'JHNBC', name: 'JHNBC (Non-Creamy Layer Caste Certificate)- CO Level', prefix: 'JHNBC/2026/', defaultFee: 100 },
+      { code: 'JHCSC', name: 'JHCSC (Scheduled Caste Certificate SC)- CO Level', prefix: 'JHCSC/2026/', defaultFee: 100 },
+      { code: 'JHCST', name: 'JHCST (Scheduled Tribe Certificate ST)- Co Level', prefix: 'JHCST/2026/', defaultFee: 100 }
     ]
   },
   {
@@ -29,8 +29,8 @@ export const CERTIFICATE_CATEGORIES = [
     icon: 'Home',
     color: 'blue',
     subServices: [
-      { code: 'JHLRCO', name: 'Local Resident Certificate CO (JHLRCO)', prefix: 'JHLRCO/2026/', defaultFee: 100 },
-      { code: 'JHRC', name: 'Residential Certificate (JHRC)', prefix: 'JHRC/2026/', defaultFee: 100 }
+      { code: 'JHLRCO', name: 'JHLRCO (Local Resident Certificate CO)- CO Level', prefix: 'JHLRCO/2026/', defaultFee: 100 },
+      { code: 'JHRES', name: 'JHRES (Residential Certificate)- SDO Level', prefix: 'JHRES/2026/', defaultFee: 100 }
     ]
   },
   {
@@ -40,8 +40,8 @@ export const CERTIFICATE_CATEGORIES = [
     icon: 'Award',
     color: 'fuchsia',
     subServices: [
-      { code: 'JHCOB', name: 'OBC Central Format Certificate (JHCOB)', prefix: 'JHCOB/2026/', defaultFee: 100 },
-      { code: 'JHOBCH', name: 'OBC State Format Certificate (JHOBCH)', prefix: 'JHOBCH/2026/', defaultFee: 100 }
+      { code: 'JHCOB', name: 'JHCOB (OBC Central Format Certificate)- CO Level', prefix: 'JHCOB/2026/', defaultFee: 100 },
+      { code: 'JHOBCH', name: 'JHOBCH (OBC State Format Certificate)- SDO/DC Level', prefix: 'JHOBCH/2026/', defaultFee: 100 }
     ]
   },
   {
@@ -51,8 +51,8 @@ export const CERTIFICATE_CATEGORIES = [
     icon: 'CheckCircle',
     color: 'teal',
     subServices: [
-      { code: 'JHEWS', name: 'EWS Central Certificate (JHEWS)', prefix: 'JHEWS/2026/', defaultFee: 100 },
-      { code: 'JHEWSH', name: 'EWS State Certificate (JHEWSH)', prefix: 'JHEWSH/2026/', defaultFee: 100 }
+      { code: 'JHEWS', name: 'JHEWS (EWS Central Certificate)- Co level', prefix: 'JHEWS/2026/', defaultFee: 100 },
+      { code: 'JHEWSH', name: 'JHEWSH (EWS State Certificate)- SDO/DC Level', prefix: 'JHEWSH/2026/', defaultFee: 100 }
     ]
   },
   {
@@ -62,7 +62,7 @@ export const CERTIFICATE_CATEGORIES = [
     icon: 'Heart',
     color: 'rose',
     subServices: [
-      { code: 'JHMGR', name: 'Marriage Registration Certificate (JHMGR)', prefix: 'JHMGR/2026/', defaultFee: 150 }
+      { code: 'JHMGR', name: 'Marriage Registration Certificate (JHMGR)', prefix: 'JHMGR/2026/', defaultFee: 200 }
     ]
   },
   {
@@ -72,8 +72,8 @@ export const CERTIFICATE_CATEGORIES = [
     icon: 'CreditCard',
     color: 'amber',
     subServices: [
-      { code: 'PANNEW', name: 'New PAN Card Application (PANNEW)', prefix: 'PANNEW/2026/', defaultFee: 120 },
-      { code: 'PANUPD', name: 'PAN Card Correction / Update (PANUPD)', prefix: 'PANUPD/2026/', defaultFee: 120 }
+      { code: 'PANNEW', name: 'New PAN Card Application (PANNEW)', prefix: 'PANNEW/2026/', defaultFee: 200 },
+      { code: 'PANUPD', name: 'PAN Card Correction / Update (PANUPD)', prefix: 'PANUPD/2026/', defaultFee: 200 }
     ]
   }
 ];
