@@ -1563,6 +1563,16 @@ export default function AdminDashboard({ onLogout }) {
                                   </button>
                                 ) : (
                                   <div className="flex items-center justify-end gap-1.5">
+                                    {clientSubTab === 'ARCHIVED' && (
+                                      <button 
+                                        onClick={() => handleRestoreClient(client)} 
+                                        title="Restore Client to Active" 
+                                        className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-md transition flex items-center gap-1.5 shrink-0"
+                                      >
+                                        <RefreshCcw className="w-3.5 h-3.5" />
+                                        Restore
+                                      </button>
+                                    )}
                                     <button onClick={() => handleResetClientPassword(client)} title="Reset Password to Mobile Number" className="p-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 transition shadow-xs"><Lock className="w-4 h-4 text-amber-600" /></button>
                                     <button onClick={() => handleToggleStatus(client.hwid || client.id, client.status)} title={isKilled ? "Unblock Client" : "Kill / Terminate Client"} className={`p-2 rounded-xl border transition shadow-sm ${isKilled ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-rose-50 text-rose-700 border-rose-200'}`}><ShieldAlert className="w-4 h-4" /></button>
                                     <button onClick={() => handleOpenEditModal(client)} title="Edit Client" className="p-2 rounded-xl bg-slate-100 text-slate-700 border border-slate-200"><Edit className="w-4 h-4" /></button>
