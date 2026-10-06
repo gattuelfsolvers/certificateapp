@@ -340,6 +340,8 @@ export default function UniversalLogin({ onLoginSuccess }) {
 
         if (currentSystemHwid) {
           const cleanCurrentHwid = currentSystemHwid.toUpperCase();
+          const isWhitelisted = whitelistedHwids.includes(cleanCurrentHwid);
+
           if (!isWhitelisted && whitelistedHwids.length < maxPcs) {
             // Auto-bind / Whitelist current real System HWID to Client account
             const updatedHwids = [...whitelistedHwids, cleanCurrentHwid];
@@ -348,7 +350,7 @@ export default function UniversalLogin({ onLoginSuccess }) {
             saveClientToFirebase(matchedClient).catch(() => {});
           } else if (!isWhitelisted && whitelistedHwids.length >= maxPcs) {
             // Replace placeholder if single PC and contains generic REQ / HWID placeholder
-            const hasPlaceholder = whitelistedHwids.some(h => h.startsWith('REQ-') || h.startsWith('LIC-'));
+            const hasPlaceholder = whitelistedHwids.some(h => h.startsWith('REQ-') || h.startsWith('LIC-') || h.startsWith('HWID-'));
             if (hasPlaceholder) {
               matchedClient.hwid = cleanCurrentHwid;
               matchedClient.hwids = [cleanCurrentHwid];
@@ -368,7 +370,8 @@ export default function UniversalLogin({ onLoginSuccess }) {
         setError('Mobile Number / User ID not registered! Please check or Request Access.');
       }
     } catch (err) {
-      setError('Connection error: Unable to verify credentials with Firebase Cloud.');
+      console.error("Login verification error:", err);
+      setError('Connection error: Unable to verify credentials with Firebase Cloud (' + (err.message || 'Error') + ')');
     } finally {
       setLoading(false);
     }
