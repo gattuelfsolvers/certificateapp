@@ -1161,11 +1161,8 @@ export default function AdminDashboard({ onLogout }) {
                 <div>
                   <h3 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
                     <DollarSign className="w-6 h-6 text-emerald-600" />
-                    SaaS Subscription Pricing & Plan Master
+                    Subscription Pricing & Plan Master
                   </h3>
-                  <p className="text-xs text-slate-500 font-medium pt-1">
-                    Manage client subscription plans, offer prices, validity, certificate limits, and facility ON/OFF toggles.
-                  </p>
                 </div>
               </div>
 
