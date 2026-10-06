@@ -82,41 +82,32 @@ export default function UniversalLogin({ onLoginSuccess }) {
     setSubmittingReg(true);
     try {
       const cleanPhone = requestForm.phone.trim();
-      const generatedHwid = `REQ-${Date.now()}`;
       
-      let daysCount = 7;
-      let pcsCount = 1;
-      let initialStatus = 'PENDING';
-
-      if (selectedPlanId === 'FREE_TRIAL') {
-        daysCount = 7;
-        pcsCount = 1;
-        initialStatus = 'ACTIVE'; // Demo active for 5 entries
-      } else if (selectedPlanId === 'MONTHLY') {
-        daysCount = 30;
-        pcsCount = 1;
-      } else if (selectedPlanId === 'HALF_YEARLY') {
-        daysCount = 180;
-        pcsCount = 3;
-      } else if (selectedPlanId === 'YEARLY') {
-        daysCount = 365;
-        pcsCount = 5;
+      // Auto fetch current system HWID from local device
+      let currentSystemHwid = localStorage.getItem('CLIENT_SYSTEM_HWID');
+      if (!currentSystemHwid) {
+        currentSystemHwid = 'HWID-' + Math.random().toString(36).substring(2, 10).toUpperCase();
+        localStorage.setItem('CLIENT_SYSTEM_HWID', currentSystemHwid);
       }
+      const cleanHwid = currentSystemHwid.toUpperCase();
 
-      const expiresAt = new Date(Date.now() + daysCount * 86400000).toISOString();
+      // Default Active Free Trial (7 Days / 5 Demo entries) for ALL accounts initially
+      const freeTrialDays = 7;
+      const expiresAt = new Date(Date.now() + freeTrialDays * 86400000).toISOString();
 
       const newClientPayload = {
-        hwid: generatedHwid,
-        hwids: [generatedHwid],
-        allowedPcs: pcsCount,
+        hwid: cleanHwid,
+        hwids: [cleanHwid],
+        allowedPcs: 1, // Default 1 PC for Free Trial
         clientName: requestForm.shopName.trim(),
         ownerName: requestForm.ownerName.trim(),
         phone: cleanPhone,
         address: requestForm.address.trim(),
-        planType: selectedPlanId,
-        status: initialStatus,
+        planType: 'FREE_TRIAL', // Activated on Free Trial by default
+        requestedPlan: selectedPlanId, // Track requested paid plan for admin approval
+        status: 'ACTIVE', // Instantly ACTIVE so user can log in without HWID block
         password: cleanPhone, // Mobile number as default password
-        licenseKey: `LIC-${selectedPlanId}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`,
+        licenseKey: `LIC-FREE-${Math.random().toString(36).substring(2, 6).toUpperCase()}`,
         expiresAt: expiresAt,
         createdAt: new Date().toISOString()
       };
@@ -128,7 +119,7 @@ export default function UniversalLogin({ onLoginSuccess }) {
       if (selectedPlanId === 'FREE_TRIAL') {
         messageText = `Thanks for choosing our service! Please log in and use your 5 demo entries.\n\nYour Login ID is: ${cleanPhone}\nYour Password is: ${cleanPhone}`;
       } else {
-        messageText = `Thanks for choosing our service!\n\nYour Login ID is: ${cleanPhone}\nYour Password is: ${cleanPhone}\n\nPlease wait for the Admin to confirm your payment. Once your payment is confirmed by Admin, you will receive a confirmation message on your WhatsApp. Please make sure you have paid your subscription fee for a smooth software experience.`;
+        messageText = `Thanks for choosing our service!\n\nYour Login ID is: ${cleanPhone}\nYour Password is: ${cleanPhone}\n\nYour account has been activated with a Free Demo Plan. Please wait for Admin to confirm your payment for the ${selectedPlanId.replace('_', ' ')} plan. Once confirmed, your subscription will be automatically upgraded to your chosen plan. Make sure you have paid your subscription fee for a smooth software experience.`;
       }
 
       // Send WhatsApp Notification to Client
