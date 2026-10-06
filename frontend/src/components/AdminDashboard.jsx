@@ -5,7 +5,7 @@ import {
   Copy, Check, Download, Upload, Trash2, Edit, Smartphone, Store,
   Building2, Calendar, Shield, Activity, Power, RefreshCcw, Bell,
   ChevronRight, Layers, DollarSign, LayoutDashboard, Settings, Menu, PanelLeftClose, PanelLeft, UserCheck,
-  UserCheck as ManageAccountIcon, MessageSquare, Key, CheckCircle, Send, QrCode, Sliders, Eye, Database
+  UserCheck as ManageAccountIcon, MessageSquare, Key, CheckCircle, Send, QrCode, Sliders, Eye, Database, Lock
 } from 'lucide-react';
 import { 
   fetchClientsFromFirebase, 
@@ -735,6 +735,37 @@ export default function AdminDashboard({ onLogout }) {
     }
   };
 
+  const handleResetClientPassword = async (client) => {
+    const defaultPassword = client.phone ? client.phone.trim() : '';
+    if (!defaultPassword) {
+      showToast('error', 'Reset Failed', 'Client mobile number missing.');
+      return;
+    }
+    if (!window.confirm(`Reset password for "${client.clientName}"? Password will be set to mobile number: ${defaultPassword}`)) return;
+
+    try {
+      const updated = {
+        ...client,
+        password: defaultPassword
+      };
+      await saveClientToFirebase(updated);
+      showToast('success', 'Password Reset', `Password reset! Default password set to client mobile number: ${defaultPassword}`);
+
+      // Auto-dispatch WhatsApp notification to Client about password reset
+      fetch('http://localhost:5000/api/whatsapp/notify-client', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          client: updated,
+          eventType: 'PROFILE_UPDATE',
+          extraInfo: { note: `Password Reset Complete. Default Password is your registered mobile number: ${defaultPassword}` }
+        })
+      }).catch(() => {});
+    } catch (err) {
+      showToast('error', 'Reset Failed', err.message);
+    }
+  };
+
   const handleRenewLicense = async (client) => {
     try {
       let newExpiry = new Date();
@@ -1263,6 +1294,7 @@ export default function AdminDashboard({ onLogout }) {
                                   </button>
                                 ) : (
                                   <div className="flex items-center justify-end gap-1.5">
+                                    <button onClick={() => handleResetClientPassword(client)} title="Reset Password to Mobile Number" className="p-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 transition shadow-xs"><Lock className="w-4 h-4 text-amber-600" /></button>
                                     <button onClick={() => handleToggleStatus(client.hwid || client.id, client.status)} title={isKilled ? "Unblock Client" : "Kill / Terminate Client"} className={`p-2 rounded-xl border transition shadow-sm ${isKilled ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-rose-50 text-rose-700 border-rose-200'}`}><ShieldAlert className="w-4 h-4" /></button>
                                     <button onClick={() => handleOpenEditModal(client)} title="Edit Client" className="p-2 rounded-xl bg-slate-100 text-slate-700 border border-slate-200"><Edit className="w-4 h-4" /></button>
                                     <button onClick={() => handleBackupClientData(client)} title="Download Backup" className="p-2 rounded-xl bg-blue-50 text-blue-700 border border-blue-200"><Download className="w-4 h-4" /></button>
