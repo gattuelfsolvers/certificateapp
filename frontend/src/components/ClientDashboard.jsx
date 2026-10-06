@@ -467,30 +467,30 @@ export default function ClientDashboard({ clientData, onLogout }) {
           </div>
         </div>
 
-        {/* Sub-Services Quick Launch Cards - FULL PAGE WIDTH */}
-        <section className="space-y-3 w-full">
-          <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-            <Layers className="w-5 h-5 text-blue-600" />
+        {/* Sub-Services Quick Launch Cards - FULL PAGE WIDTH IN 1 ROW */}
+        <section className="space-y-2.5 w-full">
+          <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+            <Layers className="w-4 h-4 text-blue-600" />
             Direct Service Quick Launch Cards
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2.5 w-full">
             {CERTIFICATE_CATEGORIES.map((cat) => (
-              <div key={cat.id} className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-extrabold text-blue-700 uppercase tracking-wider">{cat.name}</span>
-                  <span className="text-xs font-bold text-slate-500">{cat.subServices.length} Types</span>
+              <div key={cat.id} className="bg-white border border-slate-200 rounded-2xl p-2.5 shadow-sm space-y-2 flex flex-col justify-between">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-1">
+                  <span className="text-[11px] font-extrabold text-blue-700 uppercase tracking-tight truncate">{cat.name}</span>
+                  <span className="text-[10px] font-bold text-slate-400">{cat.subServices.length}</span>
                 </div>
-                <div className="grid grid-cols-2 gap-2">
+                <div className={`grid gap-1 ${cat.subServices.length > 2 ? 'grid-cols-2' : 'grid-cols-1'}`}>
                   {cat.subServices.map((sub) => {
                     const count = getSubServiceCount(sub.code);
                     return (
                       <button
                         key={sub.code}
                         onClick={() => handleOpenAddModal(sub.code)}
-                        className="flex items-center justify-between px-2.5 py-1.5 rounded-xl bg-slate-50 hover:bg-blue-50 text-slate-800 hover:text-blue-700 border border-slate-200 text-xs font-bold transition"
+                        className="flex items-center justify-between px-1.5 py-1 rounded-lg bg-slate-50 hover:bg-blue-50 text-slate-800 hover:text-blue-700 border border-slate-200 text-[10px] font-bold transition"
                       >
-                        <span>+ {sub.code}</span>
-                        <span className="px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 text-[10px] font-bold">{count}</span>
+                        <span className="truncate">+ {sub.code}</span>
+                        <span className="px-1 py-0.2 rounded bg-blue-100 text-blue-800 text-[9px] font-extrabold ml-1">{count}</span>
                       </button>
                     );
                   })}
