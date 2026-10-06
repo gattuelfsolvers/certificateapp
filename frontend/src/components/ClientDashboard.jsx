@@ -369,9 +369,9 @@ export default function ClientDashboard({ clientData, onLogout }) {
 
   // Stats
   const totalRecords = certificates.length;
-  const underProcessCount = certificates.filter(c => c.currentStatus && c.currentStatus.includes('UNDER_PROCESS')).length;
   const deliveredCount = certificates.filter(c => c.currentStatus && c.currentStatus.includes('DELIVERED')).length;
   const rejectedCount = certificates.filter(c => c.currentStatus && c.currentStatus.includes('REJECTED')).length;
+  const underProcessCount = Math.max(0, totalRecords - deliveredCount - rejectedCount);
   const totalFees = certificates.reduce((sum, c) => sum + (parseFloat(c.totalFee) || 0), 0);
   const totalDues = certificates.reduce((sum, c) => sum + (parseFloat(c.duesAmount) || 0), 0);
 
