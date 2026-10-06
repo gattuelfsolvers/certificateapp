@@ -1134,8 +1134,15 @@ export default function AdminDashboard({ onLogout }) {
             </div>
           </div>
 
-          {/* TOP RIGHT CORNER ACTION BUTTONS (Logout) */}
+          {/* TOP RIGHT CORNER ACTION BUTTONS (+ Add New Client & Logout) */}
           <div className="flex items-center gap-3">
+            <button
+              onClick={handleOpenAddModal}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white font-bold text-sm shadow-md transition"
+            >
+              <Plus className="w-4 h-4" />
+              Add New Client
+            </button>
             <button
               onClick={onLogout}
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/20 text-sm font-semibold transition"
@@ -1235,7 +1242,17 @@ export default function AdminDashboard({ onLogout }) {
               <span className="text-xs text-slate-400 font-medium">Direct Shortcuts</span>
             </div>
             
-            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+              <button
+                onClick={() => setActiveTab('dashboard')}
+                className="flex flex-col items-center justify-center p-3 rounded-xl bg-blue-50/80 hover:bg-blue-100/80 text-blue-900 border border-blue-100 hover:border-blue-300 transition group shadow-xs hover:shadow-md"
+              >
+                <div className="w-10 h-10 rounded-lg bg-blue-600 text-white flex items-center justify-center mb-2 group-hover:scale-110 transition-transform shadow-sm shadow-blue-500/30">
+                  <LayoutDashboard className="w-5 h-5" />
+                </div>
+                <span className="text-xs font-bold text-center">Dashboard</span>
+              </button>
+
               <button
                 onClick={() => setActiveTab('clients')}
                 className="flex flex-col items-center justify-center p-3 rounded-xl bg-violet-50/80 hover:bg-violet-100/80 text-violet-900 border border-violet-100 hover:border-violet-300 transition group shadow-xs hover:shadow-md"
@@ -1268,9 +1285,9 @@ export default function AdminDashboard({ onLogout }) {
 
               <button
                 onClick={() => setActiveTab('data_master')}
-                className="flex flex-col items-center justify-center p-3 rounded-xl bg-blue-50/80 hover:bg-blue-100/80 text-blue-900 border border-blue-100 hover:border-blue-300 transition group shadow-xs hover:shadow-md"
+                className="flex flex-col items-center justify-center p-3 rounded-xl bg-sky-50/80 hover:bg-sky-100/80 text-sky-900 border border-sky-100 hover:border-sky-300 transition group shadow-xs hover:shadow-md"
               >
-                <div className="w-10 h-10 rounded-lg bg-blue-600 text-white flex items-center justify-center mb-2 group-hover:scale-110 transition-transform shadow-sm shadow-blue-500/30">
+                <div className="w-10 h-10 rounded-lg bg-sky-600 text-white flex items-center justify-center mb-2 group-hover:scale-110 transition-transform shadow-sm shadow-sky-500/30">
                   <Database className="w-5 h-5" />
                 </div>
                 <span className="text-xs font-bold text-center">Data Master</span>
