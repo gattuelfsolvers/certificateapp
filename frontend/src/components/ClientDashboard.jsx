@@ -949,12 +949,14 @@ export default function ClientDashboard({ clientData, onLogout }) {
                 className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-extrabold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer"
               >
                 <option value="ALL">All Status ({certificates.length})</option>
-                <option value="INITIATED">Initiated</option>
-                <option value="UNDER_PROCESS">Under Process</option>
-                <option value="DELIVERED">Delivered</option>
+                <option value="INITIATED">Initiated (Submitted)</option>
+                <option value="CI_UNDER_PROCESS">CI Under Process</option>
+                <option value="CO_UNDER_PROCESS">CO Under Process</option>
+                <option value="SDO_UNDER_PROCESS">SDO / DC Under Process</option>
+                <option value="UNDER_PROCESS">General Under Process</option>
+                <option value="DELIVERED">Delivered (Issued)</option>
                 <option value="REJECTED">Rejected</option>
-                <option value="HOLD">Hold</option>
-                <option value="WAITING">Waiting</option>
+                <option value="CO_WAITING">Waiting (Objection)</option>
               </select>
 
               {/* 2. Sync List / Refresh List Button */}
@@ -1599,10 +1601,14 @@ export default function ClientDashboard({ clientData, onLogout }) {
                     onChange={(e) => setEditFormData(prev => ({ ...prev, currentStatus: e.target.value }))}
                     className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-900 font-bold text-xs"
                   >
-                    <option value="INITIATED">INITIATED</option>
-                    <option value="UNDER_PROCESS">UNDER_PROCESS</option>
-                    <option value="DELIVERED">DELIVERED</option>
+                    <option value="INITIATED">INITIATED (Submitted)</option>
+                    <option value="CI_UNDER_PROCESS">CI UNDER PROCESS (Circle Inspector)</option>
+                    <option value="CO_UNDER_PROCESS">CO UNDER PROCESS (Circle Officer)</option>
+                    <option value="SDO_UNDER_PROCESS">SDO UNDER PROCESS (SDO / DC Level)</option>
+                    <option value="UNDER_PROCESS">UNDER PROCESS (General)</option>
+                    <option value="DELIVERED">DELIVERED (Issued)</option>
                     <option value="REJECTED">REJECTED</option>
+                    <option value="CO_WAITING">CO WAITING (Applicant Objection)</option>
                   </select>
                 </div>
               </div>
