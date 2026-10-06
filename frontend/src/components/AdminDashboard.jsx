@@ -1204,9 +1204,89 @@ export default function AdminDashboard({ onLogout }) {
                 <p className="text-xs font-bold text-violet-600 uppercase tracking-wider mb-1">Pending Approval</p>
                 <h3 className="text-3xl font-extrabold text-violet-950">{pendingCount}</h3>
               </div>
-              <div className="w-12 h-12 rounded-2xl bg-violet-600 text-white flex items-center justify-center shadow-md shadow-violet-500/20">
-                <UserCheck className="w-6 h-6" />
-              </div>
+            </div>
+          </div>
+
+          {/* Quick Action Buttons Bar */}
+          <div className="bg-white/80 backdrop-blur-md p-4 rounded-2xl border border-slate-200/80 shadow-sm space-y-3">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+              <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                <Sliders className="w-4 h-4 text-violet-600" />
+                Quick Admin Actions
+              </h4>
+              <span className="text-xs text-slate-400 font-medium">Direct Shortcuts</span>
+            </div>
+            
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+              <button
+                onClick={() => setActiveTab('clients')}
+                className="flex flex-col items-center justify-center p-3 rounded-xl bg-slate-50 hover:bg-violet-50 text-slate-700 hover:text-violet-700 border border-slate-200/70 hover:border-violet-200 transition group shadow-xs hover:shadow-sm"
+              >
+                <div className="w-10 h-10 rounded-lg bg-violet-100 text-violet-600 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                  <Users className="w-5 h-5" />
+                </div>
+                <span className="text-xs font-semibold text-center">Client Master</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('licenses')}
+                className="flex flex-col items-center justify-center p-3 rounded-xl bg-slate-50 hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 border border-slate-200/70 hover:border-indigo-200 transition group shadow-xs hover:shadow-sm"
+              >
+                <div className="w-10 h-10 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                  <KeyRound className="w-5 h-5" />
+                </div>
+                <span className="text-xs font-semibold text-center">License Master</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('plans')}
+                className="flex flex-col items-center justify-center p-3 rounded-xl bg-slate-50 hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 border border-slate-200/70 hover:border-emerald-200 transition group shadow-xs hover:shadow-sm"
+              >
+                <div className="w-10 h-10 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                  <DollarSign className="w-5 h-5" />
+                </div>
+                <span className="text-xs font-semibold text-center">Plan Master</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('data_master')}
+                className="flex flex-col items-center justify-center p-3 rounded-xl bg-slate-50 hover:bg-blue-50 text-slate-700 hover:text-blue-700 border border-slate-200/70 hover:border-blue-200 transition group shadow-xs hover:shadow-sm"
+              >
+                <div className="w-10 h-10 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                  <Database className="w-5 h-5" />
+                </div>
+                <span className="text-xs font-semibold text-center">Data Master</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('whatsapp_master')}
+                className="flex flex-col items-center justify-center p-3 rounded-xl bg-slate-50 hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 border border-slate-200/70 hover:border-emerald-200 transition group shadow-xs hover:shadow-sm"
+              >
+                <div className="w-10 h-10 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                  <MessageSquare className="w-5 h-5" />
+                </div>
+                <span className="text-xs font-semibold text-center">WhatsApp Master</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('account')}
+                className="flex flex-col items-center justify-center p-3 rounded-xl bg-slate-50 hover:bg-amber-50 text-slate-700 hover:text-amber-700 border border-slate-200/70 hover:border-amber-200 transition group shadow-xs hover:shadow-sm"
+              >
+                <div className="w-10 h-10 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                  <Settings className="w-5 h-5" />
+                </div>
+                <span className="text-xs font-semibold text-center">Manage Account</span>
+              </button>
+
+              <button
+                onClick={() => handleOpenAddModal()}
+                className="flex flex-col items-center justify-center p-3 rounded-xl bg-violet-600 hover:bg-violet-700 text-white transition group shadow-md shadow-violet-500/20 hover:shadow-lg hover:shadow-violet-500/30"
+              >
+                <div className="w-10 h-10 rounded-lg bg-white/20 text-white flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                  <Plus className="w-5 h-5" />
+                </div>
+                <span className="text-xs font-bold text-center">Add New Client</span>
+              </button>
             </div>
           </div>
 
