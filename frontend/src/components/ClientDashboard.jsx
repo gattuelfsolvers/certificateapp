@@ -422,57 +422,45 @@ export default function ClientDashboard({ clientData, onLogout }) {
             <span className="text-xs text-slate-400 font-medium">Instant Navigation</span>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="flex flex-wrap items-center gap-2.5">
             <button
               onClick={() => setActiveTab('dashboard')}
-              className={`flex flex-col items-center justify-center p-3.5 rounded-xl border transition group shadow-xs hover:shadow-md ${
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold border transition shadow-xs hover:shadow ${
                 activeTab === 'dashboard' 
-                  ? 'bg-blue-600 text-white border-blue-600 shadow-md' 
-                  : 'bg-blue-50/80 hover:bg-blue-100/80 text-blue-900 border-blue-100'
+                  ? 'bg-blue-600 text-white border-blue-600 shadow-sm' 
+                  : 'bg-blue-50/80 hover:bg-blue-100 text-blue-900 border-blue-200'
               }`}
             >
-              <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-2 group-hover:scale-110 transition-transform ${
-                activeTab === 'dashboard' ? 'bg-white/20 text-white' : 'bg-blue-600 text-white shadow-sm'
-              }`}>
-                <LayoutDashboard className="w-5 h-5" />
-              </div>
-              <span className="text-xs font-extrabold text-center">Dashboard</span>
+              <LayoutDashboard className="w-4 h-4" />
+              <span>Dashboard</span>
             </button>
 
             <button
               onClick={() => setActiveTab('code_master')}
-              className={`flex flex-col items-center justify-center p-3.5 rounded-xl border transition group shadow-xs hover:shadow-md ${
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold border transition shadow-xs hover:shadow ${
                 activeTab === 'code_master' 
-                  ? 'bg-emerald-600 text-white border-emerald-600 shadow-md' 
-                  : 'bg-emerald-50/80 hover:bg-emerald-100/80 text-emerald-900 border-emerald-100'
+                  ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm' 
+                  : 'bg-emerald-50/80 hover:bg-emerald-100 text-emerald-900 border-emerald-200'
               }`}
             >
-              <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-2 group-hover:scale-110 transition-transform ${
-                activeTab === 'code_master' ? 'bg-white/20 text-white' : 'bg-emerald-600 text-white shadow-sm'
-              }`}>
-                <Code className="w-5 h-5" />
-              </div>
-              <span className="text-xs font-extrabold text-center">Code Master</span>
+              <Code className="w-4 h-4" />
+              <span>Code Master</span>
             </button>
 
             <button
               onClick={() => setIsProfileModalOpen(true)}
-              className="flex flex-col items-center justify-center p-3.5 rounded-xl bg-amber-50/80 hover:bg-amber-100/80 text-amber-900 border border-amber-100 transition group shadow-xs hover:shadow-md"
+              className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold bg-amber-50/80 hover:bg-amber-100 text-amber-900 border border-amber-200 transition shadow-xs hover:shadow"
             >
-              <div className="w-10 h-10 rounded-lg bg-amber-600 text-white flex items-center justify-center mb-2 group-hover:scale-110 transition-transform shadow-sm">
-                <User className="w-5 h-5" />
-              </div>
-              <span className="text-xs font-extrabold text-center">Profile Settings</span>
+              <User className="w-4 h-4 text-amber-600" />
+              <span>Profile Settings</span>
             </button>
 
             <button
               onClick={() => handleOpenAddModal('JHIC')}
-              className="flex flex-col items-center justify-center p-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white transition group shadow-md shadow-emerald-500/20 hover:shadow-lg"
+              className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white transition shadow-sm"
             >
-              <div className="w-10 h-10 rounded-lg bg-white/20 text-white flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
-                <Plus className="w-5 h-5" />
-              </div>
-              <span className="text-xs font-extrabold text-center">+ New Entry</span>
+              <Plus className="w-4 h-4" />
+              <span>+ New Entry</span>
             </button>
           </div>
         </div>
