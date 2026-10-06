@@ -3,7 +3,7 @@ import {
   FileText, Plus, RefreshCw, MessageSquare, Search, Filter,
   CheckCircle2, Clock, AlertTriangle, XCircle, IndianRupee,
   Smartphone, ExternalLink, Printer, Edit, Trash2, Shield, Settings, Activity, Users, Send, Layers, Tag, PlusCircle, Zap, Download, Upload, X,
-  Key, User, Lock, ShieldCheck, Building2, Store, Phone, MapPin, BadgeCheck, LogOut, Eye, PanelRight, PanelRightClose, Code, LayoutDashboard, Sliders, MoreVertical
+  Key, User, Lock, ShieldCheck, Building2, Store, Phone, MapPin, BadgeCheck, LogOut, Eye, PanelRight, PanelRightClose, Code, LayoutDashboard, Sliders, MoreVertical, Power
 } from 'lucide-react';
 import { CERTIFICATE_CATEGORIES } from '../constants/certificateTypes';
 import { fetchCertificatesFromFirebase, saveCertificateToFirebase, deleteCertificateFromFirebase } from '../firebase';
@@ -252,10 +252,10 @@ export default function ClientDashboard({ clientData, onLogout }) {
             </button>
             <button
               onClick={onLogout}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/20 text-sm font-semibold transition"
+              title="Logout"
+              className="p-2.5 rounded-xl bg-rose-100 hover:bg-rose-200 text-rose-700 border border-rose-300 transition flex items-center justify-center font-bold shadow-sm"
             >
-              <LogOut className="w-4 h-4" />
-              Logout
+              <Power className="w-5 h-5 text-rose-600" />
             </button>
           </div>
         </div>
