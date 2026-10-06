@@ -48,6 +48,13 @@ export async function saveClientToFirebase(clientData) {
   const cleanHwid = (hwid || (hwids && hwids[0]) || '').trim().toUpperCase();
   const clientRef = doc(db, "clients", cleanHwid);
   
+  let defaultDays = 30;
+  if (planType === 'FREE_TRIAL') defaultDays = 7;
+  else if (planType === 'MONTHLY') defaultDays = 30;
+  else if (planType === 'HALF_YEARLY') defaultDays = 180;
+  else if (planType === 'YEARLY') defaultDays = 365;
+  else if (planType === 'LIFETIME') defaultDays = 364635;
+
   const payload = {
     hwid: cleanHwid,
     hwids: Array.isArray(hwids) && hwids.length > 0 ? hwids : [cleanHwid],
@@ -57,7 +64,7 @@ export async function saveClientToFirebase(clientData) {
     phone: phone || '',
     planType: planType || 'MONTHLY',
     status: status || 'ACTIVE',
-    expiresAt: expiresAt ? new Date(expiresAt).toISOString() : new Date(Date.now() + 30 * 86400000).toISOString(),
+    expiresAt: expiresAt ? new Date(expiresAt).toISOString() : new Date(Date.now() + defaultDays * 86400000).toISOString(),
     licenseKey: licenseKey || `CERT-KEY-${Date.now()}`,
     createdAt: clientData.createdAt || new Date().toISOString(),
     updatedAt: new Date().toISOString()

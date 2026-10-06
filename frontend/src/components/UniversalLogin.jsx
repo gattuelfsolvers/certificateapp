@@ -277,12 +277,24 @@ export default function UniversalLogin({ onLoginSuccess }) {
 
         if (currentSystemHwid) {
           const cleanCurrentHwid = currentSystemHwid.toUpperCase();
-          const isWhitelisted = whitelistedHwids.includes(cleanCurrentHwid);
-
-          if (!isWhitelisted && whitelistedHwids.length >= maxPcs) {
-            setError(`Login Blocked: This System Hardware ID (${cleanCurrentHwid}) is not Whitelisted! Plan allows maximum ${maxPcs} PC(s). Please contact Admin.`);
-            setLoading(false);
-            return;
+          if (!isWhitelisted && whitelistedHwids.length < maxPcs) {
+            // Auto-bind / Whitelist current real System HWID to Client account
+            const updatedHwids = [...whitelistedHwids, cleanCurrentHwid];
+            matchedClient.hwid = cleanCurrentHwid;
+            matchedClient.hwids = updatedHwids;
+            saveClientToFirebase(matchedClient).catch(() => {});
+          } else if (!isWhitelisted && whitelistedHwids.length >= maxPcs) {
+            // Replace placeholder if single PC and contains generic REQ / HWID placeholder
+            const hasPlaceholder = whitelistedHwids.some(h => h.startsWith('REQ-') || h.startsWith('LIC-'));
+            if (hasPlaceholder) {
+              matchedClient.hwid = cleanCurrentHwid;
+              matchedClient.hwids = [cleanCurrentHwid];
+              saveClientToFirebase(matchedClient).catch(() => {});
+            } else {
+              setError(`Login Blocked: This System Hardware ID (${cleanCurrentHwid}) is not Whitelisted! Plan allows maximum ${maxPcs} PC(s). Please contact Admin.`);
+              setLoading(false);
+              return;
+            }
           }
         }
 
