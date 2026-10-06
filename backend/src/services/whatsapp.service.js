@@ -1,13 +1,85 @@
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, Browsers } = require('@whiskeysockets/baileys');
+const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, Browsers, initAuthCreds, BufferJSON } = require('@whiskeysockets/baileys');
 const qrcodeTerminal = require('qrcode-terminal');
 const QRCode = require('qrcode');
 const path = require('path');
 const fs = require('fs');
+const prisma = require('../db');
 
 let sock = null;
 let isConnected = false;
 let qrCodeDataUri = null;
 let connectedPhone = null;
+
+// Persistent Database Auth State Adapter for Baileys (Prevents Render disk wipe session loss)
+async function useDatabaseAuthState() {
+  const readData = async (id) => {
+    try {
+      const row = await prisma.whatsAppSession.findUnique({ where: { id } });
+      if (row && row.data) {
+        return JSON.parse(row.data, BufferJSON.reviver);
+      }
+    } catch (e) {}
+    return null;
+  };
+
+  const writeData = async (id, data) => {
+    try {
+      const jsonStr = JSON.stringify(data, BufferJSON.replacer);
+      await prisma.whatsAppSession.upsert({
+        where: { id },
+        create: { id, data: jsonStr },
+        update: { data: jsonStr }
+      });
+    } catch (e) {
+      console.error('Failed to write whatsapp session to DB:', e);
+    }
+  };
+
+  const removeData = async (id) => {
+    try {
+      await prisma.whatsAppSession.delete({ where: { id } });
+    } catch (e) {}
+  };
+
+  const creds = (await readData('creds')) || initAuthCreds();
+
+  return {
+    state: {
+      creds,
+      keys: {
+        get: async (type, ids) => {
+          const data = {};
+          await Promise.all(
+            ids.map(async (id) => {
+              let value = await readData(`${type}-${id}`);
+              if (type === 'app-state-sync-key' && value) {
+                value = Baileys.proto.Message.AppStateSyncKeyData.fromObject(value);
+              }
+              data[id] = value;
+            })
+          );
+          return data;
+        },
+        set: async (data) => {
+          const tasks = [];
+          for (const category in data) {
+            for (const id in data[category]) {
+              const value = data[category][id];
+              const keyId = `${category}-${id}`;
+              if (value) {
+                tasks.push(writeData(keyId, value));
+              } else {
+                tasks.push(removeData(keyId));
+              }
+            }
+          }
+          await Promise.all(tasks);
+        }
+      }
+    },
+    saveCreds: () => writeData('creds', creds)
+  };
+}
 
 // Anti-Spam Rate-Limiter Message Queue (WhatsApp Official Terms Safety Compliance)
 const messageQueue = [];
@@ -51,7 +123,6 @@ async function processQueue() {
 
 async function logoutWhatsApp() {
   try {
-    const authDir = path.join(__dirname, '../../auth_info_baileys');
     if (sock) {
       await sock.logout();
     }
@@ -60,10 +131,8 @@ async function logoutWhatsApp() {
     qrCodeDataUri = null;
     connectedPhone = null;
 
-    if (fs.existsSync(authDir)) {
-      fs.rmSync(authDir, { recursive: true, force: true });
-    }
-    console.log('🚪 WhatsApp Device Unlinked and Auth Credentials Cleared.');
+    await prisma.whatsAppSession.deleteMany({});
+    console.log('🚪 WhatsApp Device Unlinked and Database Auth Sessions Cleared.');
     return { success: true, message: 'WhatsApp unlinked successfully.' };
   } catch (err) {
     console.error('Logout error:', err);
@@ -73,13 +142,10 @@ async function logoutWhatsApp() {
 
 async function initWhatsApp() {
   try {
-    const authDir = path.join(__dirname, '../../auth_info_baileys');
     const publicDir = path.join(__dirname, '../../public');
-    
-    if (!fs.existsSync(authDir)) fs.mkdirSync(authDir, { recursive: true });
     if (!fs.existsSync(publicDir)) fs.mkdirSync(publicDir, { recursive: true });
 
-    const { state, saveCreds } = await useMultiFileAuthState(authDir);
+    const { state, saveCreds } = await useDatabaseAuthState();
 
     sock = makeWASocket({
       auth: state,
@@ -119,8 +185,8 @@ async function initWhatsApp() {
         if (shouldReconnect) {
           setTimeout(initWhatsApp, 4000);
         } else {
-          console.log('Logged out. Clearing auth info...');
-          fs.rmSync(authDir, { recursive: true, force: true });
+          console.log('Logged out. Clearing auth DB info...');
+          await prisma.whatsAppSession.deleteMany({}).catch(() => {});
           setTimeout(initWhatsApp, 4000);
         }
       } else if (connection === 'open') {

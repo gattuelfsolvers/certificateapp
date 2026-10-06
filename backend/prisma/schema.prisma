@@ -199,5 +199,11 @@ model PaymentRequest {
   updatedAt     DateTime @updatedAt
 }
 
+model WhatsAppSession {
+  id        String   @id
+  data      String   // JSON string of auth state key
+  updatedAt DateTime @updatedAt
+}
+
 
 
