@@ -361,50 +361,50 @@ export default function ClientDashboard({ clientData, onLogout }) {
         
         {/* KPI Metric Summary Cards - FULL PAGE WIDTH */}
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4 w-full">
-          <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex items-center justify-between">
+          <div className="bg-blue-50/70 border border-blue-200/80 rounded-2xl p-4 shadow-sm flex items-center justify-between">
             <div>
-              <p className="text-xs font-bold text-slate-500 mb-1">Total Records</p>
-              <h3 className="text-2xl font-extrabold text-slate-900">{totalRecords}</h3>
+              <p className="text-xs font-bold text-blue-700 mb-1">Total Records</p>
+              <h3 className="text-2xl font-extrabold text-blue-900">{totalRecords}</h3>
             </div>
             <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-bold">
               <FileText className="w-5 h-5" />
             </div>
           </div>
 
-          <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex items-center justify-between">
+          <div className="bg-sky-50/70 border border-sky-200/80 rounded-2xl p-4 shadow-sm flex items-center justify-between">
             <div>
-              <p className="text-xs font-bold text-sky-600 mb-1">Under Process</p>
-              <h3 className="text-2xl font-extrabold text-sky-700">{underProcessCount}</h3>
+              <p className="text-xs font-bold text-sky-700 mb-1">Under Process</p>
+              <h3 className="text-2xl font-extrabold text-sky-900">{underProcessCount}</h3>
             </div>
             <div className="w-10 h-10 rounded-xl bg-sky-100 text-sky-700 flex items-center justify-center font-bold">
               <Clock className="w-5 h-5" />
             </div>
           </div>
 
-          <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex items-center justify-between">
+          <div className="bg-emerald-50/70 border border-emerald-200/80 rounded-2xl p-4 shadow-sm flex items-center justify-between">
             <div>
-              <p className="text-xs font-bold text-emerald-600 mb-1">Delivered</p>
-              <h3 className="text-2xl font-extrabold text-emerald-700">{deliveredCount}</h3>
+              <p className="text-xs font-bold text-emerald-700 mb-1">Delivered</p>
+              <h3 className="text-2xl font-extrabold text-emerald-900">{deliveredCount}</h3>
             </div>
             <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
               <CheckCircle2 className="w-5 h-5" />
             </div>
           </div>
 
-          <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex items-center justify-between">
+          <div className="bg-indigo-50/70 border border-indigo-200/80 rounded-2xl p-4 shadow-sm flex items-center justify-between">
             <div>
-              <p className="text-xs font-bold text-indigo-600 mb-1">Total Fees</p>
-              <h3 className="text-2xl font-extrabold text-indigo-700">₹{totalFees}</h3>
+              <p className="text-xs font-bold text-indigo-700 mb-1">Total Fees</p>
+              <h3 className="text-2xl font-extrabold text-indigo-900">₹{totalFees}</h3>
             </div>
             <div className="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold">
               ₹
             </div>
           </div>
 
-          <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex items-center justify-between">
+          <div className="bg-rose-50/70 border border-rose-200/80 rounded-2xl p-4 shadow-sm flex items-center justify-between">
             <div>
-              <p className="text-xs font-bold text-rose-600 mb-1">Total Dues</p>
-              <h3 className="text-2xl font-extrabold text-rose-700">₹{totalDues}</h3>
+              <p className="text-xs font-bold text-rose-700 mb-1">Total Dues</p>
+              <h3 className="text-2xl font-extrabold text-rose-900">₹{totalDues}</h3>
             </div>
             <div className="w-10 h-10 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center font-bold">
               <AlertTriangle className="w-5 h-5" />
