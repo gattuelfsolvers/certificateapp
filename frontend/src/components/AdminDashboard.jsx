@@ -837,6 +837,32 @@ export default function AdminDashboard({ onLogout }) {
     showToast('success', 'Backup Downloaded', `Backup for ${client.clientName} saved!`);
   };
 
+  // State to track dismissed free demo notification IDs
+  const [dismissedRequests, setDismissedRequests] = useState(() => {
+    const saved = localStorage.getItem('DISMISSED_ACCESS_REQUESTS');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const handleDismissRequest = (reqId) => {
+    const updated = [...dismissedRequests, reqId];
+    setDismissedRequests(updated);
+    localStorage.setItem('DISMISSED_ACCESS_REQUESTS', JSON.stringify(updated));
+  };
+
+  // Access Requests Notification (Paid Pending Approval & Free Demo Accounts)
+  const accessRequests = clients.filter(c => {
+    const id = c.hwid || c.id;
+    if (dismissedRequests.includes(id)) return false;
+    
+    // 1. Paid Registration Requests Pending Approval
+    if (c.status === 'PENDING') return true;
+    
+    // 2. Free Demo Accounts (Default ACTIVE FREE_TRIAL)
+    if (c.planType === 'FREE_TRIAL') return true;
+    
+    return false;
+  });
+
   // Stats Calculations
   const totalCount = clients.length;
   const activeCount = clients.filter(c => c.status === 'ACTIVE' && new Date(c.expiresAt) > new Date()).length;
@@ -1144,44 +1170,94 @@ export default function AdminDashboard({ onLogout }) {
             </div>
           </div>
 
-          {/* Pending Requests Alert Section */}
-          {pendingRequests.length > 0 && (
+          {/* New Client Registration Access Requests Notification Section (Free & Paid) */}
+          {accessRequests.length > 0 && (
             <div className="p-5 rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-white shadow-lg space-y-3 w-full">
-              <div className="flex items-center gap-2 font-extrabold text-base">
-                <Bell className="w-5 h-5 animate-bounce" />
-                New Client Access Requests Pending Approval ({pendingRequests.length})
+              <div className="flex items-center justify-between font-extrabold text-base border-b border-white/20 pb-2">
+                <div className="flex items-center gap-2">
+                  <Bell className="w-5 h-5 animate-bounce" />
+                  New Client Access & Subscription Registrations ({accessRequests.length})
+                </div>
+                <span className="text-xs font-semibold bg-white/20 px-3 py-1 rounded-full">
+                  Free Demo & Paid Plan Requests
+                </span>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 w-full">
-                {pendingRequests.map(req => (
-                  <div key={req.id} className="bg-white/95 text-slate-800 p-4 rounded-xl shadow flex items-center justify-between gap-3">
-                    <div>
-                      <h4 className="text-sm font-bold text-slate-900">{req.clientName}</h4>
-                      <p className="text-xs text-slate-500 font-mono">{req.phone}</p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 w-full pt-1">
+                {accessRequests.map(req => {
+                  const reqId = req.hwid || req.id;
+                  const isFree = req.planType === 'FREE_TRIAL';
+                  const requestedPlanName = req.requestedPlan ? req.requestedPlan.replace('_', ' ') : (isFree ? 'FREE TRIAL' : 'PAID PLAN');
+
+                  return (
+                    <div key={reqId} className="bg-white/95 text-slate-800 p-4 rounded-xl shadow flex items-center justify-between gap-3">
+                      <div>
+                        <div className="flex items-center gap-1.5 mb-0.5">
+                          <h4 className="text-sm font-bold text-slate-900">{req.clientName}</h4>
+                          <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider ${
+                            isFree ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-amber-100 text-amber-900 border border-amber-300'
+                          }`}>
+                            {isFree ? 'FREE DEMO' : requestedPlanName}
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-500 font-mono">{req.phone} • {req.ownerName || 'CSC Center'}</p>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {isFree ? (
+                          /* FREE DEMO ACCOUNT ACTIONS: View & Clear */
+                          <>
+                            <button 
+                              onClick={() => handleOpenViewModal(req)}
+                              className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow transition flex items-center gap-1"
+                              title="View Free Demo Account Details"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                              View
+                            </button>
+                            <button 
+                              onClick={() => handleDismissRequest(reqId)}
+                              className="px-3 py-1.5 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold transition flex items-center gap-1"
+                              title="Clear Notification from Dashboard"
+                            >
+                              Clear
+                            </button>
+                          </>
+                        ) : (
+                          /* PAID SUBSCRIPTION PLAN REQUEST ACTIONS: View Details, Approve & Reject */
+                          <>
+                            <button 
+                              onClick={() => handleOpenViewModal(req)}
+                              className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow transition flex items-center gap-1"
+                              title="View Full Details in Popup Modal"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                              View Details
+                            </button>
+                            <button 
+                              onClick={async () => {
+                                await updateClientStatusOnFirebase(reqId, 'ACTIVE');
+                                handleDismissRequest(reqId);
+                              }}
+                              className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow transition"
+                            >
+                              Approve
+                            </button>
+                            <button 
+                              onClick={async () => {
+                                await updateClientStatusOnFirebase(reqId, 'KILLED');
+                                handleDismissRequest(reqId);
+                              }}
+                              className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow transition"
+                            >
+                              Reject
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <button 
-                        onClick={() => handleOpenViewModal(req)}
-                        className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow transition flex items-center gap-1"
-                        title="View Full Client & Request Details"
-                      >
-                        <Eye className="w-3.5 h-3.5" />
-                        View Details
-                      </button>
-                      <button 
-                        onClick={() => updateClientStatusOnFirebase(req.hwid || req.id, 'ACTIVE')}
-                        className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow transition"
-                      >
-                        Approve
-                      </button>
-                      <button 
-                        onClick={() => updateClientStatusOnFirebase(req.hwid || req.id, 'KILLED')}
-                        className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow transition"
-                      >
-                        Reject
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
@@ -2355,23 +2431,43 @@ export default function AdminDashboard({ onLogout }) {
             <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
               {isViewOnly ? (
                 <div className="flex items-center gap-3">
-                  {editingClient && editingClient.status === 'PENDING' && (
+                  {editingClient && (editingClient.status === 'PENDING' || editingClient.requestedPlan) && (
                     <>
                       <button 
                         type="button" 
                         onClick={async () => {
-                          await updateClientStatusOnFirebase(editingClient.hwid || editingClient.id, 'ACTIVE');
+                          const targetId = editingClient.hwid || editingClient.id;
+                          const targetPlan = editingClient.requestedPlan || editingClient.planType || 'MONTHLY';
+                          
+                          let daysToAdd = 30;
+                          if (targetPlan === 'HALF_YEARLY') daysToAdd = 180;
+                          else if (targetPlan === 'YEARLY') daysToAdd = 365;
+                          
+                          const newExpiresAt = new Date(Date.now() + daysToAdd * 86400000).toISOString();
+
+                          await saveClientToFirebase({
+                            ...editingClient,
+                            planType: targetPlan,
+                            status: 'ACTIVE',
+                            expiresAt: newExpiresAt
+                          });
+
+                          handleDismissRequest(targetId);
                           setIsModalOpen(false);
+                          showToast('success', 'Plan Approved', `${editingClient.clientName}'s plan has been upgraded to ${targetPlan}!`);
                         }} 
                         className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-md transition"
                       >
-                        Approve Request
+                        Approve & Upgrade Plan
                       </button>
                       <button 
                         type="button" 
                         onClick={async () => {
-                          await updateClientStatusOnFirebase(editingClient.hwid || editingClient.id, 'KILLED');
+                          const targetId = editingClient.hwid || editingClient.id;
+                          await updateClientStatusOnFirebase(targetId, 'KILLED');
+                          handleDismissRequest(targetId);
                           setIsModalOpen(false);
+                          showToast('error', 'Request Rejected', `Registration request for ${editingClient.clientName} has been rejected.`);
                         }} 
                         className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs shadow-md transition"
                       >
