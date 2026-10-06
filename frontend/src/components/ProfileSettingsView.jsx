@@ -35,13 +35,33 @@ export default function ProfileSettingsView({ clientData, showToast }) {
     newMobile: ''
   });
 
-  // 2. License Details (Read-Only)
+  // 2. Dynamic License Details Calculation
+  const calculateDaysLeft = () => {
+    const plan = (clientData?.planType || 'MONTHLY').toUpperCase();
+    if (plan.includes('LIFETIME')) {
+      return 'Unlimited (Lifetime)';
+    }
+
+    if (clientData?.expiresAt) {
+      const expDate = new Date(clientData.expiresAt);
+      const now = new Date();
+      const diffTime = expDate.getTime() - now.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return diffDays > 0 ? `${diffDays} Days Left` : 'Expired';
+    }
+
+    return '27 Days Left';
+  };
+
+  const rawPlanType = (clientData?.planType || 'MONTHLY').toUpperCase();
+  const isLifetime = rawPlanType.includes('LIFETIME');
+
   const licenseInfo = {
     licenseKey: clientData?.licenseKey || localStorage.getItem('CLIENT_LICENSE_KEY') || 'CERT-MON-98A1-4B2C-78DE',
-    hwid: clientData?.hwid || localStorage.getItem('CLIENT_SYSTEM_HWID') || 'HWID-RANCHI-CSC-2026',
+    hwid: clientData?.hwid || localStorage.getItem('CLIENT_SYSTEM_HWID') || 'HWID-WIN-24E6-3A85',
     regDate: clientData?.createdAt ? new Date(clientData.createdAt).toLocaleDateString() : '01-01-2026',
-    planType: clientData?.planType || 'ACTIVE MONTHLY PLAN',
-    daysLeft: 27
+    planType: rawPlanType,
+    daysLeftText: calculateDaysLeft()
   };
 
   // 3. Jharsewa Credentials State
@@ -321,7 +341,7 @@ export default function ProfileSettingsView({ clientData, showToast }) {
               </div>
               <div>
                 <div className="text-[11px] font-extrabold uppercase text-emerald-100">Subscription Validity Status</div>
-                <div className="text-sm font-black">{licenseInfo.daysLeft} Days Remaining</div>
+                <div className="text-sm font-black">{licenseInfo.daysLeftText}</div>
               </div>
             </div>
             <span className="px-3 py-1 rounded-full bg-white text-emerald-950 text-xs font-black shadow-sm">
@@ -669,7 +689,7 @@ export default function ProfileSettingsView({ clientData, showToast }) {
                       `• Current Owner: ${profile.ownerName}\n` +
                       `• Registered Mobile: ${profile.phone}\n` +
                       `• Hardware ID (HWID): ${licenseInfo.hwid}\n` +
-                      `• License Status: ${licenseInfo.planType} (${licenseInfo.daysLeft} Days Left)\n\n` +
+                      `• License Status: ${licenseInfo.planType} (${licenseInfo.daysLeftText})\n\n` +
                       `*Requested Profile Updates:*\n` +
                       `${changes.join('\n')}\n\n` +
                       `Please update these profile details in Admin Panel. Thank you!`;
