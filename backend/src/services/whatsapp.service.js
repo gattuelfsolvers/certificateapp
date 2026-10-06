@@ -529,7 +529,8 @@ async function sendTestWhatsAppMessage(mobile, messageText) {
     .replace(/\{certListLines\}/g, '1. *Income Certificate (JHIC)*\n   - रेफरेंस नंबर: *JHIC/2026/999999*\n\n2. *Caste Certificate (JHCBC)*\n   - रेफरेंस नंबर: *JHCBC/2026/888888*');
 
   try {
-    return await enqueueMessage(() => sock.sendMessage(jid, { text: testContent }));
+    const res = await enqueueMessage(() => sock.sendMessage(jid, { text: testContent }));
+    return { success: true, messageId: res?.key?.id || 'SENT' };
   } catch (err) {
     console.error('Failed to send test WhatsApp message:', err);
     return { success: false, error: err.message };
