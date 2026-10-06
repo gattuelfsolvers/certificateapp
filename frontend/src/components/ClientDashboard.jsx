@@ -3,7 +3,7 @@ import {
   FileText, Plus, RefreshCw, MessageSquare, Search, Filter,
   CheckCircle2, Clock, AlertTriangle, XCircle, IndianRupee,
   Smartphone, ExternalLink, Printer, Edit, Trash2, Shield, Settings, Activity, Users, Send, Layers, Tag, PlusCircle, Zap, Download, Upload, X,
-  Key, User, Lock, ShieldCheck, Building2, Store, Phone, MapPin, BadgeCheck, LogOut, Eye, PanelRight, PanelRightClose, Code, LayoutDashboard, Sliders
+  Key, User, Lock, ShieldCheck, Building2, Store, Phone, MapPin, BadgeCheck, LogOut, Eye, PanelRight, PanelRightClose, Code, LayoutDashboard, Sliders, MoreVertical
 } from 'lucide-react';
 import { CERTIFICATE_CATEGORIES } from '../constants/certificateTypes';
 import { fetchCertificatesFromFirebase, saveCertificateToFirebase, deleteCertificateFromFirebase } from '../firebase';
@@ -219,6 +219,13 @@ export default function ClientDashboard({ clientData, onLogout }) {
       <header className="bg-gradient-to-r from-blue-700 via-indigo-700 to-violet-700 text-white shadow-lg sticky top-0 z-40 px-6 md:px-10 py-4 w-full">
         <div className="w-full flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => setIsSideMenuOpen(!isSideMenuOpen)}
+              title="Open Navigation Menu"
+              className="p-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/20 transition flex items-center justify-center font-bold"
+            >
+              <MoreVertical className="w-5 h-5 text-yellow-300" />
+            </button>
             <div className="w-11 h-11 rounded-2xl bg-white/10 backdrop-blur border border-white/20 flex items-center justify-center text-white font-extrabold shadow-inner">
               <Store className="w-6 h-6 text-yellow-300" />
             </div>
@@ -237,14 +244,6 @@ export default function ClientDashboard({ clientData, onLogout }) {
 
           <div className="flex items-center gap-3">
             <button
-              onClick={() => setIsSideMenuOpen(!isSideMenuOpen)}
-              title={isSideMenuOpen ? "Close Menu Drawer" : "Open Navigation Menu"}
-              className="p-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/20 transition flex items-center gap-1.5 font-bold text-xs"
-            >
-              {isSideMenuOpen ? <PanelRightClose className="w-5 h-5 text-yellow-300" /> : <PanelRight className="w-5 h-5" />}
-              <span className="hidden sm:inline">Menu</span>
-            </button>
-            <button
               onClick={() => handleOpenAddModal('JHIC')}
               className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white font-bold text-sm shadow-md transition"
             >
@@ -262,7 +261,7 @@ export default function ClientDashboard({ clientData, onLogout }) {
         </div>
       </header>
 
-      {/* RIGHT SIDE MENU DRAWER (AUTO HIDE BY DEFAULT) */}
+      {/* LEFT SIDE MENU DRAWER (AUTO HIDE BY DEFAULT) */}
       {isSideMenuOpen && (
         <div className="fixed inset-0 z-50 overflow-hidden">
           {/* Backdrop Overlay */}
@@ -271,8 +270,8 @@ export default function ClientDashboard({ clientData, onLogout }) {
             className="absolute inset-0 bg-slate-950/60 backdrop-blur-xs transition-opacity animate-in fade-in"
           ></div>
 
-          <aside className="absolute inset-y-0 right-0 max-w-full flex pl-10">
-            <div className="w-72 bg-slate-900 text-white shadow-2xl border-l border-slate-800 flex flex-col justify-between p-6 space-y-6 animate-in slide-in-from-right duration-300">
+          <aside className="absolute inset-y-0 left-0 max-w-full flex pr-10">
+            <div className="w-72 bg-slate-900 text-white shadow-2xl border-r border-slate-800 flex flex-col justify-between p-6 space-y-6 animate-in slide-in-from-left duration-300">
               <div className="space-y-6">
                 {/* Header */}
                 <div className="flex items-center justify-between border-b border-slate-800 pb-4">
@@ -424,15 +423,7 @@ export default function ClientDashboard({ clientData, onLogout }) {
         </div>
 
         {/* Client Quick Action Shortcuts Bar */}
-        <div className="bg-white/90 backdrop-blur-md p-4 rounded-2xl border border-slate-200/80 shadow-sm space-y-3">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-              <Sliders className="w-4 h-4 text-blue-600" />
-              Client Quick Actions & Shortcuts
-            </h4>
-            <span className="text-xs text-slate-400 font-medium">Instant Navigation</span>
-          </div>
-
+        <div className="bg-white/90 backdrop-blur-md p-3.5 rounded-2xl border border-slate-200/80 shadow-sm">
           <div className="flex flex-wrap items-center gap-2.5">
             <button
               onClick={() => setActiveTab('dashboard')}
