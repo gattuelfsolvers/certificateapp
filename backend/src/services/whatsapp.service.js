@@ -585,7 +585,8 @@ async function sendClientNotification(client, eventType, extraInfo = {}) {
 
   const shopName = client.clientName || 'Client Shop';
   const owner = client.ownerName || 'Valued Partner';
-  const formattedExpiry = client.expiresAt ? new Date(client.expiresAt).toLocaleDateString('en-IN') : 'N/A';
+  const isLifetime = client.planType === 'LIFETIME' || (client.expiresAt && (new Date(client.expiresAt) - new Date()) > 3000 * 24 * 60 * 60 * 1000);
+  const formattedExpiry = isLifetime ? 'आजीवन (Lifetime)' : (client.expiresAt ? new Date(client.expiresAt).toLocaleDateString('en-IN') : 'N/A');
 
   let messageText = '';
 
