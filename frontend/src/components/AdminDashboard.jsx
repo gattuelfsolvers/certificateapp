@@ -1548,7 +1548,7 @@ export default function AdminDashboard({ onLogout }) {
                               <td className="px-6 py-4">
                                 {isPending ? (
                                   <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-violet-100 text-violet-800 border border-violet-200 text-[10px] font-extrabold animate-pulse">
-                                    <Clock className="w-3 h-3 text-violet-600" /> PENDING APPROVAL
+                                    <Clock className="w-3 h-3 text-violet-600" /> PENDING APPROVAL ({daysLeft > 0 ? `${daysLeft} Days Left` : 'Expired'})
                                   </span>
                                 ) : isKilled ? (
                                   <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-rose-100 text-rose-700 border border-rose-200 text-[10px] font-extrabold">
@@ -2660,8 +2660,11 @@ export default function AdminDashboard({ onLogout }) {
                           const targetPlan = editingClient.requestedPlan || editingClient.planType || 'MONTHLY';
                           
                           let daysToAdd = 30;
-                          if (targetPlan === 'HALF_YEARLY') daysToAdd = 180;
+                          if (targetPlan === 'FREE_TRIAL') daysToAdd = 7;
+                          else if (targetPlan === 'MONTHLY') daysToAdd = 30;
+                          else if (targetPlan === 'HALF_YEARLY') daysToAdd = 180;
                           else if (targetPlan === 'YEARLY') daysToAdd = 365;
+                          else if (targetPlan === 'LIFETIME') daysToAdd = 364635;
                           
                           const newExpiresAt = new Date(Date.now() + daysToAdd * 86400000).toISOString();
 
