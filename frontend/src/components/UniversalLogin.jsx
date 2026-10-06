@@ -271,7 +271,7 @@ export default function UniversalLogin({ onLoginSuccess }) {
             className="text-blue-400 font-bold hover:text-blue-300 transition flex items-center gap-1.5"
           >
             <UserPlus className="w-4 h-4" />
-            Request New License Key
+            Register for New User
           </button>
 
           {/* GET HARDWARE ID BUTTON */}
@@ -340,7 +340,7 @@ export default function UniversalLogin({ onLoginSuccess }) {
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <h3 className="text-base font-extrabold text-white flex items-center gap-2">
                 <UserPlus className="w-5 h-5 text-blue-400" />
-                Request Software Access License
+                Register for New Account
               </h3>
               <button 
                 onClick={() => setIsRequestModalOpen(false)}
