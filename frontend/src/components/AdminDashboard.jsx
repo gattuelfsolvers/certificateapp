@@ -1242,7 +1242,7 @@ export default function AdminDashboard({ onLogout }) {
               <span className="text-xs text-slate-400 font-medium">Direct Shortcuts</span>
             </div>
             
-            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
               <button
                 onClick={() => setActiveTab('dashboard')}
                 className="flex flex-col items-center justify-center p-3 rounded-xl bg-blue-50/80 hover:bg-blue-100/80 text-blue-900 border border-blue-100 hover:border-blue-300 transition group shadow-xs hover:shadow-md"
@@ -1311,16 +1311,6 @@ export default function AdminDashboard({ onLogout }) {
                   <Settings className="w-5 h-5" />
                 </div>
                 <span className="text-xs font-bold text-center">Manage Account</span>
-              </button>
-
-              <button
-                onClick={() => handleOpenAddModal()}
-                className="flex flex-col items-center justify-center p-3 rounded-xl bg-violet-600 hover:bg-violet-700 text-white transition group shadow-md shadow-violet-500/20 hover:shadow-lg hover:shadow-violet-500/30"
-              >
-                <div className="w-10 h-10 rounded-lg bg-white/20 text-white flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
-                  <Plus className="w-5 h-5" />
-                </div>
-                <span className="text-xs font-bold text-center">Add New Client</span>
               </button>
             </div>
           </div>
