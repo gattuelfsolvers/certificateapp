@@ -3,7 +3,7 @@ import {
   FileText, Plus, RefreshCw, MessageSquare, Search, Filter,
   CheckCircle2, Clock, AlertTriangle, XCircle, IndianRupee,
   Smartphone, ExternalLink, Printer, Edit, Trash2, Shield, Settings, Activity, Users, Send, Layers, Tag, PlusCircle, Zap, Download, Upload, X,
-  Key, User, Lock, ShieldCheck, Building2, Store, Phone, MapPin, BadgeCheck, LogOut, Eye
+  Key, User, Lock, ShieldCheck, Building2, Store, Phone, MapPin, BadgeCheck, LogOut, Eye, PanelRight, PanelRightClose, Code, LayoutDashboard, Sliders
 } from 'lucide-react';
 import { CERTIFICATE_CATEGORIES } from '../constants/certificateTypes';
 import { fetchCertificatesFromFirebase, saveCertificateToFirebase, deleteCertificateFromFirebase } from '../firebase';
@@ -27,6 +27,10 @@ export default function ClientDashboard({ clientData, onLogout }) {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [certTypeFilter, setCertTypeFilter] = useState('ALL');
+  
+  const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard' | 'code_master' | 'profile'
+  const [isSideMenuOpen, setIsSideMenuOpen] = useState(false); // Auto-hide by default
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   
   // Modal States
   const [isEntryModalOpen, setIsEntryModalOpen] = useState(false);
@@ -232,6 +236,14 @@ export default function ClientDashboard({ clientData, onLogout }) {
 
           <div className="flex items-center gap-3">
             <button
+              onClick={() => setIsSideMenuOpen(!isSideMenuOpen)}
+              title={isSideMenuOpen ? "Close Menu Drawer" : "Open Navigation Menu"}
+              className="p-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/20 transition flex items-center gap-1.5 font-bold text-xs"
+            >
+              {isSideMenuOpen ? <PanelRightClose className="w-5 h-5 text-yellow-300" /> : <PanelRight className="w-5 h-5" />}
+              <span className="hidden sm:inline">Menu</span>
+            </button>
+            <button
               onClick={() => handleOpenAddModal('JHIC')}
               className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white font-bold text-sm shadow-md transition"
             >
@@ -248,6 +260,101 @@ export default function ClientDashboard({ clientData, onLogout }) {
           </div>
         </div>
       </header>
+
+      {/* RIGHT SIDE MENU DRAWER (AUTO HIDE BY DEFAULT) */}
+      {isSideMenuOpen && (
+        <div className="fixed inset-0 z-50 overflow-hidden">
+          {/* Backdrop Overlay */}
+          <div 
+            onClick={() => setIsSideMenuOpen(false)}
+            className="absolute inset-0 bg-slate-950/60 backdrop-blur-xs transition-opacity animate-in fade-in"
+          ></div>
+
+          <aside className="absolute inset-y-0 right-0 max-w-full flex pl-10">
+            <div className="w-72 bg-slate-900 text-white shadow-2xl border-l border-slate-800 flex flex-col justify-between p-6 space-y-6 animate-in slide-in-from-right duration-300">
+              <div className="space-y-6">
+                {/* Header */}
+                <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400 font-extrabold">
+                      <Store className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-black text-white tracking-tight">Client Navigation</h3>
+                      <p className="text-[11px] text-slate-400">Shop Control Menu</p>
+                    </div>
+                  </div>
+
+                  <button 
+                    onClick={() => setIsSideMenuOpen(false)}
+                    className="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                {/* Navigation Items */}
+                <nav className="space-y-2">
+                  <button
+                    onClick={() => { setActiveTab('dashboard'); setIsSideMenuOpen(false); }}
+                    className={`w-full flex items-center justify-between px-4 py-3 rounded-xl font-bold text-xs transition ${
+                      activeTab === 'dashboard'
+                        ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
+                        : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <LayoutDashboard className="w-4 h-4 text-blue-400" />
+                      <span>1. Dashboard</span>
+                    </div>
+                    <span className="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 text-[10px] font-extrabold">Main</span>
+                  </button>
+
+                  <button
+                    onClick={() => { setActiveTab('code_master'); setIsSideMenuOpen(false); }}
+                    className={`w-full flex items-center justify-between px-4 py-3 rounded-xl font-bold text-xs transition ${
+                      activeTab === 'code_master'
+                        ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
+                        : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Code className="w-4 h-4 text-emerald-400" />
+                      <span>2. Code Master</span>
+                    </div>
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-extrabold">
+                      {CERTIFICATE_CATEGORIES.flatMap(c => c.subServices).length} Codes
+                    </span>
+                  </button>
+
+                  <button
+                    onClick={() => { setIsProfileModalOpen(true); setIsSideMenuOpen(false); }}
+                    className={`w-full flex items-center justify-between px-4 py-3 rounded-xl font-bold text-xs transition ${
+                      activeTab === 'profile'
+                        ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
+                        : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <User className="w-4 h-4 text-amber-400" />
+                      <span>3. Profile Settings</span>
+                    </div>
+                    <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-extrabold">Account</span>
+                  </button>
+                </nav>
+              </div>
+
+              {/* Bottom Footer Details */}
+              <div className="p-4 bg-slate-950 border border-slate-800 rounded-2xl space-y-2 text-xs">
+                <div className="text-[11px] font-bold text-slate-400">Registered HWID:</div>
+                <div className="font-mono text-[10px] text-amber-300 font-extrabold break-all bg-slate-900 p-2 rounded-xl border border-slate-800 select-all">
+                  {clientData?.hwid || localStorage.getItem('CLIENT_SYSTEM_HWID') || 'HWID Locked'}
+                </div>
+              </div>
+            </div>
+          </aside>
+        </div>
+      )}
 
       {/* Main Dashboard Content - FULL PAGE WIDTH */}
       <main className="w-full px-6 md:px-10 py-8 flex-1 space-y-8">
@@ -302,6 +409,71 @@ export default function ClientDashboard({ clientData, onLogout }) {
             <div className="w-10 h-10 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center font-bold">
               <AlertTriangle className="w-5 h-5" />
             </div>
+          </div>
+        </div>
+
+        {/* Client Quick Action Shortcuts Bar */}
+        <div className="bg-white/90 backdrop-blur-md p-4 rounded-2xl border border-slate-200/80 shadow-sm space-y-3">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+              <Sliders className="w-4 h-4 text-blue-600" />
+              Client Quick Actions & Shortcuts
+            </h4>
+            <span className="text-xs text-slate-400 font-medium">Instant Navigation</span>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <button
+              onClick={() => setActiveTab('dashboard')}
+              className={`flex flex-col items-center justify-center p-3.5 rounded-xl border transition group shadow-xs hover:shadow-md ${
+                activeTab === 'dashboard' 
+                  ? 'bg-blue-600 text-white border-blue-600 shadow-md' 
+                  : 'bg-blue-50/80 hover:bg-blue-100/80 text-blue-900 border-blue-100'
+              }`}
+            >
+              <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-2 group-hover:scale-110 transition-transform ${
+                activeTab === 'dashboard' ? 'bg-white/20 text-white' : 'bg-blue-600 text-white shadow-sm'
+              }`}>
+                <LayoutDashboard className="w-5 h-5" />
+              </div>
+              <span className="text-xs font-extrabold text-center">Dashboard</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('code_master')}
+              className={`flex flex-col items-center justify-center p-3.5 rounded-xl border transition group shadow-xs hover:shadow-md ${
+                activeTab === 'code_master' 
+                  ? 'bg-emerald-600 text-white border-emerald-600 shadow-md' 
+                  : 'bg-emerald-50/80 hover:bg-emerald-100/80 text-emerald-900 border-emerald-100'
+              }`}
+            >
+              <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-2 group-hover:scale-110 transition-transform ${
+                activeTab === 'code_master' ? 'bg-white/20 text-white' : 'bg-emerald-600 text-white shadow-sm'
+              }`}>
+                <Code className="w-5 h-5" />
+              </div>
+              <span className="text-xs font-extrabold text-center">Code Master</span>
+            </button>
+
+            <button
+              onClick={() => setIsProfileModalOpen(true)}
+              className="flex flex-col items-center justify-center p-3.5 rounded-xl bg-amber-50/80 hover:bg-amber-100/80 text-amber-900 border border-amber-100 transition group shadow-xs hover:shadow-md"
+            >
+              <div className="w-10 h-10 rounded-lg bg-amber-600 text-white flex items-center justify-center mb-2 group-hover:scale-110 transition-transform shadow-sm">
+                <User className="w-5 h-5" />
+              </div>
+              <span className="text-xs font-extrabold text-center">Profile Settings</span>
+            </button>
+
+            <button
+              onClick={() => handleOpenAddModal('JHIC')}
+              className="flex flex-col items-center justify-center p-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white transition group shadow-md shadow-emerald-500/20 hover:shadow-lg"
+            >
+              <div className="w-10 h-10 rounded-lg bg-white/20 text-white flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                <Plus className="w-5 h-5" />
+              </div>
+              <span className="text-xs font-extrabold text-center">+ New Entry</span>
+            </button>
           </div>
         </div>
 
