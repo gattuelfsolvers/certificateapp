@@ -123,6 +123,7 @@ async function processQueue() {
 
 async function logoutWhatsApp() {
   try {
+    const authDir = path.join(__dirname, '../../auth_info_baileys');
     if (sock) {
       await sock.logout();
     }
@@ -131,8 +132,10 @@ async function logoutWhatsApp() {
     qrCodeDataUri = null;
     connectedPhone = null;
 
-    await prisma.whatsAppSession.deleteMany({});
-    console.log('🚪 WhatsApp Device Unlinked and Database Auth Sessions Cleared.');
+    if (fs.existsSync(authDir)) {
+      fs.rmSync(authDir, { recursive: true, force: true });
+    }
+    console.log('🚪 WhatsApp Device Unlinked and Auth Credentials Cleared.');
     return { success: true, message: 'WhatsApp unlinked successfully.' };
   } catch (err) {
     console.error('Logout error:', err);
@@ -142,10 +145,13 @@ async function logoutWhatsApp() {
 
 async function initWhatsApp() {
   try {
+    const authDir = path.join(__dirname, '../../auth_info_baileys');
     const publicDir = path.join(__dirname, '../../public');
+
+    if (!fs.existsSync(authDir)) fs.mkdirSync(authDir, { recursive: true });
     if (!fs.existsSync(publicDir)) fs.mkdirSync(publicDir, { recursive: true });
 
-    const { state, saveCreds } = await useDatabaseAuthState();
+    const { state, saveCreds } = await useMultiFileAuthState(authDir);
 
     sock = makeWASocket({
       auth: state,
@@ -185,8 +191,10 @@ async function initWhatsApp() {
         if (shouldReconnect) {
           setTimeout(initWhatsApp, 4000);
         } else {
-          console.log('Logged out. Clearing auth DB info...');
-          await prisma.whatsAppSession.deleteMany({}).catch(() => {});
+          console.log('Logged out. Clearing auth info...');
+          if (fs.existsSync(authDir)) {
+            fs.rmSync(authDir, { recursive: true, force: true });
+          }
           setTimeout(initWhatsApp, 4000);
         }
       } else if (connection === 'open') {
