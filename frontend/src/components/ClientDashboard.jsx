@@ -953,7 +953,6 @@ export default function ClientDashboard({ clientData, onLogout }) {
                 <option value="CI_UNDER_PROCESS">CI Under Process</option>
                 <option value="CO_UNDER_PROCESS">CO Under Process</option>
                 <option value="SDO_UNDER_PROCESS">SDO / DC Under Process</option>
-                <option value="UNDER_PROCESS">General Under Process</option>
                 <option value="DELIVERED">Delivered (Issued)</option>
                 <option value="REJECTED">Rejected</option>
                 <option value="CO_WAITING">Waiting (Objection)</option>
@@ -1605,7 +1604,6 @@ export default function ClientDashboard({ clientData, onLogout }) {
                     <option value="CI_UNDER_PROCESS">CI UNDER PROCESS (Circle Inspector)</option>
                     <option value="CO_UNDER_PROCESS">CO UNDER PROCESS (Circle Officer)</option>
                     <option value="SDO_UNDER_PROCESS">SDO UNDER PROCESS (SDO / DC Level)</option>
-                    <option value="UNDER_PROCESS">UNDER PROCESS (General)</option>
                     <option value="DELIVERED">DELIVERED (Issued)</option>
                     <option value="REJECTED">REJECTED</option>
                     <option value="CO_WAITING">CO WAITING (Applicant Objection)</option>
