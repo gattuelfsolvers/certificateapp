@@ -829,23 +829,37 @@ export default function AdminDashboard({ onLogout }) {
   };
 
   const handleDeleteClient = async (hwid, clientName) => {
-    if (!window.confirm(`Are you sure you want to move client "${clientName}" to Archived Clients?`)) return;
-    try {
-      const targetClient = clients.find(c => (c.hwid === hwid || c.id === hwid));
-      if (targetClient) {
-        const daysRemaining = calculateDaysLeft(targetClient.expiresAt);
-        await saveClientToFirebase({
-          ...targetClient,
-          status: 'DELETED',
-          remainingDays: Math.max(0, daysRemaining)
-        });
-        showToast('info', 'Client Archived', `Client "${clientName}" has been moved to Archived Clients.`);
-      } else {
-        await updateClientStatusOnFirebase(hwid, 'DELETED');
-        showToast('info', 'Client Archived', `Client "${clientName}" has been moved to Archived Clients.`);
+    const targetClient = clients.find(c => (c.hwid === hwid || c.id === hwid));
+    const isAlreadyArchived = clientSubTab === 'ARCHIVED' || (targetClient && targetClient.status === 'DELETED');
+
+    if (isAlreadyArchived) {
+      // Permanent Delete from Firebase Firestore Cloud Database
+      if (!window.confirm(`⚠️ PERMANENT DELETE WARNING:\n\nAre you sure you want to PERMANENTLY DELETE client "${clientName}" from database?\nThis action CANNOT be undone!`)) return;
+      try {
+        await deleteClientFromFirebase(hwid);
+        showToast('error', 'Permanent Delete Complete', `Client "${clientName}" permanently deleted from database.`);
+      } catch (err) {
+        showToast('error', 'Permanent Delete Failed', err.message);
       }
-    } catch (err) {
-      showToast('error', 'Archive Failed', err.message);
+    } else {
+      // Soft Archive (move to Archived Clients tab)
+      if (!window.confirm(`Are you sure you want to move client "${clientName}" to Archived Clients?`)) return;
+      try {
+        if (targetClient) {
+          const daysRemaining = calculateDaysLeft(targetClient.expiresAt);
+          await saveClientToFirebase({
+            ...targetClient,
+            status: 'DELETED',
+            remainingDays: Math.max(0, daysRemaining)
+          });
+          showToast('info', 'Client Archived', `Client "${clientName}" has been moved to Archived Clients.`);
+        } else {
+          await updateClientStatusOnFirebase(hwid, 'DELETED');
+          showToast('info', 'Client Archived', `Client "${clientName}" has been moved to Archived Clients.`);
+        }
+      } catch (err) {
+        showToast('error', 'Archive Failed', err.message);
+      }
     }
   };
 
