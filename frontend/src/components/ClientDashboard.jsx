@@ -903,9 +903,9 @@ export default function ClientDashboard({ clientData, onLogout }) {
               />
             </div>
 
-            {/* Toolbar Action Controls: Status Dropdown, Download Data, Sync All, Refresh List */}
+            {/* Toolbar Action Controls in requested order: 1. Status Dropdown, 2. Sync List, 3. Sync All, 4. Download */}
             <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto justify-end">
-              {/* Filter List by Status Dropdown */}
+              {/* 1. Status Dropdown */}
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
@@ -920,17 +920,17 @@ export default function ClientDashboard({ clientData, onLogout }) {
                 <option value="WAITING">Waiting</option>
               </select>
 
-              {/* Download Data Button */}
-              <button
-                onClick={handleExportCSV}
-                title="Download / Export Data (CSV)"
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-bold transition shadow-xs"
+              {/* 2. Sync List / Refresh List Button */}
+              <button 
+                onClick={loadCertificates}
+                title="Refresh Records List"
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-xs font-bold transition shadow-xs"
               >
-                <Download className="w-4 h-4 text-emerald-600" />
-                <span className="hidden sm:inline">Export</span>
+                <RefreshCw className={`w-4 h-4 text-slate-500 ${loading ? 'animate-spin' : ''}`} />
+                <span>Sync List</span>
               </button>
 
-              {/* Sync All Button */}
+              {/* 3. Sync All Button */}
               <button
                 onClick={handleSyncAll}
                 disabled={isSyncingAll}
@@ -941,14 +941,14 @@ export default function ClientDashboard({ clientData, onLogout }) {
                 <span>{isSyncingAll ? 'Syncing All...' : 'Sync All'}</span>
               </button>
 
-              {/* Sync List / Refresh List Button */}
-              <button 
-                onClick={loadCertificates}
-                title="Refresh Records List"
-                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-xs font-bold transition shadow-xs"
+              {/* 4. Download Data Button */}
+              <button
+                onClick={handleExportCSV}
+                title="Download / Export Data (CSV)"
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-bold transition shadow-xs"
               >
-                <RefreshCw className={`w-4 h-4 text-slate-500 ${loading ? 'animate-spin' : ''}`} />
-                <span>Refresh List</span>
+                <Download className="w-4 h-4 text-emerald-600" />
+                <span>Download</span>
               </button>
             </div>
           </div>
