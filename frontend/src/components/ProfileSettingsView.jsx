@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   User, Store, Phone, MapPin, Key, ShieldCheck, Cpu, Calendar, Clock, 
-  Lock, Smartphone, CheckCircle2, MessageSquare, AlertCircle, Save, Eye, EyeOff, QrCode, RefreshCw, Zap, Send, FileEdit
+  Lock, Smartphone, CheckCircle2, MessageSquare, AlertCircle, Save, Eye, EyeOff, QrCode, RefreshCw, Zap, Send, FileEdit, Plus, Trash2, Edit, Monitor
 } from 'lucide-react';
 
 export default function ProfileSettingsView({ clientData, showToast }) {
@@ -34,6 +34,19 @@ export default function ProfileSettingsView({ clientData, showToast }) {
     newOwnerName: '',
     newMobile: ''
   });
+
+  // Allowed PCs and HWID List State
+  const allowedPcs = clientData?.allowedPcs || 2;
+  const [hwidList, setHwidList] = useState(() => {
+    const initialHwids = clientData?.hwids || [
+      clientData?.hwid || localStorage.getItem('CLIENT_SYSTEM_HWID') || 'HWID-WIN-24E6-3A85'
+    ];
+    return Array.from(new Set(initialHwids.filter(Boolean)));
+  });
+
+  const [newHwidInput, setNewHwidInput] = useState('');
+  const [editingHwidIndex, setEditingHwidIndex] = useState(null);
+  const [editHwidInput, setEditHwidInput] = useState('');
 
   // 2. Dynamic License Details Calculation
   const calculateDaysLeft = () => {
@@ -312,8 +325,11 @@ export default function ProfileSettingsView({ clientData, showToast }) {
               </div>
 
               <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 space-y-1">
-                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Registered Hardware ID (HWID)</span>
-                <span className="font-mono text-xs font-black text-amber-700 break-all select-all">{licenseInfo.hwid}</span>
+                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Allowed Computers (PC Limit)</span>
+                <span className="font-bold text-slate-900 flex items-center gap-1.5 text-xs">
+                  <Monitor className="w-4 h-4 text-blue-600" />
+                  <span className="font-extrabold text-blue-700">{hwidList.length}</span> / {allowedPcs} Authorized PCs
+                </span>
               </div>
 
               <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 space-y-1">
@@ -330,6 +346,140 @@ export default function ProfileSettingsView({ clientData, showToast }) {
                   <Zap className="w-3.5 h-3.5 text-emerald-600" />
                   {licenseInfo.planType}
                 </span>
+              </div>
+            </div>
+
+            {/* REGISTERED HARDWARE ID (HWID) MANAGEMENT BOX */}
+            <div className="mt-4 bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                  <Cpu className="w-4 h-4 text-amber-600" />
+                  Registered Hardware IDs ({hwidList.length})
+                </span>
+                <span className="text-[10px] text-slate-500 font-bold">
+                  Limit: {allowedPcs} PCs
+                </span>
+              </div>
+
+              {/* Add New Hardware ID Input Form */}
+              <div className="flex items-center gap-2">
+                <div className="relative flex-1">
+                  <Cpu className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={newHwidInput}
+                    onChange={(e) => setNewHwidInput(e.target.value)}
+                    placeholder="Enter PC Hardware ID (e.g. HWID-WIN-24E6-3A85)..."
+                    className="w-full bg-white border border-slate-300 rounded-xl pl-10 pr-3 py-2 text-xs font-mono font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500/20 uppercase"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!newHwidInput.trim()) {
+                      if (showToast) showToast('error', 'HWID Required', 'Please enter Hardware ID (HWID)');
+                      return;
+                    }
+                    const cleanHwid = newHwidInput.trim().toUpperCase();
+                    if (hwidList.includes(cleanHwid)) {
+                      if (showToast) showToast('error', 'Already Registered', 'This HWID is already in your registered list');
+                      return;
+                    }
+                    if (hwidList.length >= allowedPcs) {
+                      if (showToast) showToast('error', 'PC Limit Exceeded', `Your plan allows maximum ${allowedPcs} authorized PCs.`);
+                      return;
+                    }
+
+                    const updated = [...hwidList, cleanHwid];
+                    setHwidList(updated);
+                    setNewHwidInput('');
+                    if (showToast) showToast('success', 'HWID Added', `Hardware ID ${cleanHwid} added to registered list.`);
+                  }}
+                  className="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold text-xs transition shadow-xs flex items-center gap-1.5 shrink-0 cursor-pointer"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Add HWID</span>
+                </button>
+              </div>
+
+              {/* Added HWIDs List with Edit & Delete */}
+              <div className="space-y-2 pt-1">
+                {hwidList.map((hwidItem, idx) => (
+                  <div key={idx} className="bg-white border border-slate-200 rounded-xl p-2.5 flex items-center justify-between gap-2 shadow-2xs">
+                    {editingHwidIndex === idx ? (
+                      <div className="flex items-center gap-2 w-full">
+                        <input
+                          type="text"
+                          value={editHwidInput}
+                          onChange={(e) => setEditHwidInput(e.target.value)}
+                          className="w-full bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1 text-xs font-mono font-bold uppercase"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!editHwidInput.trim()) return;
+                            const clean = editHwidInput.trim().toUpperCase();
+                            const newList = [...hwidList];
+                            newList[idx] = clean;
+                            setHwidList(newList);
+                            setEditingHwidIndex(null);
+                            if (showToast) showToast('success', 'HWID Updated', 'Hardware ID updated.');
+                          }}
+                          className="px-2.5 py-1 rounded-lg bg-emerald-600 text-white font-extrabold text-xs"
+                        >
+                          Save
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditingHwidIndex(null)}
+                          className="px-2 py-1 rounded-lg bg-slate-200 text-slate-700 font-bold text-xs"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="w-5 h-5 rounded-full bg-amber-100 text-amber-800 flex items-center justify-center font-bold text-[10px] shrink-0">
+                            {idx + 1}
+                          </span>
+                          <span className="font-mono text-xs font-black text-slate-800 truncate select-all">{hwidItem}</span>
+                        </div>
+
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingHwidIndex(idx);
+                              setEditHwidInput(hwidItem);
+                            }}
+                            title="Edit HWID"
+                            className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition"
+                          >
+                            <Edit className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (hwidList.length <= 1) {
+                                if (showToast) showToast('error', 'Cannot Delete', 'At least 1 registered HWID must remain.');
+                                return;
+                              }
+                              if (!window.confirm(`Are you sure you want to remove HWID ${hwidItem}?`)) return;
+                              const newList = hwidList.filter((_, i) => i !== idx);
+                              setHwidList(newList);
+                              if (showToast) showToast('info', 'HWID Removed', 'Hardware ID removed from list.');
+                            }}
+                            title="Delete HWID"
+                            className="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 transition"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                ))}
               </div>
             </div>
           </div>
