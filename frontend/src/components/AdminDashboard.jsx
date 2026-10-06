@@ -67,7 +67,7 @@ export default function AdminDashboard({ onLogout }) {
       price: 0,
       entriesLimit: '5 Entries',
       status: 'ACTIVE',
-      maxPcs: 1,
+      usersText: '1 PC',
       facilities: {
         autoWhatsapp: true,
         jharsewaSync: true,
@@ -84,7 +84,7 @@ export default function AdminDashboard({ onLogout }) {
       price: 49,
       entriesLimit: 'Upto 100 Entries',
       status: 'ACTIVE',
-      maxPcs: 2,
+      usersText: '1 PC',
       facilities: {
         autoWhatsapp: true,
         jharsewaSync: true,
@@ -101,7 +101,7 @@ export default function AdminDashboard({ onLogout }) {
       price: 349,
       entriesLimit: 'Upto 1000 Entries',
       status: 'ACTIVE',
-      maxPcs: 5,
+      usersText: '3 PCs',
       facilities: {
         autoWhatsapp: true,
         jharsewaSync: true,
@@ -118,7 +118,7 @@ export default function AdminDashboard({ onLogout }) {
       price: 599,
       entriesLimit: 'Unlimited',
       status: 'ACTIVE',
-      maxPcs: 10,
+      usersText: '5 PCs',
       facilities: {
         autoWhatsapp: true,
         jharsewaSync: true,
@@ -135,7 +135,7 @@ export default function AdminDashboard({ onLogout }) {
       price: 2999,
       entriesLimit: 'Unlimited',
       status: 'ACTIVE',
-      maxPcs: 20,
+      usersText: 'Unlimited',
       facilities: {
         autoWhatsapp: true,
         jharsewaSync: true,
@@ -1203,6 +1203,11 @@ export default function AdminDashboard({ onLogout }) {
                         <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Plan Facilities:</span>
 
                         <div className="flex items-center justify-between p-1.5 rounded-lg bg-slate-50">
+                          <span className="text-slate-700 font-semibold">Users (System Limit)</span>
+                          <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-900 font-extrabold text-[10px] font-mono">{p.usersText || '1 PC'}</span>
+                        </div>
+
+                        <div className="flex items-center justify-between p-1.5 rounded-lg bg-slate-50">
                           <span className="text-slate-700 font-semibold">Auto WhatsApp Update</span>
                           {p.facilities?.autoWhatsapp !== false ? (
                             <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-extrabold text-[9px]">Yes</span>
@@ -1245,6 +1250,11 @@ export default function AdminDashboard({ onLogout }) {
                           ) : (
                             <span className="px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 font-extrabold text-[9px]">No</span>
                           )}
+                        </div>
+
+                        {/* Extra PC Charge Note */}
+                        <div className="p-2 rounded-xl bg-amber-50 border border-amber-200 text-center text-[10px] font-extrabold text-amber-900 mt-2 shadow-2xs">
+                          ₹99/- Per PC <span className="font-semibold text-amber-700">(If Needed Extra PC)</span>
                         </div>
                       </div>
                     </div>
@@ -2054,6 +2064,17 @@ export default function AdminDashboard({ onLogout }) {
                     className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-slate-900 font-bold font-mono"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-slate-700 font-bold mb-1">Users (Allowed PC Systems Limit)</label>
+                <input
+                  type="text"
+                  value={editingPlan.usersText || '1 PC'}
+                  onChange={(e) => setEditingPlan(prev => ({ ...prev, usersText: e.target.value }))}
+                  placeholder="e.g. 1 PC, 3 PCs, 5 PCs, Unlimited"
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-slate-900 font-bold font-mono"
+                />
               </div>
 
               {/* Plan Facilities Toggle Switches */}
