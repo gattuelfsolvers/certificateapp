@@ -502,28 +502,40 @@ export default function ClientDashboard({ clientData, onLogout }) {
     return certificates.filter(c => subCodes.includes(c.certType)).length;
   };
 
-  // Filtered List
-  const filteredCertificates = certificates.filter(c => {
-    const matchesSearch = 
-      (c.refNo && c.refNo.toLowerCase().includes(search.toLowerCase())) ||
-      (c.applicantName && c.applicantName.toLowerCase().includes(search.toLowerCase())) ||
-      (c.mobile && c.mobile.includes(search));
+  // Filtered & Sorted List (Newest Entry First / Date Wise Descending)
+  const filteredCertificates = certificates
+    .filter(c => {
+      const matchesSearch = 
+        (c.refNo && c.refNo.toLowerCase().includes(search.toLowerCase())) ||
+        (c.applicantName && c.applicantName.toLowerCase().includes(search.toLowerCase())) ||
+        (c.mobile && c.mobile.includes(search));
 
-    const matchesStatus = statusFilter === 'ALL' || (c.currentStatus && c.currentStatus.includes(statusFilter));
-    
-    let matchesCategory = true;
-    if (categoryFilter !== 'ALL') {
-      const catObj = CERTIFICATE_CATEGORIES.find(cat => cat.id === categoryFilter);
-      if (catObj) {
-        const subCodes = catObj.subServices.map(s => s.code);
-        matchesCategory = subCodes.includes(c.certType);
+      const matchesStatus = statusFilter === 'ALL' || (c.currentStatus && c.currentStatus.includes(statusFilter));
+      
+      let matchesCategory = true;
+      if (categoryFilter !== 'ALL') {
+        const catObj = CERTIFICATE_CATEGORIES.find(cat => cat.id === categoryFilter);
+        if (catObj) {
+          const subCodes = catObj.subServices.map(s => s.code);
+          matchesCategory = subCodes.includes(c.certType);
+        }
       }
-    }
 
-    const matchesType = certTypeFilter === 'ALL' || c.certType === certTypeFilter;
+      const matchesType = certTypeFilter === 'ALL' || c.certType === certTypeFilter;
 
-    return matchesSearch && matchesStatus && matchesCategory && matchesType;
-  });
+      return matchesSearch && matchesStatus && matchesCategory && matchesType;
+    })
+    .sort((a, b) => {
+      const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      if (timeA !== timeB) return timeB - timeA;
+
+      const dateA = a.entryDate ? new Date(a.entryDate).getTime() : 0;
+      const dateB = b.entryDate ? new Date(b.entryDate).getTime() : 0;
+      if (dateA !== dateB) return dateB - dateA;
+
+      return String(b.id || '').localeCompare(String(a.id || ''));
+    });
 
   const getSubServiceCount = (code) => {
     return certificates.filter((c) => c.certType === code).length;
