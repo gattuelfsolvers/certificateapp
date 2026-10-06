@@ -2008,8 +2008,14 @@ export default function AdminDashboard({ onLogout }) {
                                     {isOnlineActive ? 'Daily Sync Active (Online)' : 'Paused (Offline/Killed)'}
                                   </span>
                                 </div>
-                                <div className="text-[10px] text-slate-400 pt-0.5">
-                                  Auto-backs up whenever client connects online
+                                <div className="text-[11px] font-semibold text-slate-500 pt-0.5 font-mono">
+                                  Last Backup: {(() => {
+                                    const lastCert = clientCerts.length > 0 ? clientCerts[clientCerts.length - 1] : null;
+                                    const rawDate = client.lastBackupAt || (lastCert && (lastCert.updatedAt || lastCert.createdAt)) || client.updatedAt;
+                                    if (!rawDate) return 'Pending First Sync';
+                                    const d = new Date(rawDate);
+                                    return isNaN(d.getTime()) ? 'Pending First Sync' : `${d.toLocaleDateString('en-IN')} ${d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}`;
+                                  })()}
                                 </div>
                               </td>
 
