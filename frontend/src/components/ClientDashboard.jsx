@@ -122,6 +122,7 @@ export default function ClientDashboard({ clientData, onLogout }) {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [certTypeFilter, setCertTypeFilter] = useState('ALL');
+  const [categoryFilter, setCategoryFilter] = useState('ALL');
   
   const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard' | 'code_master' | 'profile'
   const [isSideMenuOpen, setIsSideMenuOpen] = useState(false); // Auto-hide by default
@@ -493,6 +494,14 @@ export default function ClientDashboard({ clientData, onLogout }) {
   const totalFees = certificates.reduce((sum, c) => sum + (parseFloat(c.totalFee) || 0), 0);
   const totalDues = certificates.reduce((sum, c) => sum + (parseFloat(c.duesAmount) || 0), 0);
 
+  const getCategoryRecordCount = (catId) => {
+    if (catId === 'ALL') return certificates.length;
+    const catObj = CERTIFICATE_CATEGORIES.find(cat => cat.id === catId);
+    if (!catObj) return 0;
+    const subCodes = catObj.subServices.map(s => s.code);
+    return certificates.filter(c => subCodes.includes(c.certType)).length;
+  };
+
   // Filtered List
   const filteredCertificates = certificates.filter(c => {
     const matchesSearch = 
@@ -500,10 +509,20 @@ export default function ClientDashboard({ clientData, onLogout }) {
       (c.applicantName && c.applicantName.toLowerCase().includes(search.toLowerCase())) ||
       (c.mobile && c.mobile.includes(search));
 
-    const matchesStatus = statusFilter === 'ALL' || c.currentStatus === statusFilter;
+    const matchesStatus = statusFilter === 'ALL' || (c.currentStatus && c.currentStatus.includes(statusFilter));
+    
+    let matchesCategory = true;
+    if (categoryFilter !== 'ALL') {
+      const catObj = CERTIFICATE_CATEGORIES.find(cat => cat.id === categoryFilter);
+      if (catObj) {
+        const subCodes = catObj.subServices.map(s => s.code);
+        matchesCategory = subCodes.includes(c.certType);
+      }
+    }
+
     const matchesType = certTypeFilter === 'ALL' || c.certType === certTypeFilter;
 
-    return matchesSearch && matchesStatus && matchesType;
+    return matchesSearch && matchesStatus && matchesCategory && matchesType;
   });
 
   const getSubServiceCount = (code) => {
@@ -813,6 +832,61 @@ export default function ClientDashboard({ clientData, onLogout }) {
             })}
           </div>
         </section>
+
+        {/* Category Quick Filter Bar with Certificate Counts */}
+        <div className="bg-white/90 backdrop-blur-md p-3 rounded-2xl border border-slate-200/80 shadow-xs w-full flex items-center justify-between gap-2 overflow-x-auto">
+          <div className="flex items-center gap-2 w-full overflow-x-auto py-0.5">
+            {/* ALL Category */}
+            <button
+              onClick={() => setCategoryFilter('ALL')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-extrabold transition whitespace-nowrap border ${
+                categoryFilter === 'ALL'
+                  ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
+                  : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
+              }`}
+            >
+              <span>ALL</span>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
+                categoryFilter === 'ALL' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-800'
+              }`}>
+                {certificates.length}
+              </span>
+            </button>
+
+            {/* Category Buttons: JHIC, CST, RES, OBC, EWS, MRG, PAN CARD */}
+            {[
+              { id: 'income', label: 'JHIC' },
+              { id: 'caste', label: 'CST' },
+              { id: 'residential', label: 'RES' },
+              { id: 'obc', label: 'OBC' },
+              { id: 'ews', label: 'EWS' },
+              { id: 'marriage', label: 'MRG' },
+              { id: 'pancard', label: 'PAN CARD' }
+            ].map((catItem) => {
+              const count = getCategoryRecordCount(catItem.id);
+              const isActive = categoryFilter === catItem.id;
+              
+              return (
+                <button
+                  key={catItem.id}
+                  onClick={() => setCategoryFilter(isActive ? 'ALL' : catItem.id)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-extrabold transition whitespace-nowrap border ${
+                    isActive
+                      ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                      : 'bg-white hover:bg-slate-50 text-slate-800 border-slate-200'
+                  }`}
+                >
+                  <span>{catItem.label}</span>
+                  <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
+                    isActive ? 'bg-white/20 text-white' : 'bg-blue-50 text-blue-800 border border-blue-100'
+                  }`}>
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
         {/* Certificate Table Section - FULL PAGE WIDTH */}
         <section className="space-y-4 w-full">
