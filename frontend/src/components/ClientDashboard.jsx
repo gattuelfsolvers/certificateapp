@@ -21,6 +21,51 @@ const getApiBaseUrl = () => {
 
 let API_BASE = getApiBaseUrl();
 
+const CATEGORY_COLOR_STYLES = {
+  income: {
+    cardBg: 'bg-emerald-50/80 border-emerald-200/90',
+    titleText: 'text-emerald-900',
+    borderDivider: 'border-emerald-200/60',
+    btnBg: 'bg-emerald-600 hover:bg-emerald-700 text-white'
+  },
+  caste: {
+    cardBg: 'bg-purple-50/80 border-purple-200/90',
+    titleText: 'text-purple-900',
+    borderDivider: 'border-purple-200/60',
+    btnBg: 'bg-purple-600 hover:bg-purple-700 text-white'
+  },
+  residential: {
+    cardBg: 'bg-blue-50/80 border-blue-200/90',
+    titleText: 'text-blue-900',
+    borderDivider: 'border-blue-200/60',
+    btnBg: 'bg-blue-600 hover:bg-blue-700 text-white'
+  },
+  obc: {
+    cardBg: 'bg-fuchsia-50/80 border-fuchsia-200/90',
+    titleText: 'text-fuchsia-900',
+    borderDivider: 'border-fuchsia-200/60',
+    btnBg: 'bg-fuchsia-600 hover:bg-fuchsia-700 text-white'
+  },
+  ews: {
+    cardBg: 'bg-teal-50/80 border-teal-200/90',
+    titleText: 'text-teal-900',
+    borderDivider: 'border-teal-200/60',
+    btnBg: 'bg-teal-600 hover:bg-teal-700 text-white'
+  },
+  marriage: {
+    cardBg: 'bg-rose-50/80 border-rose-200/90',
+    titleText: 'text-rose-900',
+    borderDivider: 'border-rose-200/60',
+    btnBg: 'bg-rose-600 hover:bg-rose-700 text-white'
+  },
+  pancard: {
+    cardBg: 'bg-amber-50/80 border-amber-200/90',
+    titleText: 'text-amber-950',
+    borderDivider: 'border-amber-200/60',
+    btnBg: 'bg-amber-600 hover:bg-amber-700 text-white'
+  }
+};
+
 export default function ClientDashboard({ clientData, onLogout }) {
   const [certificates, setCertificates] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -474,24 +519,33 @@ export default function ClientDashboard({ clientData, onLogout }) {
             Direct Service Quick Launch Cards
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2.5 w-full">
-            {CERTIFICATE_CATEGORIES.map((cat) => (
-              <div key={cat.id} className="bg-slate-50/90 border border-slate-200 rounded-2xl p-2.5 shadow-xs space-y-2 flex flex-col justify-between">
-                <div className="border-b border-slate-200/80 pb-1 flex items-center justify-center text-center">
-                  <span className="text-[11px] font-black text-slate-800 uppercase tracking-tight text-center truncate">{cat.name}</span>
+            {CERTIFICATE_CATEGORIES.map((cat) => {
+              const styles = CATEGORY_COLOR_STYLES[cat.id] || {
+                cardBg: 'bg-slate-50/90 border-slate-200',
+                titleText: 'text-slate-900',
+                borderDivider: 'border-slate-200/80',
+                btnBg: 'bg-blue-600 hover:bg-blue-700 text-white'
+              };
+
+              return (
+                <div key={cat.id} className={`${styles.cardBg} border rounded-2xl p-2.5 shadow-xs space-y-2 flex flex-col justify-between`}>
+                  <div className={`border-b ${styles.borderDivider} pb-1 flex items-center justify-center text-center`}>
+                    <span className={`text-[11px] font-black uppercase tracking-tight text-center truncate ${styles.titleText}`}>{cat.name}</span>
+                  </div>
+                  <div className={`grid gap-1 ${cat.subServices.length > 2 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                    {cat.subServices.map((sub) => (
+                      <button
+                        key={sub.code}
+                        onClick={() => handleOpenAddModal(sub.code)}
+                        className={`flex items-center justify-center px-2 py-1.5 rounded-xl ${styles.btnBg} text-[11px] font-extrabold transition shadow-xs hover:shadow text-center`}
+                      >
+                        <span className="truncate">{sub.code}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <div className={`grid gap-1 ${cat.subServices.length > 2 ? 'grid-cols-2' : 'grid-cols-1'}`}>
-                  {cat.subServices.map((sub) => (
-                    <button
-                      key={sub.code}
-                      onClick={() => handleOpenAddModal(sub.code)}
-                      className="flex items-center justify-center px-2 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-extrabold transition shadow-xs hover:shadow text-center"
-                    >
-                      <span className="truncate">+ {sub.code}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </section>
 
