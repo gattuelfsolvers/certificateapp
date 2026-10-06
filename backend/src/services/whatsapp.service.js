@@ -214,8 +214,6 @@ function formatJid(phoneInput) {
   return `${phone}@s.whatsapp.net`;
 }
 
-const prisma = require('../db');
-
 async function getTemplateText(key, placeholders = {}) {
   try {
     let tpl = await prisma.whatsAppTemplate.findUnique({ where: { templateKey: key } });
