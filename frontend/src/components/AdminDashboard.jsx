@@ -1160,7 +1160,7 @@ export default function AdminDashboard({ onLogout }) {
               <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm flex items-center justify-between">
                 <div>
                   <h3 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
-                    <DollarSign className="w-6 h-6 text-emerald-600" />
+                    <span className="text-emerald-600 text-2xl font-black">₹</span>
                     Subscription Pricing & Plan Master
                   </h3>
                 </div>
