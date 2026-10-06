@@ -1158,24 +1158,22 @@ export default function ClientDashboard({ clientData, onLogout }) {
                     <div className="flex items-center rounded-xl border border-slate-300 bg-white overflow-hidden focus-within:ring-2 focus-within:ring-blue-500/20">
                       <span className="px-3 py-2 bg-slate-100 text-blue-800 font-mono font-black border-r border-slate-300 text-xs select-none whitespace-nowrap">
                         {(() => {
-                          const subObj = CERTIFICATE_CATEGORIES.flatMap(c => c.subServices).find(s => s.code === itemForm.certType);
-                          const prefix = subObj ? subObj.prefix : `${itemForm.certType || 'JHIC'}/${new Date().getFullYear()}/`;
-                          return prefix;
+                          const subObj = CERTIFICATE_CATEGORIES.flatMap(c => c.subServices || []).find(s => s.code === itemForm.certType);
+                          return subObj ? subObj.prefix : `${itemForm.certType || 'JHIC'}/2026/`;
                         })()}
                       </span>
                       <input
                         type="text"
                         value={(() => {
-                          const subObj = CERTIFICATE_CATEGORIES.flatMap(c => c.subServices).find(s => s.code === itemForm.certType);
-                          const prefix = subObj ? subObj.prefix : `${itemForm.certType || 'JHIC'}/${new Date().getFullYear()}/`;
-                          return (itemForm.refNo || '').startsWith(prefix) 
-                            ? itemForm.refNo.slice(prefix.length) 
-                            : itemForm.refNo.replace(/^[A-Z0-9]+\/\d{4}\//i, '');
+                          const subObj = CERTIFICATE_CATEGORIES.flatMap(c => c.subServices || []).find(s => s.code === itemForm.certType);
+                          const prefix = subObj ? subObj.prefix : `${itemForm.certType || 'JHIC'}/2026/`;
+                          const currentVal = itemForm.refNo || '';
+                          return currentVal.startsWith(prefix) ? currentVal.slice(prefix.length) : currentVal;
                         })()}
                         onChange={(e) => {
-                          const subObj = CERTIFICATE_CATEGORIES.flatMap(c => c.subServices).find(s => s.code === itemForm.certType);
-                          const prefix = subObj ? subObj.prefix : `${itemForm.certType || 'JHIC'}/${new Date().getFullYear()}/`;
-                          const serialOnly = e.target.value.replace(/[^a-zA-Z0-9]/g, '');
+                          const subObj = CERTIFICATE_CATEGORIES.flatMap(c => c.subServices || []).find(s => s.code === itemForm.certType);
+                          const prefix = subObj ? subObj.prefix : `${itemForm.certType || 'JHIC'}/2026/`;
+                          const serialOnly = (e.target.value || '').replace(/[^a-zA-Z0-9]/g, '');
                           setItemForm(prev => ({ ...prev, refNo: prefix + serialOnly }));
                         }}
                         placeholder="123456"
@@ -1472,25 +1470,23 @@ export default function ClientDashboard({ clientData, onLogout }) {
                   <div className="flex items-center rounded-xl border border-slate-300 bg-slate-50 overflow-hidden focus-within:ring-2 focus-within:ring-blue-500/20">
                     <span className="px-3 py-2 bg-slate-200/80 text-blue-900 font-mono font-black border-r border-slate-300 text-xs select-none whitespace-nowrap">
                       {(() => {
-                        const subObj = CERTIFICATE_CATEGORIES.flatMap(c => c.subServices).find(s => s.code === editFormData.certType);
-                        const prefix = subObj ? subObj.prefix : `${editFormData.certType || 'JHIC'}/${new Date().getFullYear()}/`;
-                        return prefix;
+                        const subObj = CERTIFICATE_CATEGORIES.flatMap(c => c.subServices || []).find(s => s.code === editFormData.certType);
+                        return subObj ? subObj.prefix : `${editFormData.certType || 'JHIC'}/2026/`;
                       })()}
                     </span>
                     <input
                       type="text"
                       required
                       value={(() => {
-                        const subObj = CERTIFICATE_CATEGORIES.flatMap(c => c.subServices).find(s => s.code === editFormData.certType);
-                        const prefix = subObj ? subObj.prefix : `${editFormData.certType || 'JHIC'}/${new Date().getFullYear()}/`;
-                        return (editFormData.refNo || '').startsWith(prefix) 
-                          ? editFormData.refNo.slice(prefix.length) 
-                          : editFormData.refNo.replace(/^[A-Z0-9]+\/\d{4}\//i, '');
+                        const subObj = CERTIFICATE_CATEGORIES.flatMap(c => c.subServices || []).find(s => s.code === editFormData.certType);
+                        const prefix = subObj ? subObj.prefix : `${editFormData.certType || 'JHIC'}/2026/`;
+                        const currentVal = editFormData.refNo || '';
+                        return currentVal.startsWith(prefix) ? currentVal.slice(prefix.length) : currentVal;
                       })()}
                       onChange={(e) => {
-                        const subObj = CERTIFICATE_CATEGORIES.flatMap(c => c.subServices).find(s => s.code === editFormData.certType);
-                        const prefix = subObj ? subObj.prefix : `${editFormData.certType || 'JHIC'}/${new Date().getFullYear()}/`;
-                        const serialOnly = e.target.value.replace(/[^a-zA-Z0-9]/g, '');
+                        const subObj = CERTIFICATE_CATEGORIES.flatMap(c => c.subServices || []).find(s => s.code === editFormData.certType);
+                        const prefix = subObj ? subObj.prefix : `${editFormData.certType || 'JHIC'}/2026/`;
+                        const serialOnly = (e.target.value || '').replace(/[^a-zA-Z0-9]/g, '');
                         setEditFormData(prev => ({ ...prev, refNo: prefix + serialOnly }));
                       }}
                       placeholder="123456"
