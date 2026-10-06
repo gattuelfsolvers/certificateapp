@@ -418,110 +418,21 @@ export default function ProfileSettingsView({ clientData, showToast }) {
                 </button>
               </div>
 
-              {/* Added HWIDs List with Edit & Delete */}
+              {/* Added HWIDs List (Read-Only Once Added) */}
               <div className="space-y-2 pt-1">
                 {hwidList.map((hwidItem, idx) => (
                   <div key={idx} className="bg-white border border-slate-200 rounded-xl p-2.5 flex items-center justify-between gap-2 shadow-2xs">
-                    {editingHwidIndex === idx ? (
-                      <div className="flex items-center gap-2 w-full">
-                        <input
-                          type="text"
-                          value={editHwidInput}
-                          onChange={(e) => setEditHwidInput(e.target.value)}
-                          className="w-full bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1 text-xs font-mono font-bold uppercase"
-                        />
-                        <button
-                          type="button"
-                          onClick={async () => {
-                            if (!editHwidInput.trim()) return;
-                            const clean = editHwidInput.trim().toUpperCase();
-                            const newList = [...hwidList];
-                            newList[idx] = clean;
-                            setHwidList(newList);
-                            setEditingHwidIndex(null);
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="w-5 h-5 rounded-full bg-amber-100 text-amber-800 flex items-center justify-center font-bold text-[10px] shrink-0">
+                        {idx + 1}
+                      </span>
+                      <span className="font-mono text-xs font-black text-slate-800 truncate select-all">{hwidItem}</span>
+                    </div>
 
-                            // Sync to Firebase & LocalStorage
-                            const primaryKey = clientData?.hwid || hwidList[0] || localStorage.getItem('CLIENT_SYSTEM_HWID');
-                            await updateClientHwidsOnFirebase(primaryKey, newList);
-
-                            const activeData = localStorage.getItem('ACTIVE_CLIENT_DATA');
-                            if (activeData) {
-                              try {
-                                const parsed = JSON.parse(activeData);
-                                parsed.hwids = newList;
-                                localStorage.setItem('ACTIVE_CLIENT_DATA', JSON.stringify(parsed));
-                              } catch (err) {}
-                            }
-
-                            if (showToast) showToast('success', 'HWID Updated', 'Hardware ID updated & saved to database.');
-                          }}
-                          className="px-2.5 py-1 rounded-lg bg-emerald-600 text-white font-extrabold text-xs"
-                        >
-                          Save
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setEditingHwidIndex(null)}
-                          className="px-2 py-1 rounded-lg bg-slate-200 text-slate-700 font-bold text-xs"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    ) : (
-                      <>
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className="w-5 h-5 rounded-full bg-amber-100 text-amber-800 flex items-center justify-center font-bold text-[10px] shrink-0">
-                            {idx + 1}
-                          </span>
-                          <span className="font-mono text-xs font-black text-slate-800 truncate select-all">{hwidItem}</span>
-                        </div>
-
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setEditingHwidIndex(idx);
-                              setEditHwidInput(hwidItem);
-                            }}
-                            title="Edit HWID"
-                            className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition"
-                          >
-                            <Edit className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={async () => {
-                              if (hwidList.length <= 1) {
-                                if (showToast) showToast('error', 'Cannot Delete', 'At least 1 registered HWID must remain.');
-                                return;
-                              }
-                              if (!window.confirm(`Are you sure you want to remove HWID ${hwidItem}?`)) return;
-                              const newList = hwidList.filter((_, i) => i !== idx);
-                              setHwidList(newList);
-
-                              // Sync to Firebase & LocalStorage
-                              const primaryKey = clientData?.hwid || hwidList[0] || localStorage.getItem('CLIENT_SYSTEM_HWID');
-                              await updateClientHwidsOnFirebase(primaryKey, newList);
-
-                              const activeData = localStorage.getItem('ACTIVE_CLIENT_DATA');
-                              if (activeData) {
-                                try {
-                                  const parsed = JSON.parse(activeData);
-                                  parsed.hwids = newList;
-                                  localStorage.setItem('ACTIVE_CLIENT_DATA', JSON.stringify(parsed));
-                                } catch (err) {}
-                              }
-
-                              if (showToast) showToast('info', 'HWID Removed', 'Hardware ID removed and updated on database.');
-                            }}
-                            title="Delete HWID"
-                            className="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 transition"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </>
-                    )}
+                    <div className="flex items-center gap-1.5 shrink-0 text-slate-400 font-bold text-[10px] bg-slate-50 border border-slate-200 px-2 py-1 rounded-lg">
+                      <Lock className="w-3 h-3 text-slate-400" />
+                      <span>Locked (Contact Admin to Remove)</span>
+                    </div>
                   </div>
                 ))}
               </div>
