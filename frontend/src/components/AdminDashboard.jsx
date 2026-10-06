@@ -23,7 +23,7 @@ import {
 
 export default function AdminDashboard({ onLogout }) {
   const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard' | 'clients' | 'licenses' | 'plans' | 'data_master' | 'whatsapp_master'
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [clients, setClients] = useState([]);
   const [certificates, setCertificates] = useState([]);
   const [dataSearch, setDataSearch] = useState('');
