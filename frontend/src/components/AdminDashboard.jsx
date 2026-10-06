@@ -573,39 +573,103 @@ export default function AdminDashboard({ onLogout }) {
   };
 
   const handleToggleStatus = async (hwid, currentStatus) => {
-    const newStatus = currentStatus === 'ACTIVE' ? 'KILLED' : 'ACTIVE';
     const targetClient = clients.find(c => (c.hwid === hwid || c.id === hwid));
+    if (!targetClient) return;
+
+    const newStatus = currentStatus === 'ACTIVE' ? 'KILLED' : 'ACTIVE';
     try {
-      await updateClientStatusOnFirebase(hwid, newStatus);
+      let updatePayload = { status: newStatus };
+
+      if (newStatus === 'KILLED') {
+        // Freeze remaining days on archiving/killing
+        const daysRemaining = calculateDaysLeft(targetClient.expiresAt);
+        updatePayload.remainingDays = Math.max(0, daysRemaining);
+      } else if (newStatus === 'ACTIVE') {
+        // Restore license: check if key is expired
+        const daysRemaining = targetClient.remainingDays !== undefined 
+          ? targetClient.remainingDays 
+          : calculateDaysLeft(targetClient.expiresAt);
+
+        if (daysRemaining <= 0) {
+          showToast('error', 'Restore Blocked', 'This key is already expired, So this key will not be able to be restored.');
+          alert('This key is already expired, So this key will not be able to be restored.');
+          return;
+        }
+
+        // Resume remaining days starting from Today
+        let newExpiresAt = new Date();
+        newExpiresAt.setDate(newExpiresAt.getDate() + daysRemaining);
+        updatePayload.expiresAt = newExpiresAt.toISOString();
+        updatePayload.remainingDays = null;
+      }
+
+      await saveClientToFirebase({
+        ...targetClient,
+        ...updatePayload
+      });
+
       showToast(
         newStatus === 'KILLED' ? 'error' : 'success', 
-        'Status Changed', 
-        `Client license status set to ${newStatus}`
+        newStatus === 'ACTIVE' ? 'License Restored' : 'Status Changed', 
+        newStatus === 'ACTIVE' ? `License restored for ${targetClient.clientName} with remaining validity!` : `Client license status set to ${newStatus}`
       );
 
       // Auto-dispatch WhatsApp Notification for KILLED / ACTIVE toggle
-      if (targetClient) {
-        const payload = {
-          client: { ...targetClient, status: newStatus },
-          eventType: newStatus === 'KILLED' ? 'KILLED' : 'STATUS_CHANGE',
-          extraInfo: { newStatus }
-        };
+      const payload = {
+        client: { ...targetClient, ...updatePayload },
+        eventType: newStatus === 'KILLED' ? 'KILLED' : 'STATUS_CHANGE',
+        extraInfo: { newStatus }
+      };
 
-        // Try local gateway first, fallback to cloud route
-        fetch('http://localhost:5000/api/whatsapp/notify-client', {
+      fetch('http://localhost:5000/api/whatsapp/notify-client', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      }).catch(() => {
+        fetch('/api/whatsapp/notify-client', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
-        }).catch(() => {
-          fetch('/api/whatsapp/notify-client', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-          }).catch(() => {});
-        });
-      }
+        }).catch(() => {});
+      });
     } catch (err) {
       showToast('error', 'Update Failed', err.message);
+    }
+  };
+
+  const handleRestoreClient = async (client) => {
+    const daysRemaining = client.remainingDays !== undefined 
+      ? client.remainingDays 
+      : calculateDaysLeft(client.expiresAt);
+
+    if (daysRemaining <= 0) {
+      alert('This key is already expired, So this key will not be able to be restored.');
+      showToast('error', 'Restore Blocked', 'This key is already expired, So this key will not be able to be restored.');
+      return;
+    }
+
+    try {
+      let newExpiresAt = new Date();
+      newExpiresAt.setDate(newExpiresAt.getDate() + daysRemaining);
+
+      const updated = {
+        ...client,
+        status: 'ACTIVE',
+        expiresAt: newExpiresAt.toISOString(),
+        remainingDays: null
+      };
+
+      await saveClientToFirebase(updated);
+      showToast('success', 'License Restored', `License restored for ${client.clientName} with ${daysRemaining} days remaining!`);
+
+      // WhatsApp notify
+      fetch('http://localhost:5000/api/whatsapp/notify-client', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ client: updated, eventType: 'STATUS_CHANGE', extraInfo: { newStatus: 'ACTIVE' } })
+      }).catch(() => {});
+    } catch (err) {
+      showToast('error', 'Restore Failed', err.message);
     }
   };
 
@@ -1322,9 +1386,19 @@ export default function AdminDashboard({ onLogout }) {
                                 )}
                               </td>
 
-                              {/* Actions (Edit & Delete) */}
+                              {/* Actions (Restore, Edit & Delete) */}
                               <td className="px-6 py-4 text-right">
                                 <div className="flex items-center justify-end gap-1.5">
+                                  {licenseSubTab === 'ARCHIVED' && (
+                                    <button 
+                                      onClick={() => handleRestoreClient(client)} 
+                                      title="Restore License" 
+                                      className="p-2 rounded-xl bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 transition shadow-xs flex items-center gap-1 font-bold text-xs"
+                                    >
+                                      <RefreshCw className="w-4 h-4 text-emerald-600" />
+                                      <span className="text-[10px]">Restore</span>
+                                    </button>
+                                  )}
                                   <button onClick={() => handleOpenEditModal(client)} title="Edit License" className="p-2 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200 transition">
                                     <Edit className="w-4 h-4 text-slate-700" />
                                   </button>
