@@ -338,44 +338,18 @@ export default function CodeMasterView({ showToast }) {
             const isActive = selectedCatId === cat.id;
 
             return (
-              <div
+              <button
                 key={cat.id}
-                className={`p-2.5 rounded-2xl border transition flex flex-col justify-between relative group ${
+                onClick={() => setSelectedCatId(isActive ? 'ALL' : cat.id)}
+                className={`p-3 rounded-2xl border transition text-center flex flex-col items-center justify-center ${
                   isActive
                     ? 'bg-blue-600 text-white border-blue-600 shadow-md'
                     : 'bg-white hover:bg-slate-50 text-slate-800 border-slate-200 shadow-2xs'
                 }`}
               >
-                <div 
-                  onClick={() => setSelectedCatId(isActive ? 'ALL' : cat.id)}
-                  className="cursor-pointer text-center flex-1 flex flex-col items-center justify-center py-1"
-                >
-                  <span className={`text-[10px] font-black uppercase truncate max-w-full ${isActive ? 'text-blue-100' : 'text-slate-700'}`}>{cat.name}</span>
-                  <span className="text-lg font-extrabold mt-0.5">{count}</span>
-                </div>
-
-                {/* Edit & Delete Action Hover Buttons for Category */}
-                <div className="flex items-center justify-center gap-1.5 pt-1.5 border-t border-slate-200/50 mt-1">
-                  <button
-                    onClick={() => handleOpenEditCategory(cat)}
-                    title="Edit Parent Category"
-                    className={`p-1 rounded-lg transition text-[10px] ${
-                      isActive ? 'bg-white/20 hover:bg-white/30 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-                    }`}
-                  >
-                    <Edit className="w-3 h-3" />
-                  </button>
-                  <button
-                    onClick={() => handleDeleteCategory(cat.id, cat.name)}
-                    title="Delete Category"
-                    className={`p-1 rounded-lg transition text-[10px] ${
-                      isActive ? 'bg-rose-500/80 hover:bg-rose-600 text-white' : 'bg-rose-50 hover:bg-rose-100 text-rose-600'
-                    }`}
-                  >
-                    <Trash2 className="w-3 h-3" />
-                  </button>
-                </div>
-              </div>
+                <span className={`text-[10px] font-black uppercase truncate max-w-full ${isActive ? 'text-blue-100' : 'text-slate-700'}`}>{cat.name}</span>
+                <span className="text-xl font-extrabold mt-0.5">{count}</span>
+              </button>
             );
           })}
         </div>
