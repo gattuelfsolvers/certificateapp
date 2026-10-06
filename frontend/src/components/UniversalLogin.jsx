@@ -8,15 +8,172 @@ export default function UniversalLogin({ onLoginSuccess }) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Request Access Modal State
+  // Request Access Multi-Step Modal State
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
+  const [regStep, setRegStep] = useState(1); // Step 1: Details, Step 2: Choose Plan, Step 3: Success Result
   const [requestForm, setRequestForm] = useState({
     shopName: '',
     ownerName: '',
     phone: '',
     address: ''
   });
-  const [requestSuccess, setRequestSuccess] = useState(false);
+  const [selectedPlanId, setSelectedPlanId] = useState('HALF_YEARLY'); // Default Selected Plan
+  const [submittingReg, setSubmittingReg] = useState(false);
+  const [registeredAccountInfo, setRegisteredAccountInfo] = useState(null);
+
+  // Registration Plans List (Excludes LIFETIME)
+  const registrationPlans = [
+    {
+      id: 'FREE_TRIAL',
+      name: 'Free Trial',
+      badge: 'Demo',
+      badgeColor: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+      price: '₹0',
+      duration: '5 Demo Entries',
+      pcs: '1 PC Allowed',
+      features: ['5 Certificate Entries', 'Basic Auto Backup', 'Standard Access'],
+      highlight: false
+    },
+    {
+      id: 'MONTHLY',
+      name: 'Monthly Plan',
+      badge: 'Starter',
+      badgeColor: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+      price: '₹149',
+      duration: '30 Days Validity',
+      pcs: '1 PC Allowed',
+      features: ['Unlimited Entries', 'Jharsewa Auto Sync', 'Daily Cloud Backup', 'WhatsApp Integration'],
+      highlight: false
+    },
+    {
+      id: 'HALF_YEARLY',
+      name: 'Half-Yearly Plan',
+      badge: 'Top Selling',
+      badgeColor: 'bg-amber-500/30 text-amber-300 border-amber-500/50',
+      price: '₹349',
+      duration: '180 Days Validity',
+      pcs: '3 PCs Allowed',
+      features: ['Unlimited Entries', 'Multi-PC Sync (3 PCs)', 'Priority Cloud Backup', 'WhatsApp Integration', 'Full Customer Support'],
+      highlight: true
+    },
+    {
+      id: 'YEARLY',
+      name: 'Yearly Plan',
+      badge: 'Value for Money',
+      badgeColor: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
+      price: '₹599',
+      duration: '365 Days Validity',
+      pcs: '5 PCs Allowed',
+      features: ['Unlimited Entries', 'Multi-PC Sync (5 PCs)', 'VIP Priority Backup', 'WhatsApp Integration', '24/7 Priority Support'],
+      highlight: false
+    }
+  ];
+
+  const handleNextStep1 = (e) => {
+    e.preventDefault();
+    if (!requestForm.shopName.trim() || !requestForm.ownerName.trim() || !requestForm.phone.trim()) {
+      alert('Please fill in all mandatory fields (*)');
+      return;
+    }
+    setRegStep(2);
+  };
+
+  const handleRegistrationSubmit = async () => {
+    setSubmittingReg(true);
+    try {
+      const cleanPhone = requestForm.phone.trim();
+      const generatedHwid = `REQ-${Date.now()}`;
+      
+      let daysCount = 7;
+      let pcsCount = 1;
+      let initialStatus = 'PENDING';
+
+      if (selectedPlanId === 'FREE_TRIAL') {
+        daysCount = 7;
+        pcsCount = 1;
+        initialStatus = 'ACTIVE'; // Demo active for 5 entries
+      } else if (selectedPlanId === 'MONTHLY') {
+        daysCount = 30;
+        pcsCount = 1;
+      } else if (selectedPlanId === 'HALF_YEARLY') {
+        daysCount = 180;
+        pcsCount = 3;
+      } else if (selectedPlanId === 'YEARLY') {
+        daysCount = 365;
+        pcsCount = 5;
+      }
+
+      const expiresAt = new Date(Date.now() + daysCount * 86400000).toISOString();
+
+      const newClientPayload = {
+        hwid: generatedHwid,
+        hwids: [generatedHwid],
+        allowedPcs: pcsCount,
+        clientName: requestForm.shopName.trim(),
+        ownerName: requestForm.ownerName.trim(),
+        phone: cleanPhone,
+        address: requestForm.address.trim(),
+        planType: selectedPlanId,
+        status: initialStatus,
+        password: cleanPhone, // Mobile number as default password
+        licenseKey: `LIC-${selectedPlanId}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`,
+        expiresAt: expiresAt,
+        createdAt: new Date().toISOString()
+      };
+
+      await saveClientToFirebase(newClientPayload);
+
+      // Construct Grammatically Correct Messages
+      let messageText = '';
+      if (selectedPlanId === 'FREE_TRIAL') {
+        messageText = `Thanks for choosing our service! Please log in and use your 5 demo entries.\n\nYour Login ID is: ${cleanPhone}\nYour Password is: ${cleanPhone}`;
+      } else {
+        messageText = `Thanks for choosing our service!\n\nYour Login ID is: ${cleanPhone}\nYour Password is: ${cleanPhone}\n\nPlease wait for the Admin to confirm your payment. Once your payment is confirmed by Admin, you will receive a confirmation message on your WhatsApp. Please make sure you have paid your subscription fee for a smooth software experience.`;
+      }
+
+      // Send WhatsApp Notification to Client
+      try {
+        const notifBody = JSON.stringify({
+          client: newClientPayload,
+          eventType: 'NEW_REGISTRATION',
+          customMessage: messageText
+        });
+
+        fetch('http://localhost:5000/api/whatsapp/notify-client', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: notifBody
+        }).catch(() => {
+          fetch('/api/whatsapp/notify-client', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: notifBody
+          }).catch(() => {});
+        });
+      } catch (e) {}
+
+      setRegisteredAccountInfo({
+        phone: cleanPhone,
+        password: cleanPhone,
+        isFree: selectedPlanId === 'FREE_TRIAL',
+        message: messageText
+      });
+
+      setRegStep(3);
+    } catch (err) {
+      alert('Registration submission failed: ' + err.message);
+    } finally {
+      setSubmittingReg(false);
+    }
+  };
+
+  const resetModalState = () => {
+    setIsRequestModalOpen(false);
+    setRegStep(1);
+    setRequestForm({ shopName: '', ownerName: '', phone: '', address: '' });
+    setSelectedPlanId('HALF_YEARLY');
+    setRegisteredAccountInfo(null);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -333,94 +490,276 @@ export default function UniversalLogin({ onLoginSuccess }) {
         </div>
       )}
 
-      {/* Request New License Modal */}
+      {/* MULTI-STEP REGISTER FOR NEW USER MODAL */}
       {isRequestModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="text-base font-extrabold text-white flex items-center gap-2">
-                <UserPlus className="w-5 h-5 text-blue-400" />
-                Register for New Account
-              </h3>
+        <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4">
+          <div className={`bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 w-full shadow-2xl space-y-6 transition-all duration-300 ${regStep === 2 ? 'max-w-4xl' : 'max-w-2xl'}`}>
+            
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400 shadow-md">
+                  <UserPlus className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black text-white tracking-tight">
+                    Register for New Account
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    {regStep === 1 && 'Step 1 of 2: Enter Shop & Owner Details'}
+                    {regStep === 2 && 'Step 2 of 2: Select Your Preferred Subscription Plan'}
+                    {regStep === 3 && 'Registration Completed Successfully!'}
+                  </p>
+                </div>
+              </div>
+              
               <button 
-                onClick={() => setIsRequestModalOpen(false)}
-                className="text-slate-400 hover:text-white text-2xl font-bold"
+                onClick={resetModalState}
+                className="text-slate-400 hover:text-white text-2xl font-bold p-1 rounded-lg transition"
               >
                 &times;
               </button>
             </div>
 
-            {requestSuccess ? (
-              <div className="p-4 bg-emerald-950/60 text-emerald-300 rounded-2xl border border-emerald-500/30 text-center space-y-2">
-                <h4 className="font-bold text-sm">Request Submitted Successfully!</h4>
-                <p className="text-xs text-slate-300">Master Admin has been notified. Your account will be activated shortly.</p>
-              </div>
-            ) : (
-              <form onSubmit={handleRequestAccessSubmit} className="space-y-3 text-xs font-medium">
-                <div>
-                  <label className="block text-slate-300 font-bold mb-1">Shop / CSC Center Name *</label>
-                  <input
-                    type="text"
-                    required
-                    value={requestForm.shopName}
-                    onChange={(e) => setRequestForm(prev => ({ ...prev, shopName: e.target.value }))}
-                    placeholder="e.g. Rahul CSC Kendra"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
-                  />
+            {/* STEP 1: SHOP DETAILS FORM */}
+            {regStep === 1 && (
+              <form onSubmit={handleNextStep1} className="space-y-4 text-xs font-medium">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-slate-300 font-bold mb-1.5">Shop / CSC Center Name *</label>
+                    <input
+                      type="text"
+                      required
+                      value={requestForm.shopName}
+                      onChange={(e) => setRequestForm(prev => ({ ...prev, shopName: e.target.value }))}
+                      placeholder="e.g. Rahul CSC Kendra"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white text-sm focus:border-blue-500 focus:outline-none transition"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-300 font-bold mb-1.5">Owner Name *</label>
+                    <input
+                      type="text"
+                      required
+                      value={requestForm.ownerName}
+                      onChange={(e) => setRequestForm(prev => ({ ...prev, ownerName: e.target.value }))}
+                      placeholder="e.g. Rahul Kumar"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white text-sm focus:border-blue-500 focus:outline-none transition"
+                    />
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-slate-300 font-bold mb-1">Owner Name *</label>
-                  <input
-                    type="text"
-                    required
-                    value={requestForm.ownerName}
-                    onChange={(e) => setRequestForm(prev => ({ ...prev, ownerName: e.target.value }))}
-                    placeholder="e.g. Rahul Kumar"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-slate-300 font-bold mb-1.5">WhatsApp Mobile No *</label>
+                    <input
+                      type="text"
+                      required
+                      value={requestForm.phone}
+                      onChange={(e) => setRequestForm(prev => ({ ...prev, phone: e.target.value }))}
+                      placeholder="e.g. 9876543210"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white text-sm font-mono focus:border-blue-500 focus:outline-none transition"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-300 font-bold mb-1.5">Center Address</label>
+                    <input
+                      type="text"
+                      value={requestForm.address}
+                      onChange={(e) => setRequestForm(prev => ({ ...prev, address: e.target.value }))}
+                      placeholder="e.g. Ranchi, Jharkhand"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white text-sm focus:border-blue-500 focus:outline-none transition"
+                    />
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-slate-300 font-bold mb-1">WhatsApp Mobile No *</label>
-                  <input
-                    type="text"
-                    required
-                    value={requestForm.phone}
-                    onChange={(e) => setRequestForm(prev => ({ ...prev, phone: e.target.value }))}
-                    placeholder="e.g. 9876543210"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white font-mono"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-slate-300 font-bold mb-1">Center Address</label>
-                  <input
-                    type="text"
-                    value={requestForm.address}
-                    onChange={(e) => setRequestForm(prev => ({ ...prev, address: e.target.value }))}
-                    placeholder="e.g. Ranchi, Jharkhand"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
-                  />
-                </div>
-
-                <div className="flex items-center justify-end gap-2 pt-2">
+                {/* Footer Buttons */}
+                <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
                   <button
                     type="button"
-                    onClick={() => setIsRequestModalOpen(false)}
-                    className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold"
+                    onClick={resetModalState}
+                    className="px-6 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs transition"
                   >
-                    Cancel
+                    Close
                   </button>
                   <button
                     type="submit"
-                    className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold shadow"
+                    className="px-7 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-lg shadow-blue-900/30 transition flex items-center gap-2"
                   >
-                    Submit Access Request
+                    Next Step
+                    <ArrowRight className="w-4 h-4" />
                   </button>
                 </div>
               </form>
             )}
+
+            {/* STEP 2: CHOOSE CHATGPT STYLE PLANS */}
+            {regStep === 2 && (
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {registrationPlans.map((plan) => {
+                    const isSelected = selectedPlanId === plan.id;
+                    return (
+                      <div
+                        key={plan.id}
+                        onClick={() => setSelectedPlanId(plan.id)}
+                        className={`relative rounded-2xl p-4 border transition-all cursor-pointer flex flex-col justify-between ${
+                          isSelected
+                            ? 'bg-slate-950 border-blue-500 ring-2 ring-blue-500/50 shadow-xl shadow-blue-950/40 scale-[1.02]'
+                            : 'bg-slate-950/60 border-slate-800 hover:border-slate-700 hover:bg-slate-950/90'
+                        }`}
+                      >
+                        {/* Plan Header & Badge */}
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full border uppercase tracking-wider ${plan.badgeColor}`}>
+                              {plan.badge}
+                            </span>
+                            {isSelected && (
+                              <div className="w-5 h-5 rounded-full bg-blue-500 text-slate-950 flex items-center justify-center font-bold text-xs shadow">
+                                ✓
+                              </div>
+                            )}
+                          </div>
+
+                          <div>
+                            <h4 className="text-sm font-black text-white">{plan.name}</h4>
+                            <div className="mt-1 flex items-baseline gap-1">
+                              <span className="text-xl font-black text-white">{plan.price}</span>
+                              <span className="text-[10px] text-slate-400 font-medium">/ {plan.duration}</span>
+                            </div>
+                            <p className="text-[11px] text-emerald-400 font-bold mt-0.5">{plan.pcs}</p>
+                          </div>
+
+                          {/* Features List */}
+                          <div className="border-t border-slate-800/80 pt-3 space-y-1.5">
+                            {plan.features.map((feat, idx) => (
+                              <div key={idx} className="flex items-center gap-1.5 text-[11px] text-slate-300 font-medium">
+                                <span className="text-blue-400 font-bold">✓</span>
+                                {feat}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="mt-4 pt-2">
+                          <button
+                            type="button"
+                            className={`w-full py-2 rounded-xl text-xs font-bold transition ${
+                              isSelected
+                                ? 'bg-blue-600 text-white shadow-md'
+                                : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                            }`}
+                          >
+                            {isSelected ? 'Selected Plan' : 'Choose Plan'}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Footer Action Buttons */}
+                <div className="flex items-center justify-between pt-4 border-t border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => setRegStep(1)}
+                    className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs transition"
+                  >
+                    Back to Details
+                  </button>
+
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={resetModalState}
+                      className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs transition"
+                    >
+                      Close
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={submittingReg}
+                      onClick={handleRegistrationSubmit}
+                      className="px-7 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-xs shadow-lg shadow-emerald-950/40 transition flex items-center gap-2"
+                    >
+                      {submittingReg ? (
+                        <span className="flex items-center gap-2">
+                          <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          Processing...
+                        </span>
+                      ) : (
+                        selectedPlanId === 'FREE_TRIAL' ? 'Submit Demo Registration' : 'Proceed to Payment & Submit'
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* STEP 3: SUCCESS RESULT POPUP */}
+            {regStep === 3 && registeredAccountInfo && (
+              <div className="space-y-6 text-center py-2">
+                <div className="w-16 h-16 rounded-3xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 mx-auto shadow-xl">
+                  <Sparkles className="w-8 h-8" />
+                </div>
+
+                <div className="space-y-2">
+                  <h4 className="text-xl font-black text-white">Registration Successful!</h4>
+                  <p className="text-xs text-slate-300 max-w-md mx-auto leading-relaxed">
+                    {registeredAccountInfo.isFree ? (
+                      <>
+                        Thanks for choosing our service! Please log in and use your <strong className="text-emerald-400">5 demo entries</strong>.
+                      </>
+                    ) : (
+                      <>
+                        Thanks for choosing our service! Please wait for Admin payment confirmation to enjoy full features.
+                      </>
+                    )}
+                  </p>
+                </div>
+
+                {/* Credentials Display Card */}
+                <div className="bg-slate-950 border border-slate-800 rounded-2xl p-5 text-left max-w-md mx-auto space-y-3 shadow-inner font-mono text-xs">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                    <span className="text-slate-400 font-medium">User Login ID:</span>
+                    <span className="font-bold text-amber-300 text-sm select-all">{registeredAccountInfo.phone}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-400 font-medium">Default Password:</span>
+                    <span className="font-bold text-emerald-400 text-sm select-all">{registeredAccountInfo.password}</span>
+                  </div>
+                </div>
+
+                <div className="bg-blue-950/40 border border-blue-500/30 rounded-2xl p-4 text-xs text-blue-200 text-left max-w-md mx-auto leading-relaxed">
+                  <p className="font-semibold text-blue-400 mb-1 flex items-center gap-1.5">
+                    <ShieldCheck className="w-4 h-4" />
+                    WhatsApp Confirmation Sent
+                  </p>
+                  <p className="text-[11px] text-slate-300">
+                    A confirmation message with your credentials and subscription details has been sent to your WhatsApp number (<span className="font-mono text-amber-300">{registeredAccountInfo.phone}</span>).
+                  </p>
+                </div>
+
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setUserId(registeredAccountInfo.phone);
+                      setPassword(registeredAccountInfo.password);
+                      resetModalState();
+                    }}
+                    className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-extrabold text-xs rounded-xl shadow-lg transition"
+                  >
+                    Proceed to Login
+                  </button>
+                </div>
+              </div>
+            )}
+
           </div>
         </div>
       )}
