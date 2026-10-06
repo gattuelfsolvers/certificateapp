@@ -1080,10 +1080,24 @@ export default function AdminDashboard({ onLogout }) {
                           className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-sm transition flex items-center gap-1.5"
                         >
                           <QrCode className="w-3.5 h-3.5" />
-                          Link Device (Scan QR)
+                          Link Device (Scan QR / Code)
                         </button>
                       )}
                     </div>
+                  </div>
+
+                  {/* Local Gateway PC Engine Launcher Guidance */}
+                  <div className="p-3.5 bg-slate-900 border border-slate-800 rounded-2xl text-white space-y-1.5">
+                    <div className="flex items-center justify-between text-xs font-bold">
+                      <span className="flex items-center gap-1.5 text-emerald-400">
+                        <Smartphone className="w-4 h-4" />
+                        Local PC Hybrid Gateway Setup
+                      </span>
+                      <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-mono">Fast & Resilient</span>
+                    </div>
+                    <p className="text-[11px] text-slate-300 leading-relaxed">
+                      QR / 8-Digit Code instant scan ke liye project folder mein <code className="bg-slate-800 text-yellow-300 px-1.5 py-0.5 rounded font-mono">Start-Local-WhatsApp-Gateway.bat</code> ko double-click karke run karein.
+                    </p>
                   </div>
 
                   {/* Automatic Message Trigger Controls */}
