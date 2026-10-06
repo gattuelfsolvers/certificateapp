@@ -1132,30 +1132,133 @@ export default function AdminDashboard({ onLogout }) {
           {/* TAB 2: LICENSE MASTER VIEW */}
           {activeTab === 'licenses' && (
             <div className="space-y-4 w-full">
-              <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-4">
-                <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                  <KeyRound className="w-5 h-5 text-blue-600" />
-                  Central License Keys & Device Fingerprint Master
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {clients.map(client => (
-                    <div key={client.hwid || client.id} className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-slate-900 text-sm">{client.clientName}</span>
-                        <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-blue-100 text-blue-800">{client.planType}</span>
-                      </div>
-                      <div className="font-mono text-xs font-bold text-blue-700 bg-white p-2 rounded border border-slate-200 break-all flex items-center justify-between">
-                        <span>{client.licenseKey}</span>
-                        <button onClick={() => handleCopyKey(client.licenseKey)} className="text-blue-500 hover:text-blue-800 ml-2">
-                          {copiedKey === client.licenseKey ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-                        </button>
-                      </div>
-                      <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1">
-                        <span>HWID: {client.hwid ? client.hwid.substring(0, 12) + '...' : 'LOCKED'}</span>
-                        <button onClick={() => handleResetHWID(client)} className="text-sky-600 font-bold hover:underline">Reset HWID</button>
-                      </div>
-                    </div>
-                  ))}
+              <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm flex items-center justify-between">
+                <div>
+                  <h3 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
+                    <KeyRound className="w-5 h-5 text-blue-600" />
+                    Central License Keys & Hardware ID Master
+                  </h3>
+                  <p className="text-xs text-slate-500 font-medium pt-1">
+                    Manage client license keys, registered hardware IDs, registration dates, and expiry statuses.
+                  </p>
+                </div>
+              </div>
+
+              {/* License Master Table */}
+              <div className="bg-white border border-slate-200/80 rounded-2xl overflow-hidden shadow-sm w-full">
+                <div className="overflow-x-auto w-full">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">
+                        <th className="px-6 py-4">Shop & Owner Name</th>
+                        <th className="px-6 py-4">Hardware ID (HWID)</th>
+                        <th className="px-6 py-4">License Key</th>
+                        <th className="px-6 py-4">Reg. Date</th>
+                        <th className="px-6 py-4">Expiry Date</th>
+                        <th className="px-6 py-4">Status</th>
+                        <th className="px-6 py-4 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-xs font-medium">
+                      {loading ? (
+                        <tr>
+                          <td colSpan="7" className="px-6 py-12 text-center text-slate-400">
+                            Loading License Records from Firebase Cloud...
+                          </td>
+                        </tr>
+                      ) : clients.length === 0 ? (
+                        <tr>
+                          <td colSpan="7" className="px-6 py-12 text-center text-slate-400">
+                            No license records found.
+                          </td>
+                        </tr>
+                      ) : (
+                        clients.map((client) => {
+                          const daysLeft = calculateDaysLeft(client.expiresAt);
+                          const isExpired = daysLeft <= 0;
+                          const isKilled = client.status === 'KILLED' || client.status === 'INACTIVE';
+                          const isPending = client.status === 'PENDING';
+                          const isLifetime = client.planType === 'LIFETIME' || daysLeft > 3000;
+                          const regDate = client.createdAt ? new Date(client.createdAt).toLocaleDateString('en-IN') : 'N/A';
+                          const expDate = isLifetime ? 'Lifetime (आजीवन)' : (client.expiresAt ? new Date(client.expiresAt).toLocaleDateString('en-IN') : 'N/A');
+                          const hwidDisplay = Array.isArray(client.hwids) && client.hwids.length > 0 ? client.hwids.join(', ') : (client.hwid || 'N/A');
+
+                          return (
+                            <tr key={client.hwid || client.id} className="hover:bg-blue-50/30 transition">
+                              {/* Shop & Owner Name */}
+                              <td className="px-6 py-4">
+                                <div className="font-bold text-slate-900 text-sm">{client.clientName || 'Unnamed Shop'}</div>
+                                <div className="text-[11px] text-slate-500 flex items-center gap-1 font-medium">
+                                  <Store className="w-3.5 h-3.5 text-blue-600" />
+                                  {client.ownerName || 'Owner N/A'}
+                                </div>
+                              </td>
+
+                              {/* Hardware ID (HWID) */}
+                              <td className="px-6 py-4 font-mono font-semibold text-slate-700 max-w-[200px] truncate" title={hwidDisplay}>
+                                <span className="px-2 py-1 rounded bg-slate-100 border border-slate-200 text-[11px] text-slate-800">
+                                  {hwidDisplay}
+                                </span>
+                              </td>
+
+                              {/* License Key */}
+                              <td className="px-6 py-4 font-mono font-bold text-blue-700">
+                                <div className="flex items-center gap-1.5 bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-xl w-fit">
+                                  <span>{client.licenseKey}</span>
+                                  <button onClick={() => handleCopyKey(client.licenseKey)} className="text-blue-500 hover:text-blue-800 ml-1">
+                                    {copiedKey === client.licenseKey ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                                  </button>
+                                </div>
+                              </td>
+
+                              {/* Registration Date */}
+                              <td className="px-6 py-4 font-mono font-semibold text-slate-600">
+                                {regDate}
+                              </td>
+
+                              {/* Expiry Date */}
+                              <td className="px-6 py-4 font-mono font-bold text-slate-700">
+                                {expDate}
+                              </td>
+
+                              {/* Status */}
+                              <td className="px-6 py-4">
+                                {isPending ? (
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-violet-100 text-violet-800 border border-violet-200 text-[10px] font-extrabold animate-pulse">
+                                    <Clock className="w-3 h-3 text-violet-600" /> PENDING
+                                  </span>
+                                ) : isKilled ? (
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-rose-100 text-rose-700 border border-rose-200 text-[10px] font-extrabold">
+                                    <ShieldAlert className="w-3 h-3" /> KILLED
+                                  </span>
+                                ) : isExpired ? (
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 border border-amber-200 text-[10px] font-extrabold">
+                                    <Clock className="w-3 h-3" /> EXPIRED
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 text-[10px] font-extrabold">
+                                    <CheckCircle2 className="w-3 h-3 text-emerald-600" /> ACTIVE
+                                  </span>
+                                )}
+                              </td>
+
+                              {/* Actions (Edit & Delete) */}
+                              <td className="px-6 py-4 text-right">
+                                <div className="flex items-center justify-end gap-1.5">
+                                  <button onClick={() => handleOpenEditModal(client)} title="Edit License" className="p-2 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200 transition">
+                                    <Edit className="w-4 h-4 text-slate-700" />
+                                  </button>
+                                  <button onClick={() => handleDeleteClient(client.hwid || client.id, client.clientName)} title="Delete License" className="p-2 rounded-xl bg-slate-100 hover:bg-rose-50 text-rose-600 border border-slate-200 transition">
+                                    <Trash2 className="w-4 h-4 text-rose-600" />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             </div>
