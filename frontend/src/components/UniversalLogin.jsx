@@ -31,7 +31,7 @@ export default function UniversalLogin({ onLoginSuccess }) {
       price: '₹0',
       duration: '5 Demo Entries',
       pcs: '1 PC Allowed',
-      features: ['5 Certificate Entries', 'Basic Auto Backup', 'Standard Access'],
+      features: ['5 Certificate Entries', 'WhatsApp Integration', 'Basic Auto Backup', 'Standard Access'],
       highlight: false
     },
     {
@@ -42,7 +42,7 @@ export default function UniversalLogin({ onLoginSuccess }) {
       price: '₹149',
       duration: '30 Days Validity',
       pcs: '1 PC Allowed',
-      features: ['Unlimited Entries', 'Jharsewa Auto Sync', 'Daily Cloud Backup', 'WhatsApp Integration'],
+      features: ['Upto 100 Entries', 'Jharsewa Auto Sync', 'Daily Cloud Backup', 'WhatsApp Integration'],
       highlight: false
     },
     {
@@ -53,7 +53,7 @@ export default function UniversalLogin({ onLoginSuccess }) {
       price: '₹349',
       duration: '180 Days Validity',
       pcs: '3 PCs Allowed',
-      features: ['Unlimited Entries', 'Multi-PC Sync (3 PCs)', 'Priority Cloud Backup', 'WhatsApp Integration', 'Full Customer Support'],
+      features: ['Upto 1000 Entries', 'Multi-PC Sync (3 PCs)', 'Priority Cloud Backup', 'WhatsApp Integration', 'Full Customer Support'],
       highlight: true
     },
     {
