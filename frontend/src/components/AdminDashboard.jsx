@@ -23,6 +23,7 @@ export default function AdminDashboard({ onLogout }) {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [licenseSubTab, setLicenseSubTab] = useState('ACTIVE'); // 'ACTIVE' | 'ARCHIVED'
   
   // WhatsApp Master Templates State
   const [whatsappTemplates, setWhatsappTemplates] = useState([
@@ -1139,7 +1140,7 @@ export default function AdminDashboard({ onLogout }) {
           {/* TAB 2: LICENSE MASTER VIEW */}
           {activeTab === 'licenses' && (
             <div className="space-y-4 w-full">
-              <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm flex items-center justify-between">
+              <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                   <h3 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
                     <KeyRound className="w-5 h-5 text-blue-600" />
@@ -1148,6 +1149,43 @@ export default function AdminDashboard({ onLogout }) {
                   <p className="text-xs text-slate-500 font-medium pt-1">
                     Manage client license keys, registered hardware IDs, registration dates, and expiry statuses.
                   </p>
+                </div>
+
+                {/* Sub-Navigation Tabs: Active vs Archived */}
+                <div className="flex items-center gap-1.5 p-1.5 bg-slate-100 rounded-2xl border border-slate-200 shrink-0">
+                  <button
+                    onClick={() => setLicenseSubTab('ACTIVE')}
+                    className={`px-4 py-2 rounded-xl text-xs font-black transition flex items-center gap-2 ${
+                      licenseSubTab === 'ACTIVE'
+                        ? 'bg-emerald-600 text-white shadow-md'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                    }`}
+                  >
+                    <CheckCircle2 className="w-4 h-4" />
+                    Active Licenses ({clients.filter(c => {
+                      const d = calculateDaysLeft(c.expiresAt);
+                      const isExp = d <= 0;
+                      const isK = c.status === 'KILLED' || c.status === 'INACTIVE';
+                      return c.status === 'ACTIVE' && !isExp && !isK;
+                    }).length})
+                  </button>
+
+                  <button
+                    onClick={() => setLicenseSubTab('ARCHIVED')}
+                    className={`px-4 py-2 rounded-xl text-xs font-black transition flex items-center gap-2 ${
+                      licenseSubTab === 'ARCHIVED'
+                        ? 'bg-amber-600 text-white shadow-md'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                    }`}
+                  >
+                    <Clock className="w-4 h-4" />
+                    Archived Licenses ({clients.filter(c => {
+                      const d = calculateDaysLeft(c.expiresAt);
+                      const isExp = d <= 0;
+                      const isK = c.status === 'KILLED' || c.status === 'INACTIVE';
+                      return c.status === 'EXPIRED' || c.status === 'PENDING' || isExp || isK;
+                    }).length})
+                  </button>
                 </div>
               </div>
 
@@ -1176,14 +1214,33 @@ export default function AdminDashboard({ onLogout }) {
                             Loading License Records from Firebase Cloud...
                           </td>
                         </tr>
-                      ) : clients.length === 0 ? (
-                        <tr>
-                          <td colSpan="7" className="px-6 py-12 text-center text-slate-400">
-                            No license records found.
-                          </td>
-                        </tr>
-                      ) : (
-                        clients.map((client) => {
+                      ) : (() => {
+                        const filteredLicenses = clients.filter(c => {
+                          const daysLeft = calculateDaysLeft(c.expiresAt);
+                          const isExpired = daysLeft <= 0;
+                          const isKilled = c.status === 'KILLED' || c.status === 'INACTIVE';
+                          const isPending = c.status === 'PENDING';
+                          const isActiveOnly = c.status === 'ACTIVE' && !isExpired && !isKilled;
+
+                          if (licenseSubTab === 'ACTIVE') {
+                            return isActiveOnly;
+                          } else {
+                            // ARCHIVED: Expired, Killed, Pending or Blocked licenses
+                            return isExpired || isKilled || isPending || c.status === 'EXPIRED';
+                          }
+                        });
+
+                        if (filteredLicenses.length === 0) {
+                          return (
+                            <tr>
+                              <td colSpan="7" className="px-6 py-12 text-center text-slate-400">
+                                {licenseSubTab === 'ACTIVE' ? 'No active license keys found.' : 'No archived (expired/killed) license keys found.'}
+                              </td>
+                            </tr>
+                          );
+                        }
+
+                        return filteredLicenses.map((client) => {
                           const daysLeft = calculateDaysLeft(client.expiresAt);
                           const isExpired = daysLeft <= 0;
                           const isKilled = client.status === 'KILLED' || client.status === 'INACTIVE';
@@ -1278,8 +1335,8 @@ export default function AdminDashboard({ onLogout }) {
                               </td>
                             </tr>
                           );
-                        })
-                      )}
+                        });
+                      })()}
                     </tbody>
                   </table>
                 </div>
