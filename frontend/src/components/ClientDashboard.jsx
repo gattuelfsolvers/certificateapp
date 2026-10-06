@@ -5,9 +5,18 @@ import {
   Smartphone, ExternalLink, Printer, Edit, Trash2, Shield, Settings, Activity, Users, Send, Layers, Tag, PlusCircle, Zap, Download, Upload, X,
   Key, User, Lock, ShieldCheck, Building2, Store, Phone, MapPin, BadgeCheck, LogOut, Eye, PanelRight, PanelRightClose, Code, LayoutDashboard, Sliders, MoreVertical, Power
 } from 'lucide-react';
-import { CERTIFICATE_CATEGORIES } from '../constants/certificateTypes';
+import { CERTIFICATE_CATEGORIES as DEFAULT_CATEGORIES } from '../constants/certificateTypes';
 import { fetchCertificatesFromFirebase, saveCertificateToFirebase, deleteCertificateFromFirebase } from '../firebase';
+import CodeMasterView from './CodeMasterView';
 import axios from 'axios';
+
+const getActiveCategories = () => {
+  const saved = typeof localStorage !== 'undefined' ? localStorage.getItem('CUSTOM_CERT_CATEGORIES') : null;
+  if (saved) {
+    try { return JSON.parse(saved); } catch (e) {}
+  }
+  return DEFAULT_CATEGORIES;
+};
 
 const getApiBaseUrl = () => {
   const custom = typeof localStorage !== 'undefined' ? localStorage.getItem('CUSTOM_API_BASE') : null;
@@ -117,6 +126,9 @@ const CATEGORY_COLOR_STYLES = {
 };
 
 export default function ClientDashboard({ clientData, onLogout }) {
+  const [categories, setCategories] = useState(() => getActiveCategories());
+  const CERTIFICATE_CATEGORIES = categories;
+
   const [certificates, setCertificates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -169,6 +181,10 @@ export default function ClientDashboard({ clientData, onLogout }) {
   useEffect(() => {
     loadCertificates();
   }, []);
+
+  useEffect(() => {
+    setCategories(getActiveCategories());
+  }, [activeTab]);
 
   const showToast = (type, title, message) => {
     setToast({ type, title, message });
@@ -806,8 +822,12 @@ export default function ClientDashboard({ clientData, onLogout }) {
           </div>
         </div>
 
-        {/* Sub-Services Quick Launch Cards - FULL PAGE WIDTH IN 1 ROW */}
-        <section className="space-y-2.5 w-full">
+        {activeTab === 'code_master' ? (
+          <CodeMasterView showToast={showToast} />
+        ) : (
+          <>
+            {/* Sub-Services Quick Launch Cards - FULL PAGE WIDTH IN 1 ROW */}
+            <section className="space-y-2.5 w-full">
           <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
             <Layers className="w-4 h-4 text-blue-600" />
             Direct Service Quick Launch Cards
@@ -1069,7 +1089,9 @@ export default function ClientDashboard({ clientData, onLogout }) {
             </div>
           </div>
         </section>
-      </main>
+      </>
+    )}
+  </main>
 
       {/* Entry Modal - ENHANCED BATCH & MULTI-ITEM LIST MODAL (MAX-W-4XL) */}
       {isEntryModalOpen && (
