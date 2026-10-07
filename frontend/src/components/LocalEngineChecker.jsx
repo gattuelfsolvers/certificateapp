@@ -54,8 +54,9 @@ export default function LocalEngineChecker({ engineStatus, onRetry, isChecking, 
           </button>
           
           <a
-            href={`${API_BASE}/settings/download-local-engine`}
-            download="App-Local-Engine-Setup.zip"
+            href="https://drive.google.com/uc?export=download&id=1aWQ7E-X3EtNVbn-UHVXc8rvmObTb5vb3"
+            target="_blank"
+            rel="noopener noreferrer"
             className="flex-1 md:flex-none px-5 py-2.5 bg-gradient-to-r from-rose-600 to-indigo-600 hover:from-rose-500 hover:to-indigo-500 text-white rounded-xl font-semibold text-sm shadow-lg shadow-rose-600/30 transition flex items-center justify-center gap-2 border border-rose-400/30"
           >
             <Download className="w-4 h-4" />
