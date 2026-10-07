@@ -19,11 +19,12 @@ const SESSION_TIMEOUT_MS = 25 * 60 * 1000; // 25 Minutes timeout reset window
 async function cleanGreenCaptchaImage(buffer) {
   try {
     const img = await loadImage(buffer);
-    const canvas = createCanvas(img.width, img.height);
+    const canvas = createCanvas(img.width * 2, img.height * 2);
     const ctx = canvas.getContext('2d');
-    ctx.drawImage(img, 0, 0);
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(img, 0, 0, img.width * 2, img.height * 2);
 
-    const imgData = ctx.getImageData(0, 0, img.width, img.height);
+    const imgData = ctx.getImageData(0, 0, img.width * 2, img.height * 2);
     const data = imgData.data;
 
     for (let i = 0; i < data.length; i += 4) {
@@ -31,7 +32,7 @@ async function cleanGreenCaptchaImage(buffer) {
       const g = data[i + 1];
       const b = data[i + 2];
 
-      if (g > 100 && g > r * 1.2 && g > b * 1.2) {
+      if (g > 80 && g > r * 1.15 && g > b * 1.15) {
         data[i] = 0;
         data[i + 1] = 0;
         data[i + 2] = 0;
@@ -142,9 +143,31 @@ async function getOrCreateCSCSession(forceFresh = false) {
       await new Promise(r => setTimeout(r, 1500));
     }
 
-    const captchaElement = await globalPage.$('#captchaImage, img[src*="captcha"]');
-    if (captchaElement) {
-      const captchaBuffer = await captchaElement.screenshot();
+    // Direct Base64 Canvas Export from img#captchaImage
+    let captchaBuffer = null;
+    try {
+      const base64Data = await globalPage.evaluate(async () => {
+        const imgs = Array.from(document.querySelectorAll('img#captchaImage, img[src*="captchaImage"], img[src*="captcha"]'));
+        const greenImg = imgs.find(img => img.src && (img.src.includes('captcha') || img.src.includes('captchaImage')));
+        if (!greenImg) return null;
+
+        const canvas = document.createElement('canvas');
+        canvas.width = greenImg.naturalWidth || greenImg.width || 220;
+        canvas.height = greenImg.naturalHeight || greenImg.height || 60;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(greenImg, 0, 0);
+        return canvas.toDataURL('image/png');
+      });
+
+      if (base64Data) {
+        const base64Clean = base64Data.replace(/^data:image\/png;base64,/, "");
+        captchaBuffer = Buffer.from(base64Clean, 'base64');
+      }
+    } catch (e) {
+      console.error('Failed extracting base64 captcha:', e.message);
+    }
+
+    if (captchaBuffer) {
       const cleanedBuffer = await cleanGreenCaptchaImage(captchaBuffer);
       const worker = await createWorker('eng');
       await worker.setParameters({ tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ' });
@@ -153,13 +176,17 @@ async function getOrCreateCSCSession(forceFresh = false) {
 
       let captchaText = text.replace(/[^A-Z0-9]/gi, '').toUpperCase().trim();
       if (captchaText.length > 6) captchaText = captchaText.substring(0, 6);
+      console.log(`🤖 Decrypted Captcha: "${captchaText}"`);
 
       await globalPage.evaluate((val) => {
-        const c = document.querySelector('input[name="captchaAnswer"], #captchaAnswer, input[id*="captcha"]');
-        if (c) {
-          c.value = val;
-          c.dispatchEvent(new Event('input', { bubbles: true }));
-        }
+        const inputs = document.querySelectorAll('#captchaAnswer, input[name="captchaAnswer"], input[placeholder="Captcha"], input[placeholder*="captcha"]');
+        inputs.forEach(c => {
+          if (c) {
+            c.value = val;
+            c.dispatchEvent(new Event('input', { bubbles: true }));
+            c.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+        });
       }, captchaText);
     }
 

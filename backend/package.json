@@ -11,6 +11,8 @@
   },
   "dependencies": {
     "@napi-rs/canvas": "^1.0.9",
+    "@paddlejs-models/ocr": "^1.2.4",
+    "@paddlejs/paddlejs-core": "^2.2.0",
     "@prisma/client": "^5.10.0",
     "@whiskeysockets/baileys": "^7.0.0-rc14",
     "axios": "^1.6.8",
