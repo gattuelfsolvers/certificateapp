@@ -505,10 +505,12 @@ export default function ClientDashboard({ clientData, onLogout }) {
         const newStatus = res.data.statusResult?.status || res.data.newStatus;
         showToast('success', 'Status Synced', `Live status updated: ${newStatus}`);
         loadCertificates();
+      } else {
+        showToast('error', 'Sync Failed', res?.data?.error || 'Unable to sync status from Jharsewa portal.');
       }
     } catch (err) {
-      loadCertificates();
-      showToast('info', 'Status Checked', `Refreshed records from Cloud Firestore.`);
+      console.error('Sync error:', err);
+      showToast('error', 'Sync Exception', err.response?.data?.error || err.message || 'Connection error.');
     } finally {
       setSyncingId(null);
     }
