@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 
 import { updateClientHwidsOnFirebase } from '../firebase';
+import axios from 'axios';
 
 export default function ProfileSettingsView({ clientData, showToast }) {
   // 1. Client Personal & Business Details State
@@ -109,6 +110,8 @@ export default function ProfileSettingsView({ clientData, showToast }) {
   });
 
   const [isQrLoading, setIsQrLoading] = useState(false);
+  const [testMobileInput, setTestMobileInput] = useState(clientData?.phone || '8210212926');
+  const [isSendingTestMsg, setIsSendingTestMsg] = useState(false);
 
   // Save Profile to LocalStorage
   const handleSaveProfile = (e) => {
@@ -165,6 +168,47 @@ export default function ProfileSettingsView({ clientData, showToast }) {
   const handleSaveWhatsappSettings = () => {
     localStorage.setItem('WHATSAPP_LINK_SETUP', JSON.stringify(whatsappSetup));
     if (showToast) showToast('success', 'Automation Settings Saved', 'WhatsApp notification preferences updated.');
+  };
+
+  const handleSendTestWhatsapp = async () => {
+    if (!testMobileInput || !testMobileInput.trim()) {
+      if (showToast) showToast('error', 'Mobile Required', 'Please enter a 10-digit WhatsApp Mobile Number');
+      return;
+    }
+
+    const cleanNum = testMobileInput.replace(/\D/g, '');
+    if (cleanNum.length < 10) {
+      if (showToast) showToast('error', 'Invalid Mobile', 'Mobile number must be at least 10 digits.');
+      return;
+    }
+
+    setIsSendingTestMsg(true);
+    if (showToast) showToast('info', 'Sending Test Message', `Dispatching test WhatsApp message to +91 ${cleanNum}...`);
+
+    try {
+      let res;
+      try {
+        res = await axios.post('http://localhost:5000/api/whatsapp/test-message', {
+          mobile: cleanNum,
+          message: '📲 *WhatsApp Bot Link Successful!* \nThis is a live connection test message from your Certificate Management Software.'
+        });
+      } catch (lErr) {
+        res = await axios.post('/api/whatsapp/test-message', {
+          mobile: cleanNum,
+          message: '📲 *WhatsApp Bot Link Successful!* \nThis is a live connection test message from your Certificate Management Software.'
+        });
+      }
+
+      if (res && res.data && res.data.success) {
+        if (showToast) showToast('success', 'Test Message Delivered', `WhatsApp test message successfully delivered to +91 ${cleanNum}!`);
+      } else {
+        if (showToast) showToast('error', 'Test Failed', res?.data?.error || res?.data?.reason || 'Unable to send test WhatsApp message.');
+      }
+    } catch (err) {
+      if (showToast) showToast('error', 'Send Error', err.response?.data?.error || err.message || 'WhatsApp Bot is offline or disconnected.');
+    } finally {
+      setIsSendingTestMsg(false);
+    }
   };
 
   return (
@@ -625,16 +669,50 @@ export default function ProfileSettingsView({ clientData, showToast }) {
               </label>
             </div>
 
-            <div className="flex justify-end pt-2">
+          {/* Test WhatsApp Message Dispatch Tool */}
+          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3 mt-4">
+            <h4 className="text-xs font-black text-slate-800 flex items-center gap-2">
+              <Send className="w-4 h-4 text-emerald-600" />
+              Live WhatsApp Bot Connection Tester
+            </h4>
+            <p className="text-[11px] text-slate-500">
+              Enter any WhatsApp mobile number below and click "Send Test Message" to verify if the bot is successfully delivering live WhatsApp alerts.
+            </p>
+            
+            <div className="flex flex-col sm:flex-row items-center gap-2">
+              <div className="relative flex-1 w-full">
+                <Smartphone className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  value={testMobileInput}
+                  onChange={(e) => setTestMobileInput(e.target.value)}
+                  placeholder="Enter 10-digit WhatsApp Mobile Number (e.g. 8210212926)..."
+                  className="w-full bg-white border border-slate-300 rounded-xl pl-10 pr-3 py-2 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                />
+              </div>
+
               <button
                 type="button"
-                onClick={handleSaveWhatsappSettings}
-                className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl shadow-md transition"
+                onClick={handleSendTestWhatsapp}
+                disabled={isSendingTestMsg}
+                className="w-full sm:w-auto px-5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-xs shadow-md transition flex items-center justify-center gap-2 shrink-0 cursor-pointer disabled:opacity-50"
               >
-                <Save className="w-4 h-4" />
-                <span>Save WhatsApp Preferences</span>
+                <Send className={`w-3.5 h-3.5 ${isSendingTestMsg ? 'animate-bounce' : ''}`} />
+                <span>{isSendingTestMsg ? 'Sending Message...' : 'Send Test Message'}</span>
               </button>
             </div>
+          </div>
+
+          <div className="flex justify-end pt-2">
+            <button
+              type="button"
+              onClick={handleSaveWhatsappSettings}
+              className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl shadow-md transition"
+            >
+              <Save className="w-4 h-4" />
+              <span>Save WhatsApp Preferences</span>
+            </button>
+          </div>
           </div>
         </div>
 
