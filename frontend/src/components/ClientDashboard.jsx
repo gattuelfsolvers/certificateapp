@@ -82,6 +82,21 @@ const getStatusBadgeStyle = (status) => {
   return 'bg-slate-100 text-slate-800 border border-slate-300 font-extrabold';
 };
 
+const getCertFullDisplayName = (code) => {
+  if (!code) return 'N/A';
+  const categories = getActiveCategories();
+  for (const cat of categories) {
+    const sub = cat.subServices?.find(s => s.code === code);
+    if (sub) {
+      return sub.name || cat.title || code;
+    }
+    if (cat.id === code || cat.name === code) {
+      return cat.title || cat.name;
+    }
+  }
+  return code;
+};
+
 const CATEGORY_COLOR_STYLES = {
   income: {
     cardBg: 'bg-emerald-50/80 border-emerald-200/90',
@@ -1753,7 +1768,7 @@ export default function ClientDashboard({ clientData, onLogout }) {
                 </div>
                 <div className="flex justify-between border-b border-slate-200/60 pb-1.5">
                   <span className="text-slate-500 font-bold">Certificate Type:</span>
-                  <span className="font-black text-blue-700">{receiptModalCert.certType}</span>
+                  <span className="font-black text-blue-700">{getCertFullDisplayName(receiptModalCert.certType)}</span>
                 </div>
                 <div className="flex justify-between border-b border-slate-200/60 pb-1.5">
                   <span className="text-slate-500 font-bold">Application Date:</span>
@@ -1808,10 +1823,9 @@ export default function ClientDashboard({ clientData, onLogout }) {
 ------------------------------------
 रेफरेंस नंबर: *${receiptModalCert.refNo}*
 आवेदक का नाम: *${receiptModalCert.applicantName}*
-प्रमाण पत्र का प्रकार: *${receiptModalCert.certType}*
+प्रमाण पत्र का प्रकार: *${getCertFullDisplayName(receiptModalCert.certType)}*
 आवेदन तिथि: *${formatDateDDMMYYYY(receiptModalCert.entryDate)}*
 वर्तमान स्थिति: *${receiptModalCert.currentStatus || 'INITIATED'}*
-भुगतान की गई राशि: *₹${receiptModalCert.paidAmount || 0}*
 बकाया राशि (Dues): *₹${receiptModalCert.duesAmount || 0}*
 
 धन्यवाद! प्रज्ञा केंद्र एवं साइबर सेंटर।`;
