@@ -453,6 +453,31 @@ export default function ClientDashboard({ clientData, onLogout }) {
     showToast('success', 'Data Downloaded', `${filteredCertificates.length} certificate record(s) exported to CSV!`);
   };
 
+  const triggerCsvDownload = (certList, isBulk = false) => {
+    try {
+      const headers = ['Srl No', 'ID', 'Reference No', 'Date', 'Current Status', 'Applicant Name'];
+      const rows = certList.map((c, i) => [
+        `"${i + 1}"`,
+        `"${c.id || ''}"`,
+        `"${c.refNo || ''}"`,
+        `"${c.entryDate ? new Date(c.entryDate).toISOString().split('T')[0] : ''}"`,
+        `"${c.currentStatus || 'INITIATED'}"`,
+        `"${c.applicantName || ''}"`
+      ]);
+      const csvString = '\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\r\n');
+      const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', isBulk ? `sync_bulk_${Date.now()}.csv` : `sync_${(certList[0]?.refNo || 'cert').replace(/\//g, '_')}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (e) {
+      console.error('CSV trigger creation error:', e);
+    }
+  };
+
   const handleSyncAll = async () => {
     const toSync = certificates.filter(c => !c.currentStatus || (!c.currentStatus.includes('DELIVERED') && !c.currentStatus.includes('REJECTED')));
     if (toSync.length === 0) {
@@ -461,7 +486,8 @@ export default function ClientDashboard({ clientData, onLogout }) {
     }
 
     setIsSyncingAll(true);
-    showToast('info', 'Sync Started', `Syncing live status for ${toSync.length} certificate(s)...`);
+    triggerCsvDownload(toSync, true);
+    showToast('info', 'Sync CSV Downloaded', `Triggered CSV Sync for ${toSync.length} certificate(s)...`);
 
     let count = 0;
     for (const cert of toSync) {
@@ -469,12 +495,12 @@ export default function ClientDashboard({ clientData, onLogout }) {
         let res;
         try {
           if (engineStatus === 'ONLINE') {
-            res = await axios.post(`http://localhost:5000/api/certificates/${cert.id}/sync-jharsewa`);
+            res = await axios.post(`http://localhost:5000/api/certificates/${cert.id}/sync-jharsewa`, cert);
           } else {
-            res = await axios.post(`${API_BASE}/certificates/${cert.id}/sync-jharsewa`);
+            res = await axios.post(`${API_BASE}/certificates/${cert.id}/sync-jharsewa`, cert);
           }
         } catch (e1) {
-          res = await axios.post(`${API_BASE}/certificates/${cert.id}/sync-jharsewa`);
+          res = await axios.post(`${API_BASE}/certificates/${cert.id}/sync-jharsewa`, cert);
         }
         if (res && res.data && res.data.success) count++;
       } catch (err) {
@@ -490,6 +516,7 @@ export default function ClientDashboard({ clientData, onLogout }) {
   const handleSyncSingle = async (cert) => {
     try {
       setSyncingId(cert.id);
+      triggerCsvDownload([cert], false);
       let res;
       try {
         if (engineStatus === 'ONLINE') {
@@ -498,7 +525,7 @@ export default function ClientDashboard({ clientData, onLogout }) {
           res = await axios.post(`${API_BASE}/certificates/${cert.id}/sync-jharsewa`, cert);
         }
       } catch (e1) {
-        res = await axios.post(`${API_BASE}/certificates/${cert.id}/sync-jharsewa`);
+        res = await axios.post(`${API_BASE}/certificates/${cert.id}/sync-jharsewa`, cert);
       }
 
       if (res && res.data && res.data.success) {

@@ -62,4 +62,12 @@ app.listen(PORT, async () => {
   // Initialize WhatsApp client daemon
   console.log('Initializing WhatsApp Engine...');
   initWhatsApp();
+
+  // Initialize Automatic CSV Folder Watcher Engine
+  try {
+    const { startCsvFolderWatcher } = require('./watchers/csvWatcher');
+    startCsvFolderWatcher();
+  } catch (wErr) {
+    console.error('CSV Watcher error:', wErr);
+  }
 });
