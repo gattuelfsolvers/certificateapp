@@ -321,36 +321,57 @@ export default function ClientDashboard({ clientData, onLogout }) {
     setPaidAmountInput(100);
   };
 
-  const sendWhatsAppReceipt = async (cert) => {
-    if (!cert || !cert.mobile) return false;
-    const fullCertName = getCertFullDisplayName(cert.certType);
-    const receiptText = `📄 *आवेदन पावती रसीद (ACKNOWLEDGEMENT RECEIPT)* 📄
-------------------------------------
-रेफरेंस नंबर: *${cert.refNo}*
-आवेदक का नाम: *${cert.applicantName}*
-प्रमाण पत्र का प्रकार: *${fullCertName}*
-आवेदन तिथि: *${formatDateDDMMYYYY(cert.entryDate)}*
-वर्तमान स्थिति: *${cert.currentStatus || 'INITIATED'}*
-बकाया राशि (Dues): *₹${cert.duesAmount || 0}*
+  const getShopProfileDetails = () => {
+    const saved = typeof localStorage !== 'undefined' ? localStorage.getItem('CLIENT_PROFILE_DETAILS') : null;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed.clientName) return parsed;
+      } catch (e) {}
+    }
+    return {
+      clientName: clientData?.clientName || 'Apna Digital Hub - Certificate Management',
+      ownerName: clientData?.ownerName || 'CSC Partner',
+      phone: clientData?.phone || '8210212926',
+      address: clientData?.address || 'Main Road, CSC Digital Center, Ranchi, Jharkhand'
+    };
+  };
 
-धन्यवाद! प्रज्ञा केंद्र एवं साइबर सेंटर।`;
+  const sendStatusUpdateWhatsApp = async (cert, customStatus) => {
+    if (!cert || !cert.mobile) return false;
+    const profile = getShopProfileDetails();
+    const fullCertName = getCertFullDisplayName(cert.certType);
+    const statusToUse = customStatus || cert.currentStatus || 'INITIATED';
+
+    const messageText = `*${profile.clientName}*
+📞 ${profile.phone}
+📍 ${profile.address}
+-----------------------
+📄 रेफरेंस नंबर: *${cert.refNo}*
+👤 आवेदक का नाम: *${cert.applicantName}*
+📜 प्रमाण पत्र का प्रकार: *${fullCertName}*
+📅 आवेदन तिथि: *${formatDateDDMMYYYY(cert.entryDate)}*
+🔄 अद्यतन स्थिति (Status): *${statusToUse}*
+💰 बकाया राशि (Dues): *₹${cert.duesAmount || 0}*
+
+किसी प्रकार के अपडेट पर आपको सूचित किया जाएगा। धन्यवाद!`;
 
     try {
       let res;
       try {
         res = await axios.post('http://localhost:5000/api/whatsapp/test-message', {
           mobile: cert.mobile,
-          message: receiptText
+          message: messageText
         });
       } catch (lErr) {
         res = await axios.post('/api/whatsapp/test-message', {
           mobile: cert.mobile,
-          message: receiptText
+          message: messageText
         });
       }
       return res?.data?.success || false;
     } catch (err) {
-      console.error('Auto WhatsApp send error:', err);
+      console.error('Auto WhatsApp status update error:', err);
       return false;
     }
   };
@@ -413,13 +434,13 @@ export default function ClientDashboard({ clientData, onLogout }) {
 
         await saveCertificateToFirebase(payload);
 
-        // Automatic WhatsApp Receipt Dispatch
-        sendWhatsAppReceipt(payload);
+        // Automatic WhatsApp Receipt & Initial Status Alert Dispatch
+        sendStatusUpdateWhatsApp(payload);
       }
 
       setIsEntryModalOpen(false);
       loadCertificates();
-      showToast('success', 'Records Saved', `${itemsToSave.length} Certificate record(s) saved & WhatsApp receipt sent!`);
+      showToast('success', 'Records Saved', `${itemsToSave.length} Certificate record(s) saved & WhatsApp status message sent!`);
     } catch (err) {
       showToast('error', 'Save Failed', err.message);
     }
@@ -465,9 +486,13 @@ export default function ClientDashboard({ clientData, onLogout }) {
       };
 
       await saveCertificateToFirebase(payload);
+      
+      // Auto WhatsApp Status Update Notification on Edit
+      sendStatusUpdateWhatsApp(payload);
+
       setEditingCert(null);
       loadCertificates();
-      showToast('success', 'Entry Updated', `Certificate ${payload.refNo} updated successfully!`);
+      showToast('success', 'Entry Updated', `Certificate ${payload.refNo} updated & WhatsApp notification sent!`);
     } catch (err) {
       showToast('error', 'Update Failed', err.message);
     }
@@ -556,7 +581,15 @@ export default function ClientDashboard({ clientData, onLogout }) {
         } catch (e1) {
           res = await axios.post(`${API_BASE}/certificates/${cert.id}/sync-jharsewa`, cert);
         }
-        if (res && res.data && res.data.success) count++;
+        if (res && res.data && res.data.success) {
+          count++;
+          const newStatus = res.data.statusResult?.status || res.data.newStatus;
+          if (newStatus && newStatus !== cert.currentStatus) {
+            const updatedCert = { ...cert, currentStatus: newStatus, lastSyncedAt: new Date().toISOString() };
+            try { await saveCertificateToFirebase(updatedCert); } catch (fErr) {}
+            sendStatusUpdateWhatsApp(updatedCert, newStatus);
+          }
+        }
       } catch (err) {
         console.error('Sync failed for cert:', cert.id, err);
       }
@@ -584,14 +617,19 @@ export default function ClientDashboard({ clientData, onLogout }) {
 
       if (res && res.data && res.data.success) {
         const newStatus = res.data.statusResult?.status || res.data.newStatus;
+        const updatedCert = {
+          ...cert,
+          currentStatus: newStatus,
+          lastSyncedAt: new Date().toISOString()
+        };
         try {
-          await saveCertificateToFirebase({
-            ...cert,
-            currentStatus: newStatus,
-            lastSyncedAt: new Date().toISOString()
-          });
+          await saveCertificateToFirebase(updatedCert);
         } catch (fErr) {}
-        showToast('success', 'Status Synced', `Live status updated: ${newStatus}`);
+        
+        // Auto WhatsApp notification on status sync update
+        sendStatusUpdateWhatsApp(updatedCert, newStatus);
+
+        showToast('success', 'Status Synced', `Live status updated: ${newStatus} & WhatsApp alert sent!`);
         loadCertificates();
       } else {
         showToast('error', 'Sync Failed', res?.data?.error || 'Unable to sync status from Jharsewa portal.');
@@ -1854,40 +1892,17 @@ export default function ClientDashboard({ clientData, onLogout }) {
                     return;
                   }
                   setIsSendingWaReceipt(true);
-                  showToast('info', 'Sending WhatsApp Receipt', `Sending text receipt to +91 ${receiptModalCert.mobile}...`);
+                  showToast('info', 'Sending WhatsApp Notification', `Sending status alert to +91 ${receiptModalCert.mobile}...`);
                   
-                  const receiptText = `📄 *आवेदन पावती रसीद (ACKNOWLEDGEMENT RECEIPT)* 📄
-------------------------------------
-रेफरेंस नंबर: *${receiptModalCert.refNo}*
-आवेदक का नाम: *${receiptModalCert.applicantName}*
-प्रमाण पत्र का प्रकार: *${getCertFullDisplayName(receiptModalCert.certType)}*
-आवेदन तिथि: *${formatDateDDMMYYYY(receiptModalCert.entryDate)}*
-वर्तमान स्थिति: *${receiptModalCert.currentStatus || 'INITIATED'}*
-बकाया राशि (Dues): *₹${receiptModalCert.duesAmount || 0}*
-
-धन्यवाद! प्रज्ञा केंद्र एवं साइबर सेंटर।`;
-
                   try {
-                    let res;
-                    try {
-                      res = await axios.post('http://localhost:5000/api/whatsapp/test-message', {
-                        mobile: receiptModalCert.mobile,
-                        message: receiptText
-                      });
-                    } catch (lErr) {
-                      res = await axios.post('/api/whatsapp/test-message', {
-                        mobile: receiptModalCert.mobile,
-                        message: receiptText
-                      });
-                    }
-
-                    if (res && res.data && res.data.success) {
-                      showToast('success', 'WhatsApp Receipt Sent', `Receipt text successfully sent to +91 ${receiptModalCert.mobile}!`);
+                    const success = await sendStatusUpdateWhatsApp(receiptModalCert);
+                    if (success) {
+                      showToast('success', 'WhatsApp Alert Sent', `Status update text successfully sent to +91 ${receiptModalCert.mobile}!`);
                     } else {
-                      showToast('error', 'Send Failed', res?.data?.error || res?.data?.reason || 'Failed to send WhatsApp receipt.');
+                      showToast('error', 'Send Failed', 'Failed to send WhatsApp status alert.');
                     }
                   } catch (err) {
-                    showToast('error', 'Send Error', err.response?.data?.error || err.message || 'WhatsApp engine offline.');
+                    showToast('error', 'Send Error', err.message || 'WhatsApp engine offline.');
                   } finally {
                     setIsSendingWaReceipt(false);
                   }
