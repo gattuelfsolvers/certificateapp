@@ -299,11 +299,15 @@ function mapCSCStatusToInternal(rawStatus, prefixUpper, taskNameLevel = '') {
     return { status: 'CO_UNDER_PROCESS', details: `Application status verified: Revenue Karmachari / Circle Officer - Under Process` };
   }
 
-  // Default Under process fallback: Return error instead of mutating status when officer level cannot be determined!
+  // Default Under process fallback: Return CO_UNDER_PROCESS when officer level is not specifically matched
+  if (statusUpper.includes('UNDER PROCESS') || statusUpper.includes('PROCESS')) {
+    return { status: 'CO_UNDER_PROCESS', details: `Application status verified: Under Process` };
+  }
+
   return { 
     error: true,
     status: null, 
-    details: `Sync Failed: Unable to determine specific officer level (CI/CO/SDO/RK) from tracking modal for status "${rawStatus}". Status left unchanged.` 
+    details: `Sync Failed: Unable to determine status for "${rawStatus}". Status left unchanged.` 
   };
 }
 
