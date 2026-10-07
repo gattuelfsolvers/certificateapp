@@ -742,6 +742,7 @@ export default function ClientDashboard({ clientData, onLogout }) {
           engineStatus={engineStatus} 
           onRetry={checkLocalEngine} 
           isChecking={isCheckingEngine} 
+          API_BASE={API_BASE}
         />
 
         {/* KPI Metric Summary Cards - FULL PAGE WIDTH */}

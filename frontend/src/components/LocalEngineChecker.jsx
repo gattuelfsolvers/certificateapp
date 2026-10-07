@@ -1,7 +1,7 @@
 import React from 'react';
 import { ShieldAlert, Download, RefreshCw, Cpu, CheckCircle2 } from 'lucide-react';
 
-export default function LocalEngineChecker({ engineStatus, onRetry, isChecking }) {
+export default function LocalEngineChecker({ engineStatus, onRetry, isChecking, API_BASE = '/api' }) {
   if (engineStatus === 'ONLINE') {
     return (
       <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-3 mb-6 flex items-center justify-between backdrop-blur-md">
@@ -54,7 +54,7 @@ export default function LocalEngineChecker({ engineStatus, onRetry, isChecking }
           </button>
           
           <a
-            href="/api/settings/download-local-engine"
+            href={`${API_BASE}/settings/download-local-engine`}
             download="App-Local-Engine-Setup.zip"
             className="flex-1 md:flex-none px-5 py-2.5 bg-gradient-to-r from-rose-600 to-indigo-600 hover:from-rose-500 hover:to-indigo-500 text-white rounded-xl font-semibold text-sm shadow-lg shadow-rose-600/30 transition flex items-center justify-center gap-2 border border-rose-400/30"
           >
