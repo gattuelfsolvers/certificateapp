@@ -503,6 +503,13 @@ export default function ClientDashboard({ clientData, onLogout }) {
 
       if (res && res.data && res.data.success) {
         const newStatus = res.data.statusResult?.status || res.data.newStatus;
+        try {
+          await saveCertificateToFirebase({
+            ...cert,
+            currentStatus: newStatus,
+            lastSyncedAt: new Date().toISOString()
+          });
+        } catch (fErr) {}
         showToast('success', 'Status Synced', `Live status updated: ${newStatus}`);
         loadCertificates();
       } else {
