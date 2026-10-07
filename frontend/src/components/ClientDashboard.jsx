@@ -321,6 +321,40 @@ export default function ClientDashboard({ clientData, onLogout }) {
     setPaidAmountInput(100);
   };
 
+  const sendWhatsAppReceipt = async (cert) => {
+    if (!cert || !cert.mobile) return false;
+    const fullCertName = getCertFullDisplayName(cert.certType);
+    const receiptText = `📄 *आवेदन पावती रसीद (ACKNOWLEDGEMENT RECEIPT)* 📄
+------------------------------------
+रेफरेंस नंबर: *${cert.refNo}*
+आवेदक का नाम: *${cert.applicantName}*
+प्रमाण पत्र का प्रकार: *${fullCertName}*
+आवेदन तिथि: *${formatDateDDMMYYYY(cert.entryDate)}*
+वर्तमान स्थिति: *${cert.currentStatus || 'INITIATED'}*
+बकाया राशि (Dues): *₹${cert.duesAmount || 0}*
+
+धन्यवाद! प्रज्ञा केंद्र एवं साइबर सेंटर।`;
+
+    try {
+      let res;
+      try {
+        res = await axios.post('http://localhost:5000/api/whatsapp/test-message', {
+          mobile: cert.mobile,
+          message: receiptText
+        });
+      } catch (lErr) {
+        res = await axios.post('/api/whatsapp/test-message', {
+          mobile: cert.mobile,
+          message: receiptText
+        });
+      }
+      return res?.data?.success || false;
+    } catch (err) {
+      console.error('Auto WhatsApp send error:', err);
+      return false;
+    }
+  };
+
   const handleSaveCertificate = async (e) => {
     e.preventDefault();
 
@@ -378,11 +412,14 @@ export default function ClientDashboard({ clientData, onLogout }) {
         };
 
         await saveCertificateToFirebase(payload);
+
+        // Automatic WhatsApp Receipt Dispatch
+        sendWhatsAppReceipt(payload);
       }
 
       setIsEntryModalOpen(false);
       loadCertificates();
-      showToast('success', 'Records Saved', `${itemsToSave.length} Certificate record(s) saved successfully!`);
+      showToast('success', 'Records Saved', `${itemsToSave.length} Certificate record(s) saved & WhatsApp receipt sent!`);
     } catch (err) {
       showToast('error', 'Save Failed', err.message);
     }
