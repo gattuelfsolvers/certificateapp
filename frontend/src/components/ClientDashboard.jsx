@@ -493,9 +493,9 @@ export default function ClientDashboard({ clientData, onLogout }) {
       let res;
       try {
         if (engineStatus === 'ONLINE') {
-          res = await axios.post(`http://localhost:5000/api/certificates/${cert.id}/sync-jharsewa`);
+          res = await axios.post(`http://localhost:5000/api/certificates/${cert.id}/sync-jharsewa`, cert);
         } else {
-          res = await axios.post(`${API_BASE}/certificates/${cert.id}/sync-jharsewa`);
+          res = await axios.post(`${API_BASE}/certificates/${cert.id}/sync-jharsewa`, cert);
         }
       } catch (e1) {
         res = await axios.post(`${API_BASE}/certificates/${cert.id}/sync-jharsewa`);

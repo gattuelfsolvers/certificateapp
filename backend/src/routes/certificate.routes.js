@@ -386,9 +386,30 @@ router.put('/:id', async (req, res) => {
 // 5. Single Certificate Jharsewa Status Sync
 router.post('/:id/sync-jharsewa', async (req, res) => {
   try {
-    const cert = await prisma.certificate.findUnique({ where: { id: req.params.id } });
+    let cert = await prisma.certificate.findUnique({ where: { id: req.params.id } });
+    
+    // Fallback: If cert not in local SQLite, check by refNo or body payload
+    if (!cert && req.body && req.body.refNo) {
+      cert = await prisma.certificate.findUnique({ where: { refNo: req.body.refNo.trim() } });
+      if (!cert) {
+        // Upsert into local DB on the fly
+        cert = await prisma.certificate.create({
+          data: {
+            id: req.params.id,
+            refNo: req.body.refNo.trim(),
+            applicantName: req.body.applicantName || 'Applicant',
+            mobile: req.body.mobile || '',
+            certType: req.body.certType || 'JHIC',
+            entryDate: req.body.entryDate ? new Date(req.body.entryDate) : new Date()
+          }
+        });
+      }
+    } else if (!cert && req.params.id && req.params.id.includes('/')) {
+      cert = await prisma.certificate.findUnique({ where: { refNo: req.params.id.trim() } });
+    }
+
     if (!cert) {
-      return res.status(404).json({ success: false, error: 'Certificate not found' });
+      return res.status(404).json({ success: false, error: 'Certificate not found in database. Please check Ref No.' });
     }
 
     let statusResult = { error: true };
