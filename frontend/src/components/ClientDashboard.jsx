@@ -164,9 +164,11 @@ export default function ClientDashboard({ clientData, onLogout }) {
   const [draftList, setDraftList] = useState([]);
   const [paidAmountInput, setPaidAmountInput] = useState(100);
 
-  // View & Edit Modal States
+  // View, Edit & Print Receipt Modal States
   const [viewingCert, setViewingCert] = useState(null);
   const [editingCert, setEditingCert] = useState(null);
+  const [receiptModalCert, setReceiptModalCert] = useState(null);
+  const [isSendingWaReceipt, setIsSendingWaReceipt] = useState(false);
   const [editFormData, setEditFormData] = useState({
     id: '',
     refNo: '',
@@ -1136,6 +1138,15 @@ export default function ClientDashboard({ clientData, onLogout }) {
                               <Eye className="w-4 h-4" />
                             </button>
 
+                            {/* 2.5 Print Receipt */}
+                            <button
+                              onClick={() => setReceiptModalCert(cert)}
+                              title="Print Receipt & Send WhatsApp"
+                              className="p-2 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 transition shadow-xs"
+                            >
+                              <Printer className="w-4 h-4 text-purple-600" />
+                            </button>
+
                             {/* 3. Edit Entry */}
                             <button
                               onClick={() => handleOpenEditModal(cert)}
@@ -1693,6 +1704,149 @@ export default function ClientDashboard({ clientData, onLogout }) {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* PRINT RECEIPT & SEND TO WHATSAPP MODAL */}
+      {receiptModalCert && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-2xl space-y-6 animate-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-purple-50 text-purple-600 border border-purple-200 flex items-center justify-center font-black">
+                  <Printer className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-slate-900">Certificate Acknowledgement Receipt</h3>
+                  <p className="text-xs text-purple-600 font-mono font-bold">{receiptModalCert.refNo}</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setReceiptModalCert(null)}
+                className="p-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Printable Receipt Card Body */}
+            <div id="printable-receipt-card" className="bg-slate-50 border-2 border-dashed border-purple-200 rounded-2xl p-5 space-y-4 text-xs">
+              <div className="text-center border-b border-slate-200 pb-3">
+                <h4 className="text-sm font-black text-slate-900 uppercase tracking-tight">Pragya Kendra & Cyber Center</h4>
+                <p className="text-[11px] text-slate-500 font-bold">Official Application Acknowledgement Slip</p>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex justify-between border-b border-slate-200/60 pb-1.5">
+                  <span className="text-slate-500 font-bold">Reference Number:</span>
+                  <span className="font-mono font-black text-purple-700">{receiptModalCert.refNo}</span>
+                </div>
+                <div className="flex justify-between border-b border-slate-200/60 pb-1.5">
+                  <span className="text-slate-500 font-bold">Applicant Name:</span>
+                  <span className="font-extrabold text-slate-900">{receiptModalCert.applicantName}</span>
+                </div>
+                <div className="flex justify-between border-b border-slate-200/60 pb-1.5">
+                  <span className="text-slate-500 font-bold">Mobile Number:</span>
+                  <span className="font-mono font-bold text-slate-900">{receiptModalCert.mobile}</span>
+                </div>
+                <div className="flex justify-between border-b border-slate-200/60 pb-1.5">
+                  <span className="text-slate-500 font-bold">Certificate Type:</span>
+                  <span className="font-black text-blue-700">{receiptModalCert.certType}</span>
+                </div>
+                <div className="flex justify-between border-b border-slate-200/60 pb-1.5">
+                  <span className="text-slate-500 font-bold">Application Date:</span>
+                  <span className="font-mono font-bold text-slate-800">{formatDateDDMMYYYY(receiptModalCert.entryDate)}</span>
+                </div>
+                <div className="flex justify-between border-b border-slate-200/60 pb-1.5">
+                  <span className="text-slate-500 font-bold">Current Status:</span>
+                  <span className="font-black text-amber-700 uppercase">{receiptModalCert.currentStatus || 'INITIATED'}</span>
+                </div>
+                <div className="flex justify-between pt-1">
+                  <span className="text-slate-600 font-extrabold">Fee Paid / Dues:</span>
+                  <span className="font-extrabold text-emerald-700">₹{receiptModalCert.paidAmount || 0} Paid / ₹{receiptModalCert.duesAmount || 0} Dues</span>
+                </div>
+              </div>
+
+              <div className="text-center text-[10px] text-slate-400 pt-2 border-t border-slate-200">
+                Thank you for using our services! Track live status on our portal.
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const printContent = document.getElementById('printable-receipt-card').outerHTML;
+                  const win = window.open('', '', 'width=600,height=700');
+                  win.document.write(`<html><head><title>Print Receipt - ${receiptModalCert.refNo}</title><style>body{font-family:sans-serif;padding:20px;}</style></head><body>${printContent}</body></html>`);
+                  win.document.close();
+                  win.focus();
+                  win.print();
+                  win.close();
+                }}
+                className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-xs flex items-center justify-center gap-2 border border-slate-300 transition"
+              >
+                <Printer className="w-4 h-4 text-slate-600" />
+                <span>Print Receipt</span>
+              </button>
+
+              <button
+                type="button"
+                disabled={isSendingWaReceipt}
+                onClick={async () => {
+                  if (!receiptModalCert.mobile) {
+                    showToast('error', 'Mobile Missing', 'Applicant WhatsApp mobile number is missing.');
+                    return;
+                  }
+                  setIsSendingWaReceipt(true);
+                  showToast('info', 'Sending WhatsApp Receipt', `Sending text receipt to +91 ${receiptModalCert.mobile}...`);
+                  
+                  const receiptText = `📄 *आवेदन पावती रसीद (ACKNOWLEDGEMENT RECEIPT)* 📄
+------------------------------------
+रेफरेंस नंबर: *${receiptModalCert.refNo}*
+आवेदक का नाम: *${receiptModalCert.applicantName}*
+प्रमाण पत्र का प्रकार: *${receiptModalCert.certType}*
+आवेदन तिथि: *${formatDateDDMMYYYY(receiptModalCert.entryDate)}*
+वर्तमान स्थिति: *${receiptModalCert.currentStatus || 'INITIATED'}*
+भुगतान की गई राशि: *₹${receiptModalCert.paidAmount || 0}*
+बकाया राशि (Dues): *₹${receiptModalCert.duesAmount || 0}*
+
+धन्यवाद! प्रज्ञा केंद्र एवं साइबर सेंटर।`;
+
+                  try {
+                    let res;
+                    try {
+                      res = await axios.post('http://localhost:5000/api/whatsapp/test-message', {
+                        mobile: receiptModalCert.mobile,
+                        message: receiptText
+                      });
+                    } catch (lErr) {
+                      res = await axios.post('/api/whatsapp/test-message', {
+                        mobile: receiptModalCert.mobile,
+                        message: receiptText
+                      });
+                    }
+
+                    if (res && res.data && res.data.success) {
+                      showToast('success', 'WhatsApp Receipt Sent', `Receipt text successfully sent to +91 ${receiptModalCert.mobile}!`);
+                    } else {
+                      showToast('error', 'Send Failed', res?.data?.error || res?.data?.reason || 'Failed to send WhatsApp receipt.');
+                    }
+                  } catch (err) {
+                    showToast('error', 'Send Error', err.response?.data?.error || err.message || 'WhatsApp engine offline.');
+                  } finally {
+                    setIsSendingWaReceipt(false);
+                  }
+                }}
+                className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-xs shadow-md transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                <Send className={`w-4 h-4 ${isSendingWaReceipt ? 'animate-bounce' : ''}`} />
+                <span>{isSendingWaReceipt ? 'Sending Receipt...' : 'Send to WhatsApp'}</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
