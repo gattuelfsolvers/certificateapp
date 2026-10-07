@@ -468,13 +468,13 @@ export default function ClientDashboard({ clientData, onLogout }) {
       try {
         let res;
         try {
-          res = await axios.post(`${API_BASE}/certificates/${cert.id}/sync-jharsewa`);
-        } catch (e1) {
-          if (API_BASE !== 'http://localhost:5000/api') {
+          if (engineStatus === 'ONLINE') {
             res = await axios.post(`http://localhost:5000/api/certificates/${cert.id}/sync-jharsewa`);
           } else {
-            throw e1;
+            res = await axios.post(`${API_BASE}/certificates/${cert.id}/sync-jharsewa`);
           }
+        } catch (e1) {
+          res = await axios.post(`${API_BASE}/certificates/${cert.id}/sync-jharsewa`);
         }
         if (res && res.data && res.data.success) count++;
       } catch (err) {
