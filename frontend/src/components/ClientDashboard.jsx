@@ -9,6 +9,7 @@ import { CERTIFICATE_CATEGORIES as DEFAULT_CATEGORIES } from '../constants/certi
 import { fetchCertificatesFromFirebase, saveCertificateToFirebase, deleteCertificateFromFirebase } from '../firebase';
 import CodeMasterView from './CodeMasterView';
 import ProfileSettingsView from './ProfileSettingsView';
+import LocalEngineChecker from './LocalEngineChecker';
 import axios from 'axios';
 
 const getActiveCategories = () => {
@@ -179,9 +180,30 @@ export default function ClientDashboard({ clientData, onLogout }) {
     paidAmount: 100
   });
 
+  const [engineStatus, setEngineStatus] = useState('CHECKING'); // 'ONLINE' | 'OFFLINE' | 'CHECKING'
+  const [isCheckingEngine, setIsCheckingEngine] = useState(false);
+
   useEffect(() => {
     loadCertificates();
+    checkLocalEngine();
   }, []);
+
+  const checkLocalEngine = async () => {
+    setIsCheckingEngine(true);
+    try {
+      // Ping local agent helper port 5000 /api/health
+      const res = await fetch('http://localhost:5000/api/health', { method: 'GET', mode: 'cors' });
+      if (res.ok) {
+        setEngineStatus('ONLINE');
+      } else {
+        setEngineStatus('OFFLINE');
+      }
+    } catch (err) {
+      setEngineStatus('OFFLINE');
+    } finally {
+      setIsCheckingEngine(false);
+    }
+  };
 
   useEffect(() => {
     setCategories(getActiveCategories());
@@ -715,6 +737,13 @@ export default function ClientDashboard({ clientData, onLogout }) {
       {/* Main Dashboard Content - FULL PAGE WIDTH */}
       <main className="w-full px-6 md:px-10 py-8 flex-1 space-y-8">
         
+        {/* Local Engine Requirement Health Gatekeeper Banner */}
+        <LocalEngineChecker 
+          engineStatus={engineStatus} 
+          onRetry={checkLocalEngine} 
+          isChecking={isCheckingEngine} 
+        />
+
         {/* KPI Metric Summary Cards - FULL PAGE WIDTH */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3.5 w-full">
           <div className="bg-blue-50/70 border border-blue-200/80 rounded-2xl p-4 shadow-sm flex items-center justify-between">

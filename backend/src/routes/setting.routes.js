@@ -50,6 +50,16 @@ router.post('/jharsewa-credentials', async (req, res) => {
   }
 });
 
+// Download Local Engine Installer Zip
+router.get('/download-local-engine', (req, res) => {
+  const zipPath = path.join(__dirname, '../../public/App-Local-Engine-Setup.zip');
+  if (require('fs').existsSync(zipPath)) {
+    res.download(zipPath, 'App-Local-Engine-Setup.zip');
+  } else {
+    res.status(404).json({ success: false, error: 'Local Engine Setup zip package not found.' });
+  }
+});
+
 // Get Shop & Center Profile Settings
 router.get('/shop-profile', async (req, res) => {
   try {
