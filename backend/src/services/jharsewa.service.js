@@ -15,6 +15,28 @@ let lastSessionTime = 0;
 const SESSION_TIMEOUT_MS = 25 * 60 * 1000; // 25 Minutes timeout reset window
 
 /**
+ * Automatically locate Chrome or Edge executable on Windows/Linux
+ */
+function getSystemBrowserExecutablePath() {
+  const possiblePaths = [
+    'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+    'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+    process.env.LOCALAPPDATA ? path.join(process.env.LOCALAPPDATA, 'Google\\Chrome\\Application\\chrome.exe') : null,
+    'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
+    'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
+    process.env.PROGRAMFILES ? path.join(process.env.PROGRAMFILES, 'Microsoft\\Edge\\Application\\msedge.exe') : null
+  ].filter(Boolean);
+
+  for (const p of possiblePaths) {
+    if (fs.existsSync(p)) {
+      console.log(`🌐 [Puppeteer] Found System Installed Browser at: ${p}`);
+      return p;
+    }
+  }
+  return undefined; // Puppeteer fallback to bundled chromium
+}
+
+/**
  * Preprocess green captcha image for high accuracy OCR
  */
 async function cleanGreenCaptchaImage(buffer) {
@@ -80,10 +102,15 @@ async function getOrCreateCSCSession(forceFresh = false) {
   }
 
   console.log('🔑 Launching new Jharsewa CSC Portal login session...');
-  globalBrowser = await puppeteer.launch({
+  const browserExecutable = getSystemBrowserExecutablePath();
+  const launchOptions = {
     headless: "new",
     args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--window-size=1280,800']
-  });
+  };
+  if (browserExecutable) {
+    launchOptions.executablePath = browserExecutable;
+  }
+  globalBrowser = await puppeteer.launch(launchOptions);
 
   globalPage = await globalBrowser.newPage();
   await globalPage.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
