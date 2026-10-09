@@ -237,6 +237,9 @@ export default function ClientDashboard({ clientData, onLogout }) {
     errorCount: 0
   });
 
+  // Set of Certificate IDs that received a newly updated status exclusively via Sync All
+  const [newlyUpdatedCertIds, setNewlyUpdatedCertIds] = useState(new Set());
+
   useEffect(() => {
     if (engineStatus === 'OFFLINE' && !sessionStorage.getItem('SEEN_ENGINE_DOWNLOAD_PROMPT')) {
       setShowEngineModal(true);
@@ -309,7 +312,13 @@ export default function ClientDashboard({ clientData, onLogout }) {
             synced++;
             if (newStatus?.includes('DELIVERED')) delivered++;
             else if (newStatus?.includes('REJECTED')) rejected++;
-            else if (newStatus === item.oldStatus) unchanged++;
+            
+            // Check if status newly changed from oldStatus
+            if (newStatus && newStatus !== item.oldStatus) {
+              setNewlyUpdatedCertIds(prevSet => new Set([...prevSet, String(item.id)]));
+            } else {
+              unchanged++;
+            }
           } else if (itemStatus === 'ERROR') {
             errs++;
           }
@@ -1384,9 +1393,16 @@ export default function ClientDashboard({ clientData, onLogout }) {
                           {formatDateDDMMYYYY(cert.entryDate)}
                         </td>
                         <td className="px-6 py-4 text-center">
-                          <span className={`px-3 py-1 rounded-full text-[10px] uppercase font-black inline-block tracking-tight ${getStatusBadgeStyle(cert.currentStatus)}`}>
-                            {cert.currentStatus || 'INITIATED'}
-                          </span>
+                          <div className="flex items-center justify-center gap-1.5 flex-wrap">
+                            <span className={`px-3 py-1 rounded-full text-[10px] uppercase font-black inline-block tracking-tight ${getStatusBadgeStyle(cert.currentStatus)}`}>
+                              {cert.currentStatus || 'INITIATED'}
+                            </span>
+                            {newlyUpdatedCertIds.has(String(cert.id)) && (
+                              <span className="px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider bg-gradient-to-r from-rose-500 to-amber-500 text-white shadow-xs animate-bounce" title="Status newly updated in last Sync All!">
+                                ✨ NEW
+                              </span>
+                            )}
+                          </div>
                           {(cert.syncStatus === 'QUEUED' || cert.syncStatus === 'PROCESSING' || syncingId === cert.id) && (
                             <span className="px-2 py-0.5 rounded-full text-[9px] uppercase font-black tracking-tight bg-amber-100 text-amber-900 border border-amber-300 animate-pulse block mt-1 shadow-2xs">
                               ⏳ Checking Live...
@@ -2590,9 +2606,16 @@ export default function ClientDashboard({ clientData, onLogout }) {
 
                       <span className="text-slate-500 font-medium">नया:</span>
                       {item.newStatus ? (
-                        <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase ${getStatusBadgeStyle(item.newStatus)}`}>
-                          {item.newStatus}
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase ${getStatusBadgeStyle(item.newStatus)}`}>
+                            {item.newStatus}
+                          </span>
+                          {item.newStatus !== item.oldStatus && (
+                            <span className="px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider bg-gradient-to-r from-rose-500 to-amber-500 text-white shadow-xs animate-bounce" title="New Update!">
+                              ✨ NEW
+                            </span>
+                          )}
+                        </div>
                       ) : (
                         <span className="text-slate-400 font-bold text-[10px]">जांच हो रही है...</span>
                       )}
