@@ -6,7 +6,14 @@ import {
   Key, User, Lock, ShieldCheck, Building2, Store, Phone, MapPin, BadgeCheck, LogOut, Eye, PanelRight, PanelRightClose, Code, LayoutDashboard, Sliders, MoreVertical, Power
 } from 'lucide-react';
 import { CERTIFICATE_CATEGORIES as DEFAULT_CATEGORIES } from '../constants/certificateTypes';
-import { fetchCertificatesFromFirebase, saveCertificateToFirebase, deleteCertificateFromFirebase } from '../firebase';
+import { 
+  fetchCertificatesFromFirebase, 
+  subscribeCertificatesFromFirebase, 
+  requestCertificateSyncOnFirebase, 
+  requestBulkSyncOnFirebase, 
+  saveCertificateToFirebase, 
+  deleteCertificateFromFirebase 
+} from '../firebase';
 import CodeMasterView from './CodeMasterView';
 import ProfileSettingsView from './ProfileSettingsView';
 import LocalEngineChecker from './LocalEngineChecker';
@@ -201,8 +208,16 @@ export default function ClientDashboard({ clientData, onLogout }) {
   const [isCheckingEngine, setIsCheckingEngine] = useState(false);
 
   useEffect(() => {
-    loadCertificates();
+    setLoading(true);
+    const unsubscribe = subscribeCertificatesFromFirebase((data) => {
+      setCertificates(data || []);
+      setLoading(false);
+    });
     checkLocalEngine();
+
+    return () => {
+      if (typeof unsubscribe === 'function') unsubscribe();
+    };
   }, []);
 
   const checkLocalEngine = async () => {
@@ -232,14 +247,11 @@ export default function ClientDashboard({ clientData, onLogout }) {
   };
 
   const loadCertificates = async () => {
-    setLoading(true);
     try {
       const data = await fetchCertificatesFromFirebase();
       setCertificates(data || []);
     } catch (err) {
       console.error('Error loading certificates:', err);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -565,80 +577,40 @@ export default function ClientDashboard({ clientData, onLogout }) {
     }
 
     setIsSyncingAll(true);
-    triggerCsvDownload(toSync, true);
-    showToast('info', 'Sync CSV Downloaded', `Triggered CSV Sync for ${toSync.length} certificate(s)...`);
+    showToast('info', 'Bulk Sync Queued', `Queued ${toSync.length} certificate(s) for live Jharsewa status check via Cloud Queue!`);
 
-    let count = 0;
-    for (const cert of toSync) {
-      try {
-        let res;
-        try {
-          if (engineStatus === 'ONLINE') {
-            res = await axios.post(`http://localhost:5000/api/certificates/${cert.id}/sync-jharsewa`, cert);
-          } else {
-            res = await axios.post(`${API_BASE}/certificates/${cert.id}/sync-jharsewa`, cert);
-          }
-        } catch (e1) {
-          res = await axios.post(`${API_BASE}/certificates/${cert.id}/sync-jharsewa`, cert);
-        }
-        if (res && res.data && res.data.success) {
-          count++;
-          const newStatus = res.data.statusResult?.status || res.data.newStatus;
-          if (newStatus && newStatus !== cert.currentStatus) {
-            const updatedCert = { ...cert, currentStatus: newStatus, lastSyncedAt: new Date().toISOString() };
-            try { await saveCertificateToFirebase(updatedCert); } catch (fErr) {}
-            sendStatusUpdateWhatsApp(updatedCert, newStatus);
-          }
-        }
-      } catch (err) {
-        console.error('Sync failed for cert:', cert.id, err);
+    try {
+      await requestBulkSyncOnFirebase(toSync.map(c => c.id));
+      
+      // Also ping local engine if available for fast execution
+      if (engineStatus === 'ONLINE') {
+        axios.post('http://localhost:5000/api/certificates/sync-all', { certificates: toSync }).catch(() => null);
       }
+    } catch (err) {
+      console.error('Bulk sync queue error:', err);
+      showToast('error', 'Sync Queue Error', err.message);
+    } finally {
+      setIsSyncingAll(false);
     }
-
-    setIsSyncingAll(false);
-    loadCertificates();
-    showToast('success', 'Sync Completed', `Synced status for ${count} of ${toSync.length} certificate records.`);
   };
 
   const handleSyncSingle = async (cert) => {
     try {
       setSyncingId(cert.id);
-      triggerCsvDownload([cert], false);
-      let res;
-      try {
-        if (engineStatus === 'ONLINE') {
-          res = await axios.post(`http://localhost:5000/api/certificates/${cert.id}/sync-jharsewa`, cert);
-        } else {
-          res = await axios.post(`${API_BASE}/certificates/${cert.id}/sync-jharsewa`, cert);
-        }
-      } catch (e1) {
-        res = await axios.post(`${API_BASE}/certificates/${cert.id}/sync-jharsewa`, cert);
-      }
+      showToast('info', 'Sync Queued', `Checking Jharsewa for ${cert.refNo}... Result will appear live on screen.`);
+      
+      // 1. Direct Cloud Firestore Queue Request (Works from ANY online device/mobile)
+      await requestCertificateSyncOnFirebase(cert.id);
 
-      if (res && res.data && res.data.success) {
-        const newStatus = res.data.statusResult?.status || res.data.newStatus;
-        const updatedCert = {
-          ...cert,
-          currentStatus: newStatus,
-          lastSyncedAt: new Date().toISOString()
-        };
-        try {
-          await saveCertificateToFirebase(updatedCert);
-        } catch (fErr) {}
-        
-        // Auto WhatsApp notification on status sync update
-        sendStatusUpdateWhatsApp(updatedCert, newStatus);
-
-        showToast('success', 'Status Synced', `Live status updated: ${newStatus} & WhatsApp alert sent!`);
-        loadCertificates();
-      } else {
-        showToast('error', 'Sync Failed', res?.data?.error || 'Unable to sync status from Jharsewa portal.');
+      // 2. Direct local engine fast-path ping if online
+      if (engineStatus === 'ONLINE') {
+        axios.post(`http://localhost:5000/api/certificates/${cert.id}/sync-jharsewa`, cert).catch(() => null);
       }
     } catch (err) {
       console.error('Sync error:', err);
-      showToast('error', 'Sync Exception', err.response?.data?.error || err.message || 'Connection error.');
+      showToast('error', 'Sync Failed', err.message);
     } finally {
-      setSyncingId(null);
+      setTimeout(() => setSyncingId(null), 3000);
     }
   };
 
@@ -1198,6 +1170,11 @@ export default function ClientDashboard({ clientData, onLogout }) {
                           <span className={`px-3 py-1 rounded-full text-[10px] uppercase font-black inline-block tracking-tight ${getStatusBadgeStyle(cert.currentStatus)}`}>
                             {cert.currentStatus || 'INITIATED'}
                           </span>
+                          {(cert.syncStatus === 'QUEUED' || cert.syncStatus === 'PROCESSING' || syncingId === cert.id) && (
+                            <span className="px-2 py-0.5 rounded-full text-[9px] uppercase font-black tracking-tight bg-amber-100 text-amber-900 border border-amber-300 animate-pulse block mt-1 shadow-2xs">
+                              ⏳ Checking Live...
+                            </span>
+                          )}
                         </td>
                         <td className="px-6 py-4 text-center">
                           <div className="font-bold text-slate-900">Paid: ₹{cert.paidAmount} / ₹{cert.totalFee}</div>
@@ -1212,11 +1189,11 @@ export default function ClientDashboard({ clientData, onLogout }) {
                             {/* 1. Sync Status Bot */}
                             <button
                               onClick={() => handleSyncSingle(cert)}
-                              disabled={syncingId === cert.id}
+                              disabled={syncingId === cert.id || cert.syncStatus === 'QUEUED' || cert.syncStatus === 'PROCESSING'}
                               title="Sync Jharsewa Status"
-                              className="p-2 rounded-xl bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 transition shadow-xs"
+                              className="p-2 rounded-xl bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 transition shadow-xs disabled:opacity-50"
                             >
-                              <RefreshCw className={`w-4 h-4 ${syncingId === cert.id ? 'animate-spin' : ''}`} />
+                              <RefreshCw className={`w-4 h-4 ${(syncingId === cert.id || cert.syncStatus === 'QUEUED' || cert.syncStatus === 'PROCESSING') ? 'animate-spin text-blue-600' : ''}`} />
                             </button>
 
                             {/* 2. View Entry */}

@@ -151,6 +151,54 @@ export async function fetchCertificatesFromFirebase() {
   }
 }
 
+// Real-Time Listener for Certificates Collection (0ms Live Updates)
+export function subscribeCertificatesFromFirebase(onUpdate) {
+  const certsRef = collection(db, "certificates");
+  return onSnapshot(certsRef, (snapshot) => {
+    const certs = [];
+    snapshot.forEach(docSnap => {
+      certs.push({ id: docSnap.id, ...docSnap.data() });
+    });
+    onUpdate(certs);
+  }, (error) => {
+    console.error("Error in certificates snapshot listener:", error);
+  });
+}
+
+// Request Live Jharsewa Sync for a single certificate via Firebase Queue
+export async function requestCertificateSyncOnFirebase(certId) {
+  try {
+    const certRef = doc(db, "certificates", String(certId));
+    await setDoc(certRef, {
+      syncRequested: true,
+      syncStatus: 'QUEUED',
+      syncRequestedAt: new Date().toISOString()
+    }, { merge: true });
+    return true;
+  } catch (error) {
+    console.error("Error requesting certificate sync on Firebase:", error);
+    return false;
+  }
+}
+
+// Request Live Jharsewa Sync for multiple certificates via Firebase Queue
+export async function requestBulkSyncOnFirebase(certIds) {
+  try {
+    for (const certId of certIds) {
+      const certRef = doc(db, "certificates", String(certId));
+      await setDoc(certRef, {
+        syncRequested: true,
+        syncStatus: 'QUEUED',
+        syncRequestedAt: new Date().toISOString()
+      }, { merge: true });
+    }
+    return true;
+  } catch (error) {
+    console.error("Error requesting bulk certificate sync on Firebase:", error);
+    return false;
+  }
+}
+
 // Save or Update Certificate in Firebase Cloud
 export async function saveCertificateToFirebase(certData) {
   try {

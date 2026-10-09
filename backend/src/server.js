@@ -63,7 +63,15 @@ app.listen(PORT, async () => {
   console.log('Initializing WhatsApp Engine...');
   initWhatsApp();
 
-  // Initialize Automatic CSV Folder Watcher Engine
+  // Initialize Firebase Realtime Queue Listener (100% Cloud-to-Local Bridge)
+  try {
+    const { startFirebaseQueueListener } = require('./services/firebaseQueue.service');
+    startFirebaseQueueListener();
+  } catch (qErr) {
+    console.error('Firebase Queue listener error:', qErr);
+  }
+
+  // Initialize Automatic CSV Folder Watcher Engine (Legacy fallback)
   try {
     const { startCsvFolderWatcher } = require('./watchers/csvWatcher');
     startCsvFolderWatcher();
