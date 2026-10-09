@@ -289,6 +289,7 @@ export default function UniversalLogin({ onLoginSuccess }) {
       setTimeout(() => {
         localStorage.setItem('AUTH_ROLE', 'ADMIN');
         localStorage.setItem('IS_ADMIN_LOGGED_IN', 'true');
+        localStorage.setItem('LOGIN_TIMESTAMP', Date.now().toString());
         onLoginSuccess('ADMIN', { name: 'Master Admin' });
         setLoading(false);
       }, 500);
@@ -362,6 +363,7 @@ export default function UniversalLogin({ onLoginSuccess }) {
 
         localStorage.setItem('AUTH_ROLE', 'CLIENT');
         localStorage.setItem('ACTIVE_CLIENT_DATA', JSON.stringify(matchedClient));
+        localStorage.setItem('LOGIN_TIMESTAMP', Date.now().toString());
         onLoginSuccess('CLIENT', matchedClient);
       } else {
         setError('Mobile Number / User ID not registered! Please check or Request Access.');
