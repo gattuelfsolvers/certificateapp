@@ -209,7 +209,7 @@ export default function ClientDashboard({ clientData, onLogout }) {
   const [isCheckingEngine, setIsCheckingEngine] = useState(false);
   const [showEngineModal, setShowEngineModal] = useState(false);
 
-  // Center Popup Modal State for Live Jharsewa Status Result
+  // Center Popup Modal State for Live Jharsewa Status Result (Single)
   const [syncStatusModal, setSyncStatusModal] = useState({
     isOpen: false,
     certId: null,
@@ -222,6 +222,19 @@ export default function ClientDashboard({ clientData, onLogout }) {
     newStatus: null,
     step: 'CHECKING', // 'CHECKING' | 'SUCCESS' | 'ERROR'
     errorReason: null
+  });
+
+  // Center Popup Modal State for Bulk Sync All
+  const [bulkSyncModal, setBulkSyncModal] = useState({
+    isOpen: false,
+    step: 'CHECKING', // 'CHECKING' | 'SUCCESS' | 'ERROR'
+    totalCount: 0,
+    items: [], // [{ id, refNo, applicantName, certType, mobile, oldStatus, newStatus, status: 'PENDING' | 'PROCESSING' | 'SUCCESS' | 'ERROR', errorReason }]
+    syncedCount: 0,
+    deliveredCount: 0,
+    rejectedCount: 0,
+    unchangedCount: 0,
+    errorCount: 0
   });
 
   useEffect(() => {
@@ -259,6 +272,70 @@ export default function ClientDashboard({ clientData, onLogout }) {
           }
         }
         return prev;
+      });
+
+      // Reactively update Bulk Sync All popup if open
+      setBulkSyncModal((prev) => {
+        if (!prev.isOpen || prev.items.length === 0) return prev;
+        
+        let synced = 0;
+        let delivered = 0;
+        let rejected = 0;
+        let unchanged = 0;
+        let errs = 0;
+
+        const updatedItems = prev.items.map((item) => {
+          const liveCert = data?.find((c) => String(c.id) === String(item.id));
+          if (!liveCert) return item;
+
+          let itemStatus = item.status;
+          let newStatus = item.newStatus || liveCert.currentStatus;
+          let errorReason = item.errorReason;
+
+          if (liveCert.syncStatus === 'PROCESSING') {
+            itemStatus = 'PROCESSING';
+          } else if (liveCert.syncStatus === 'COMPLETED' || (liveCert.currentStatus && liveCert.currentStatus !== item.oldStatus && liveCert.syncStatus !== 'QUEUED')) {
+            itemStatus = 'SUCCESS';
+            newStatus = liveCert.currentStatus;
+          } else if (liveCert.syncStatus === 'ERROR') {
+            itemStatus = 'ERROR';
+            errorReason = liveCert.syncError || 'Portal sync failed';
+          } else if (liveCert.syncStatus === undefined && liveCert.currentStatus) {
+            // Already synced
+            itemStatus = 'SUCCESS';
+          }
+
+          if (itemStatus === 'SUCCESS') {
+            synced++;
+            if (newStatus?.includes('DELIVERED')) delivered++;
+            else if (newStatus?.includes('REJECTED')) rejected++;
+            else if (newStatus === item.oldStatus) unchanged++;
+          } else if (itemStatus === 'ERROR') {
+            errs++;
+          }
+
+          return {
+            ...item,
+            cert: liveCert,
+            newStatus,
+            status: itemStatus,
+            errorReason
+          };
+        });
+
+        // If all items reached terminal state (SUCCESS or ERROR), update step to SUCCESS/SUMMARY
+        const allDone = updatedItems.every(i => i.status === 'SUCCESS' || i.status === 'ERROR');
+
+        return {
+          ...prev,
+          items: updatedItems,
+          syncedCount: synced,
+          deliveredCount: delivered,
+          rejectedCount: rejected,
+          unchangedCount: unchanged,
+          errorCount: errs,
+          step: allDone ? 'SUCCESS' : prev.step
+        };
       });
     });
     checkLocalEngine();
@@ -624,8 +701,32 @@ export default function ClientDashboard({ clientData, onLogout }) {
       return;
     }
 
+    // Open Center Popup Modal for Bulk Sync
+    setBulkSyncModal({
+      isOpen: true,
+      step: 'CHECKING',
+      totalCount: toSync.length,
+      items: toSync.map(c => ({
+        id: c.id,
+        refNo: c.refNo,
+        applicantName: c.applicantName,
+        certType: c.certType,
+        mobile: c.mobile,
+        oldStatus: c.currentStatus || 'INITIATED',
+        newStatus: null,
+        status: 'PENDING',
+        errorReason: null,
+        cert: c
+      })),
+      syncedCount: 0,
+      deliveredCount: 0,
+      rejectedCount: 0,
+      unchangedCount: 0,
+      errorCount: 0
+    });
+
     setIsSyncingAll(true);
-    showToast('info', 'Bulk Sync Queued', `Queued ${toSync.length} certificate(s) for live Jharsewa status check via Cloud Queue!`);
+    showToast('info', 'Bulk Sync Queued', `Checking live status for ${toSync.length} certificate(s)...`);
 
     try {
       await requestBulkSyncOnFirebase(toSync.map(c => c.id));
@@ -637,6 +738,11 @@ export default function ClientDashboard({ clientData, onLogout }) {
     } catch (err) {
       console.error('Bulk sync queue error:', err);
       showToast('error', 'Sync Queue Error', err.message);
+      setBulkSyncModal(prev => ({
+        ...prev,
+        step: 'ERROR',
+        errorReason: err.message
+      }));
     } finally {
       setIsSyncingAll(false);
     }
@@ -2339,6 +2445,207 @@ export default function ClientDashboard({ clientData, onLogout }) {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* BULK SYNC ALL STATUS RESULT POPUP MODAL (CENTER POPUP) */}
+      {bulkSyncModal.isOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 md:p-8 max-w-2xl w-full shadow-2xl space-y-6 animate-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
+            
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 border border-indigo-200 flex items-center justify-center font-black">
+                  <Zap className="w-5 h-5 text-indigo-600" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-slate-900">
+                    Bulk Jharsewa Status Verification (सभी का स्टेटस चेक)
+                  </h3>
+                  <p className="text-xs text-indigo-600 font-bold">
+                    कुल {bulkSyncModal.totalCount} प्रमाण पत्र लाइव चेक किए जा रहे हैं
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setBulkSyncModal(prev => ({ ...prev, isOpen: false }))}
+                className="p-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Progress / Status Counters Banner */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+              <div className="bg-blue-50 border border-blue-200 rounded-2xl p-3 text-center">
+                <div className="text-[10px] text-blue-600 font-bold uppercase">जांचे गए (Synced)</div>
+                <div className="text-xl font-black text-blue-900">
+                  {bulkSyncModal.syncedCount} / {bulkSyncModal.totalCount}
+                </div>
+              </div>
+
+              <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-3 text-center">
+                <div className="text-[10px] text-emerald-700 font-bold uppercase">बन चुके हैं (Delivered)</div>
+                <div className="text-xl font-black text-emerald-700">
+                  🎉 {bulkSyncModal.deliveredCount}
+                </div>
+              </div>
+
+              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3 text-center">
+                <div className="text-[10px] text-amber-700 font-bold uppercase">अपरिवर्तित (No Change)</div>
+                <div className="text-xl font-black text-amber-800">
+                  {bulkSyncModal.unchangedCount}
+                </div>
+              </div>
+
+              <div className="bg-rose-50 border border-rose-200 rounded-2xl p-3 text-center">
+                <div className="text-[10px] text-rose-600 font-bold uppercase">अस्वीकृत / एरर</div>
+                <div className="text-xl font-black text-rose-700">
+                  {bulkSyncModal.rejectedCount + bulkSyncModal.errorCount}
+                </div>
+              </div>
+            </div>
+
+            {/* Special Congratulations Card if any delivered */}
+            {bulkSyncModal.deliveredCount > 0 && (
+              <div className="p-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white flex items-center gap-3 shadow-md">
+                <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center shrink-0">
+                  <PartyPopper className="w-6 h-6 text-yellow-300 animate-bounce" />
+                </div>
+                <div className="text-xs">
+                  <div className="font-extrabold text-sm">🎉 बधाई हो! कुल {bulkSyncModal.deliveredCount} प्रमाण पत्र बन चुके हैं!</div>
+                  <div className="text-emerald-100 font-medium">इनका नया स्टेटस जारी कर दिया गया है। आप नीचे से सीधे व्हाट्सएप पर अलर्ट भेज सकते हैं।</div>
+                </div>
+              </div>
+            )}
+
+            {/* Loading / Status indication */}
+            {bulkSyncModal.step === 'CHECKING' && (
+              <div className="flex items-center justify-center gap-2 py-2 text-xs font-bold text-indigo-700 bg-indigo-50/70 border border-indigo-200/60 rounded-xl">
+                <RefreshCw className="w-4 h-4 animate-spin text-indigo-600" />
+                <span>झारसेवा पोर्टल से एक-एक करके ऑटोमेटिक स्टेटस फेच हो रहा है, कृपया प्रतीक्षा करें...</span>
+              </div>
+            )}
+
+            {/* Scrollable Items List */}
+            <div className="flex-1 overflow-y-auto space-y-2.5 max-h-[42vh] pr-1">
+              {bulkSyncModal.items.map((item, idx) => (
+                <div 
+                  key={item.id || idx}
+                  className={`p-3.5 rounded-2xl border transition text-xs ${
+                    item.newStatus?.includes('DELIVERED')
+                      ? 'bg-emerald-50/60 border-emerald-300'
+                      : item.newStatus?.includes('REJECTED')
+                      ? 'bg-rose-50/60 border-rose-300'
+                      : item.status === 'ERROR'
+                      ? 'bg-red-50/50 border-red-200'
+                      : item.status === 'PROCESSING'
+                      ? 'bg-indigo-50/50 border-indigo-300 ring-1 ring-indigo-400'
+                      : 'bg-slate-50 border-slate-200'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2 mb-1.5">
+                    <div className="flex items-center gap-2">
+                      <span className="w-5 h-5 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-[10px] font-black">
+                        {idx + 1}
+                      </span>
+                      <span className="font-extrabold text-slate-900">{item.applicantName}</span>
+                      <span className="text-blue-700 font-mono font-bold text-[11px]">({item.refNo})</span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      {item.status === 'PROCESSING' && (
+                        <span className="flex items-center gap-1 text-[10px] text-indigo-600 font-bold bg-indigo-100 px-2 py-0.5 rounded-full animate-pulse">
+                          <RefreshCw className="w-3 h-3 animate-spin" />
+                          <span>जांच जारी...</span>
+                        </span>
+                      )}
+                      {item.status === 'PENDING' && (
+                        <span className="text-[10px] text-slate-400 font-bold bg-slate-100 px-2 py-0.5 rounded-full">
+                          कतार में (Queued)
+                        </span>
+                      )}
+                      {item.status === 'SUCCESS' && (
+                        <span className="flex items-center gap-1 text-[10px] text-emerald-700 font-bold bg-emerald-100 px-2 py-0.5 rounded-full">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                          <span>जांच पूर्ण</span>
+                        </span>
+                      )}
+                      {item.status === 'ERROR' && (
+                        <span className="text-[10px] text-rose-700 font-bold bg-rose-100 px-2 py-0.5 rounded-full">
+                          त्रुटि (Error)
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Status Comparison Line */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-200/60">
+                    <div className="flex items-center gap-2 text-[11px]">
+                      <span className="text-slate-500 font-medium">पुराना:</span>
+                      <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase ${getStatusBadgeStyle(item.oldStatus)}`}>
+                        {item.oldStatus}
+                      </span>
+                      
+                      <ArrowRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+
+                      <span className="text-slate-500 font-medium">नया:</span>
+                      {item.newStatus ? (
+                        <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase ${getStatusBadgeStyle(item.newStatus)}`}>
+                          {item.newStatus}
+                        </span>
+                      ) : (
+                        <span className="text-slate-400 font-bold text-[10px]">जांच हो रही है...</span>
+                      )}
+                    </div>
+
+                    {/* Quick WhatsApp Button if delivered or updated */}
+                    {item.newStatus && item.mobile && (
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          showToast('info', 'Sending WhatsApp Alert', `Sending status update to +91 ${item.mobile}...`);
+                          const sent = await sendStatusUpdateWhatsApp(item.cert || item, item.newStatus);
+                          if (sent) {
+                            showToast('success', 'WhatsApp Sent', `Status alert delivered to +91 ${item.mobile}!`);
+                          } else {
+                            showToast('error', 'Send Failed', 'Failed to deliver WhatsApp message.');
+                          }
+                        }}
+                        className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[10px] flex items-center gap-1 transition shadow-xs"
+                      >
+                        <Send className="w-3 h-3" />
+                        <span>Send WhatsApp</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Footer Actions */}
+            <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+              <div className="text-xs text-slate-500 font-medium">
+                {bulkSyncModal.step === 'SUCCESS' ? (
+                  <span className="text-emerald-700 font-bold">✅ सभी प्रमाण पत्रों की जांच पूरी हो चुकी है।</span>
+                ) : (
+                  <span>⏳ बैकग्राउंड में प्रोसेस चल रहा है...</span>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setBulkSyncModal(prev => ({ ...prev, isOpen: false }))}
+                  className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs shadow-md transition"
+                >
+                  ठीक है (Close)
+                </button>
+              </div>
+            </div>
+
           </div>
         </div>
       )}
