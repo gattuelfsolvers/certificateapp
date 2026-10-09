@@ -362,11 +362,14 @@ export default function ClientDashboard({ clientData, onLogout }) {
       const res = await fetch('http://localhost:5000/api/health', { method: 'GET', mode: 'cors' });
       if (res.ok) {
         setEngineStatus('ONLINE');
+        return true;
       } else {
         setEngineStatus('OFFLINE');
+        return false;
       }
     } catch (err) {
       setEngineStatus('OFFLINE');
+      return false;
     } finally {
       setIsCheckingEngine(false);
     }
@@ -705,6 +708,24 @@ export default function ClientDashboard({ clientData, onLogout }) {
   };
 
   const handleSyncAll = async () => {
+    // 1. Verify Engine Connection First
+    const isOnline = await checkLocalEngine();
+    if (!isOnline) {
+      setBulkSyncModal({
+        isOpen: true,
+        step: 'ENGINE_OFFLINE',
+        totalCount: 0,
+        items: [],
+        syncedCount: 0,
+        deliveredCount: 0,
+        rejectedCount: 0,
+        unchangedCount: 0,
+        errorCount: 0,
+        errorReason: 'Sync Engine Not Connected! Please ensure that Local Engine is downloaded, extracted in C: drive and running.'
+      });
+      return;
+    }
+
     const toSync = certificates.filter(c => !c.currentStatus || (!c.currentStatus.includes('DELIVERED') && !c.currentStatus.includes('REJECTED')));
     if (toSync.length === 0) {
       showToast('info', 'Nothing to Sync', 'All certificate records are already delivered or finalized.');
@@ -756,6 +777,25 @@ export default function ClientDashboard({ clientData, onLogout }) {
   };
 
   const handleSyncSingle = async (cert) => {
+    // 1. Verify Engine Connection First
+    const isOnline = await checkLocalEngine();
+    if (!isOnline) {
+      setSyncStatusModal({
+        isOpen: true,
+        certId: cert.id,
+        cert,
+        refNo: cert.refNo,
+        applicantName: cert.applicantName,
+        certType: cert.certType,
+        mobile: cert.mobile,
+        oldStatus: cert.currentStatus || 'INITIATED',
+        newStatus: null,
+        step: 'ENGINE_OFFLINE',
+        errorReason: 'Sync Engine Not Connected! Please ensure that Local Engine is downloaded, extracted in C: drive and running.'
+      });
+      return;
+    }
+
     try {
       setSyncingId(cert.id);
       
@@ -2477,6 +2517,73 @@ export default function ClientDashboard({ clientData, onLogout }) {
                 </div>
               </div>
             )}
+
+            {/* STEP 4: ENGINE OFFLINE ERROR STATE */}
+            {syncStatusModal.step === 'ENGINE_OFFLINE' && (
+              <div className="py-6 text-center space-y-4">
+                <div className="w-16 h-16 rounded-3xl bg-rose-100 text-rose-600 border border-rose-200 flex items-center justify-center mx-auto shadow-sm">
+                  <ShieldAlert className="w-9 h-9 text-rose-600" />
+                </div>
+                <div>
+                  <h4 className="text-base font-black text-slate-900">Sync Engine Not Connected!</h4>
+                  <p className="text-xs text-rose-600 font-bold mt-1 max-w-sm mx-auto">
+                    कृपया सुनिश्चित करें कि लोकल इंजन डाउनलोड है और सही जगह चालू है।
+                  </p>
+                </div>
+
+                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 text-xs text-slate-700 max-w-md mx-auto text-left space-y-2">
+                  <p className="font-extrabold text-slate-900 border-b border-slate-200 pb-1 flex items-center gap-1.5">
+                    📌 आवश्यक निर्देश (Required Setup):
+                  </p>
+                  <p className="text-[11px] leading-relaxed">
+                    1. नीचे दिए गए <strong>Download Engine</strong> बटन से ZIP फ़ाइल डाउनलोड करके <code className="bg-amber-100 text-amber-900 px-1 py-0.5 rounded font-mono font-bold">C:\</code> ड्राइव में Extract करें।
+                  </p>
+                  <p className="text-[11px] leading-relaxed">
+                    2. फ़ोल्डर के अंदर <code className="bg-indigo-100 text-indigo-900 px-1 py-0.5 rounded font-mono font-bold">Start_App.bat</code> पर डबल-क्लिक करें ताकि इंजन बैकग्राउंड में कनेक्ट हो जाए।
+                  </p>
+                  <p className="text-[11px] leading-relaxed">
+                    3. इंजन चालू होने के बाद नीचे <strong>Retry Again (दोबारा जांचें)</strong> बटन दबाएं।
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center justify-center gap-2.5 pt-2">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const isNowOnline = await checkLocalEngine();
+                      if (isNowOnline && syncStatusModal.cert) {
+                        handleSyncSingle(syncStatusModal.cert);
+                      } else {
+                        showToast('error', 'Engine Still Offline', 'Local Engine Port 5000 पर नहीं चल रहा है। कृपया Start_App.bat चलाएं।');
+                      }
+                    }}
+                    disabled={isCheckingEngine}
+                    className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs shadow-md transition flex items-center gap-1.5"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isCheckingEngine ? 'animate-spin' : ''}`} />
+                    <span>{isCheckingEngine ? 'Checking...' : 'Retry Again (दोबारा जांचें)'}</span>
+                  </button>
+
+                  <a
+                    href="https://drive.google.com/uc?export=download&id=1uCwW0U--DJ0il6TmgORoghC2NOsNThn6"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-rose-600 to-indigo-600 hover:from-rose-500 hover:to-indigo-500 text-white font-extrabold text-xs shadow-md transition flex items-center gap-1.5"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Download Engine</span>
+                  </a>
+
+                  <button
+                    type="button"
+                    onClick={() => setSyncStatusModal(prev => ({ ...prev, isOpen: false }))}
+                    className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs transition"
+                  >
+                    बंद करें (Close)
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -2509,6 +2616,73 @@ export default function ClientDashboard({ clientData, onLogout }) {
               </button>
             </div>
 
+            {/* IF ENGINE IS OFFLINE */}
+            {bulkSyncModal.step === 'ENGINE_OFFLINE' ? (
+              <div className="py-6 text-center space-y-4">
+                <div className="w-16 h-16 rounded-3xl bg-rose-100 text-rose-600 border border-rose-200 flex items-center justify-center mx-auto shadow-sm">
+                  <ShieldAlert className="w-9 h-9 text-rose-600" />
+                </div>
+                <div>
+                  <h4 className="text-base font-black text-slate-900">Sync Engine Not Connected!</h4>
+                  <p className="text-xs text-rose-600 font-bold mt-1 max-w-md mx-auto">
+                    बल्क सिंक (Bulk Sync) शुरू करने के लिए आपके कंप्यूटर में लोकल इंजन का चलना आवश्यक है।
+                  </p>
+                </div>
+
+                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 text-xs text-slate-700 max-w-md mx-auto text-left space-y-2">
+                  <p className="font-extrabold text-slate-900 border-b border-slate-200 pb-1 flex items-center gap-1.5">
+                    📌 आवश्यक निर्देश (Required Setup):
+                  </p>
+                  <p className="text-[11px] leading-relaxed">
+                    1. नीचे दिए गए <strong>Download Engine</strong> बटन से ZIP फ़ाइल डाउनलोड करके <code className="bg-amber-100 text-amber-900 px-1 py-0.5 rounded font-mono font-bold">C:\</code> ड्राइव में Extract करें।
+                  </p>
+                  <p className="text-[11px] leading-relaxed">
+                    2. फ़ोल्डर के अंदर <code className="bg-indigo-100 text-indigo-900 px-1 py-0.5 rounded font-mono font-bold">Start_App.bat</code> पर डबल-क्लिक करें ताकि इंजन बैकग्राउंड में कनेक्ट हो जाए।
+                  </p>
+                  <p className="text-[11px] leading-relaxed">
+                    3. इंजन चालू होने के बाद नीचे <strong>Retry Again (दोबारा जांचें)</strong> बटन दबाएं।
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center justify-center gap-2.5 pt-2">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const isNowOnline = await checkLocalEngine();
+                      if (isNowOnline) {
+                        handleSyncAll();
+                      } else {
+                        showToast('error', 'Engine Still Offline', 'Local Engine Port 5000 पर नहीं चल रहा है। कृपया Start_App.bat चलाएं।');
+                      }
+                    }}
+                    disabled={isCheckingEngine}
+                    className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs shadow-md transition flex items-center gap-1.5"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isCheckingEngine ? 'animate-spin' : ''}`} />
+                    <span>{isCheckingEngine ? 'Checking...' : 'Retry Again (दोबारा जांचें)'}</span>
+                  </button>
+
+                  <a
+                    href="https://drive.google.com/uc?export=download&id=1uCwW0U--DJ0il6TmgORoghC2NOsNThn6"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-rose-600 to-indigo-600 hover:from-rose-500 hover:to-indigo-500 text-white font-extrabold text-xs shadow-md transition flex items-center gap-1.5"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Download Engine</span>
+                  </a>
+
+                  <button
+                    type="button"
+                    onClick={() => setBulkSyncModal(prev => ({ ...prev, isOpen: false }))}
+                    className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs transition"
+                  >
+                    बंद करें (Close)
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
             {/* Progress / Status Counters Banner */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
               <div className="bg-blue-50 border border-blue-200 rounded-2xl p-3 text-center">
@@ -2684,6 +2858,8 @@ export default function ClientDashboard({ clientData, onLogout }) {
                 </button>
               </div>
             </div>
+          </>
+        )}
 
           </div>
         </div>
