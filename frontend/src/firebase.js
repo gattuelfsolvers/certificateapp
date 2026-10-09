@@ -172,6 +172,7 @@ export async function requestCertificateSyncOnFirebase(certId) {
     await setDoc(certRef, {
       syncRequested: true,
       syncStatus: 'QUEUED',
+      syncError: null,
       syncRequestedAt: new Date().toISOString()
     }, { merge: true });
     return true;
@@ -189,6 +190,7 @@ export async function requestBulkSyncOnFirebase(certIds) {
       await setDoc(certRef, {
         syncRequested: true,
         syncStatus: 'QUEUED',
+        syncError: null,
         syncRequestedAt: new Date().toISOString()
       }, { merge: true });
     }

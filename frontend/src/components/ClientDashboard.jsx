@@ -258,11 +258,12 @@ export default function ClientDashboard({ clientData, onLogout }) {
         if (!prev.isOpen || prev.step !== 'CHECKING' || !prev.certId) return prev;
         const updated = data?.find((c) => String(c.id) === String(prev.certId));
         if (updated) {
-          if (updated.syncStatus === 'COMPLETED' || (updated.currentStatus && updated.currentStatus !== prev.oldStatus && updated.syncStatus !== 'QUEUED' && updated.syncStatus !== 'PROCESSING')) {
+          const liveStatus = updated.currentStatus || updated.status;
+          if (updated.syncStatus === 'COMPLETED' || (!updated.syncRequested && updated.syncStatus !== 'QUEUED' && updated.syncStatus !== 'PROCESSING' && updated.syncStatus !== 'ERROR' && liveStatus)) {
             return {
               ...prev,
               step: 'SUCCESS',
-              newStatus: updated.currentStatus,
+              newStatus: liveStatus,
               cert: updated
             };
           } else if (updated.syncStatus === 'ERROR') {
@@ -292,14 +293,14 @@ export default function ClientDashboard({ clientData, onLogout }) {
           if (!liveCert) return item;
 
           let itemStatus = item.status;
-          let newStatus = item.newStatus || liveCert.currentStatus;
+          let newStatus = liveCert.currentStatus || liveCert.status || item.newStatus || item.oldStatus;
           let errorReason = item.errorReason;
 
           if (liveCert.syncStatus === 'PROCESSING') {
             itemStatus = 'PROCESSING';
-          } else if (liveCert.syncStatus === 'COMPLETED' || (liveCert.currentStatus && liveCert.currentStatus !== item.oldStatus && liveCert.syncStatus !== 'QUEUED')) {
+          } else if (liveCert.syncStatus === 'COMPLETED' || (!liveCert.syncRequested && liveCert.syncStatus !== 'QUEUED' && liveCert.syncStatus !== 'PROCESSING' && liveCert.syncStatus !== 'ERROR')) {
             itemStatus = 'SUCCESS';
-            newStatus = liveCert.currentStatus;
+            newStatus = liveCert.currentStatus || liveCert.status || newStatus;
           } else if (liveCert.syncStatus === 'ERROR') {
             itemStatus = 'ERROR';
             errorReason = liveCert.syncError || 'Portal sync failed';
@@ -814,46 +815,20 @@ export default function ClientDashboard({ clientData, onLogout }) {
         errorReason: null
       });
 
-      // 1. Direct Cloud Firestore Queue Request (Works from ANY online device/mobile)
+      // Direct Cloud Firestore Queue Request (Works from ANY online device/mobile & local daemon)
       await requestCertificateSyncOnFirebase(cert.id);
-
-      // 2. Direct local engine fast-path ping if online
-      if (engineStatus === 'ONLINE') {
-        const res = await axios.post(`http://localhost:5000/api/certificates/${cert.id}/sync-jharsewa`, cert);
-        if (res && res.data && res.data.success) {
-          const newStatus = res.data.statusResult?.status || res.data.newStatus;
-          if (newStatus) {
-            setSyncStatusModal(prev => (prev?.certId === cert.id ? {
-              ...prev,
-              step: 'SUCCESS',
-              newStatus,
-              cert: { ...cert, currentStatus: newStatus }
-            } : prev));
-          }
-        } else if (res && res.data && (res.data.error || res.data.statusResult?.error)) {
-          setSyncStatusModal(prev => (prev?.certId === cert.id ? {
-            ...prev,
-            step: 'ERROR',
-            errorReason: res.data.error || res.data.statusResult?.error || 'Portal query failed',
-            cert
-          } : prev));
-        }
-      }
     } catch (err) {
       console.error('Sync error:', err);
-      // Timeout fallback for modal if network dropped
-      setTimeout(() => {
-        setSyncStatusModal(prev => {
-          if (prev?.certId === cert.id && prev?.step === 'CHECKING') {
-            return {
-              ...prev,
-              step: 'ERROR',
-              errorReason: err.response?.data?.error || err.message || 'Portal connection timed out. Please verify local engine.'
-            };
-          }
-          return prev;
-        });
-      }, 35000);
+      setSyncStatusModal(prev => {
+        if (prev?.certId === cert.id && prev?.step === 'CHECKING') {
+          return {
+            ...prev,
+            step: 'ERROR',
+            errorReason: err.response?.data?.error || err.message || 'Portal connection timed out. Please verify local engine.'
+          };
+        }
+        return prev;
+      });
     } finally {
       setTimeout(() => setSyncingId(null), 3000);
     }
