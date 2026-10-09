@@ -521,7 +521,8 @@ router.post(['/sync-all', '/sync-all-jharsewa'], async (req, res) => {
 
     let updatedCount = 0;
     for (const item of syncResults) {
-      if (item.newStatus && item.newStatus !== item.oldStatus) {
+      const isStatusChanged = Boolean(item.newStatus && item.newStatus !== item.oldStatus);
+      if (isStatusChanged) {
         updatedCount++;
         const updated = await prisma.certificate.update({
           where: { id: item.certId },
@@ -544,29 +545,30 @@ router.post(['/sync-all', '/sync-all-jharsewa'], async (req, res) => {
         try {
           await sendStatusUpdateNotification(updated, item.oldStatus, item.newStatus);
         } catch (e) {}
-
-        // Live Real-Time Firebase Cloud Firestore Sync
-        try {
-          const firestoreUrl = `https://firestore.googleapis.com/v1/projects/certificate-master-db/databases/(default)/documents/certificates/${item.certId}?updateMask.fieldPaths=currentStatus&updateMask.fieldPaths=status&updateMask.fieldPaths=lastSyncedAt`;
-          await fetch(firestoreUrl, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              fields: {
-                currentStatus: { stringValue: item.newStatus },
-                status: { stringValue: item.newStatus },
-                lastSyncedAt: { stringValue: new Date().toISOString() }
-              }
-            })
-          });
-        } catch (fbErr) {
-          console.error('Firebase sync error during bulk status sync:', fbErr);
-        }
       } else {
         await prisma.certificate.update({
           where: { id: item.certId },
           data: { lastSyncedAt: new Date() }
-        });
+        }).catch(() => null);
+      }
+
+      // Live Real-Time Firebase Cloud Firestore Sync for every processed item
+      try {
+        const { doc, setDoc } = require('firebase/firestore');
+        const { db } = require('../config/firebase');
+        if (db) {
+          const certRef = doc(db, 'certificates', String(item.certId));
+          await setDoc(certRef, {
+            currentStatus: item.newStatus || item.oldStatus,
+            status: item.newStatus || item.oldStatus,
+            syncRequested: false,
+            syncStatus: item.synced ? 'COMPLETED' : 'ERROR',
+            syncError: item.error || null,
+            lastSyncedAt: new Date().toISOString()
+          }, { merge: true });
+        }
+      } catch (fbErr) {
+        console.error('Firebase sync error during bulk status sync:', fbErr.message);
       }
     }
 

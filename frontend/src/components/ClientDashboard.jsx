@@ -731,7 +731,53 @@ export default function ClientDashboard({ clientData, onLogout }) {
     try {
       if (engineStatus === 'ONLINE') {
         // Direct local engine fast-batch sync (Uses optimal 90-day window without racing Firebase Queue)
-        axios.post('http://localhost:5000/api/certificates/sync-all', { certificates: toSync }).catch(() => null);
+        const res = await axios.post('http://localhost:5000/api/certificates/sync-all', { certificates: toSync });
+        if (res && res.data && Array.isArray(res.data.results)) {
+          const syncResults = res.data.results;
+          setBulkSyncModal(prev => {
+            let synced = 0;
+            let delivered = 0;
+            let rejected = 0;
+            let unchanged = 0;
+            let errs = 0;
+
+            const updatedItems = prev.items.map(item => {
+              const r = syncResults.find(sr => String(sr.certId) === String(item.id) || (sr.refNo && sr.refNo === item.refNo));
+              if (!r) return item;
+
+              const newStatus = r.newStatus || item.oldStatus;
+              const isSuccess = Boolean(r.synced);
+              const status = isSuccess ? 'SUCCESS' : (r.error ? 'ERROR' : 'SUCCESS');
+
+              if (status === 'SUCCESS') {
+                synced++;
+                if (newStatus?.includes('DELIVERED')) delivered++;
+                else if (newStatus?.includes('REJECTED')) rejected++;
+                else if (newStatus === item.oldStatus) unchanged++;
+              } else {
+                errs++;
+              }
+
+              return {
+                ...item,
+                newStatus,
+                status,
+                errorReason: r.error || null
+              };
+            });
+
+            return {
+              ...prev,
+              items: updatedItems,
+              syncedCount: synced,
+              deliveredCount: delivered,
+              rejectedCount: rejected,
+              unchangedCount: unchanged,
+              errorCount: errs,
+              step: 'SUCCESS'
+            };
+          });
+        }
       } else {
         // Cloud Firestore Queue (Sequential FIFO queue processed safely by background worker)
         await requestBulkSyncOnFirebase(toSync.map(c => c.id));
