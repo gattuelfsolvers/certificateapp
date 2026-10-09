@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   FileText, Plus, RefreshCw, MessageSquare, Search, Filter,
   CheckCircle2, Clock, AlertTriangle, XCircle, IndianRupee,
-  Smartphone, ExternalLink, Printer, Edit, Trash2, Shield, Settings, Activity, Users, Send, Layers, Tag, PlusCircle, Zap, Download, Upload, X,
+  Smartphone, ExternalLink, Printer, Edit, Trash2, Shield, Settings, Activity, Users, Send, Layers, Tag, PlusCircle, Zap, Download, Upload, X, ShieldAlert,
   Key, User, Lock, ShieldCheck, Building2, Store, Phone, MapPin, BadgeCheck, LogOut, Eye, PanelRight, PanelRightClose, Code, LayoutDashboard, Sliders, MoreVertical, Power
 } from 'lucide-react';
 import { CERTIFICATE_CATEGORIES as DEFAULT_CATEGORIES } from '../constants/certificateTypes';
@@ -206,6 +206,14 @@ export default function ClientDashboard({ clientData, onLogout }) {
 
   const [engineStatus, setEngineStatus] = useState('CHECKING'); // 'ONLINE' | 'OFFLINE' | 'CHECKING'
   const [isCheckingEngine, setIsCheckingEngine] = useState(false);
+  const [showEngineModal, setShowEngineModal] = useState(false);
+
+  useEffect(() => {
+    if (engineStatus === 'OFFLINE' && !sessionStorage.getItem('SEEN_ENGINE_DOWNLOAD_PROMPT')) {
+      setShowEngineModal(true);
+      sessionStorage.setItem('SEEN_ENGINE_DOWNLOAD_PROMPT', 'true');
+    }
+  }, [engineStatus]);
 
   useEffect(() => {
     setLoading(true);
@@ -721,6 +729,37 @@ export default function ClientDashboard({ clientData, onLogout }) {
           </div>
 
           <div className="flex items-center gap-3">
+            {/* COMPACT ENGINE STATUS PILL */}
+            {engineStatus === 'ONLINE' ? (
+              <button
+                type="button"
+                onClick={checkLocalEngine}
+                title="Sync Engine Connected (Port 5000) - Click to verify"
+                className="flex items-center gap-2 px-3 py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-200 border border-emerald-400/30 text-xs font-black shadow-xs cursor-pointer transition select-none"
+              >
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
+                </span>
+                <span className="hidden sm:inline">Engine Active</span>
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-300" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowEngineModal(true)}
+                title="Sync Engine Offline - Click to Download & Setup"
+                className="flex items-center gap-2 px-3 py-2 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 border border-rose-400/40 text-xs font-black shadow-xs cursor-pointer transition select-none animate-pulse"
+              >
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
+                </span>
+                <span className="hidden sm:inline">Engine Offline</span>
+                <Download className="w-3.5 h-3.5 text-rose-300" />
+              </button>
+            )}
+
             <button
               onClick={() => handleOpenAddModal('JHIC')}
               className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white font-bold text-sm shadow-md transition"
@@ -836,15 +875,6 @@ export default function ClientDashboard({ clientData, onLogout }) {
 
       {/* Main Dashboard Content - FULL PAGE WIDTH */}
       <main className="w-full px-6 md:px-10 py-8 flex-1 space-y-8">
-        
-        {/* Local Engine Requirement Health Gatekeeper Banner */}
-        <LocalEngineChecker 
-          engineStatus={engineStatus} 
-          onRetry={checkLocalEngine} 
-          isChecking={isCheckingEngine} 
-          API_BASE={API_BASE}
-        />
-
         {/* KPI Metric Summary Cards - FULL PAGE WIDTH */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3.5 w-full">
           <div className="bg-blue-50/70 border border-blue-200/80 rounded-2xl p-4 shadow-sm flex items-center justify-between">
@@ -1889,6 +1919,86 @@ export default function ClientDashboard({ clientData, onLogout }) {
                 <Send className={`w-4 h-4 ${isSendingWaReceipt ? 'animate-bounce' : ''}`} />
                 <span>{isSendingWaReceipt ? 'Sending Receipt...' : 'Send to WhatsApp'}</span>
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* LOCAL SYNC ENGINE SETUP & DOWNLOAD MODAL */}
+      {showEngineModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl space-y-5 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center font-black ${
+                  engineStatus === 'ONLINE' ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' : 'bg-rose-50 text-rose-600 border border-rose-200'
+                }`}>
+                  {engineStatus === 'ONLINE' ? <CheckCircle2 className="w-5 h-5" /> : <ShieldAlert className="w-5 h-5" />}
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-slate-900">
+                    {engineStatus === 'ONLINE' ? 'Local Sync Engine Active' : 'Local Sync Engine Setup'}
+                  </h3>
+                  <p className="text-xs text-slate-500 font-medium">
+                    {engineStatus === 'ONLINE' ? 'Port 5000 Connected' : 'Auto Jharsewa & WhatsApp Helper'}
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setShowEngineModal(false)}
+                className="p-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs text-slate-600 leading-relaxed">
+              {engineStatus === 'ONLINE' ? (
+                <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-2xl text-emerald-800 space-y-1">
+                  <p className="font-bold">✅ Local Engine is Running & Ready!</p>
+                  <p className="text-[11px] text-emerald-700">Aapka computer background me Jharsewa status auto-checking aur WhatsApp auto-notifications ke liye tayar hai.</p>
+                </div>
+              ) : (
+                <>
+                  <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-2xl text-rose-800 space-y-1">
+                    <p className="font-bold flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-rose-500"></span>
+                      Local Engine Offline / Not Running
+                    </p>
+                    <p className="text-[11px] text-rose-700">
+                      Jharsewa captcha decryption aur automatic WhatsApp background alert ke liye aapke computer me Local Engine chalna zaroori hai.
+                    </p>
+                  </div>
+                  <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-[11px] space-y-1 text-slate-700">
+                    <p className="font-bold text-slate-900">Agar aapne pehle se download kiya hai:</p>
+                    <p>Apne PC par <code className="bg-white px-1.5 py-0.5 rounded border border-slate-300 font-mono font-bold text-blue-700">Start_App.bat</code> ko run karein.</p>
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={checkLocalEngine}
+                disabled={isCheckingEngine}
+                className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs transition flex items-center justify-center gap-1.5"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isCheckingEngine ? 'animate-spin' : ''}`} />
+                <span>{isCheckingEngine ? 'Checking...' : 'Check Again'}</span>
+              </button>
+
+              {engineStatus !== 'ONLINE' && (
+                <a
+                  href="https://drive.google.com/uc?export=download&id=1B854E_ctKnEDpvOv18oBfXAPKgX9Sw48"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-gradient-to-r from-rose-600 to-indigo-600 hover:from-rose-500 hover:to-indigo-500 text-white font-extrabold text-xs shadow-md transition flex items-center justify-center gap-2"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>Download Engine Setup</span>
+                </a>
+              )}
             </div>
           </div>
         </div>
