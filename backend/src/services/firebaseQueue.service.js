@@ -20,7 +20,10 @@ const { checkJharsewaStatus } = require('./jharsewa.service');
 const { sendTestWhatsAppMessage } = require('./whatsapp.service');
 const prisma = require('../db');
 
-const processingQueue = new Set();
+// In-memory sequential queue & lock
+const pendingQueueItems = [];
+const enqueuedIds = new Set();
+let isWorkerRunning = false;
 let isListenerActive = false;
 
 // Shop Profile details fallback helper
@@ -83,11 +86,8 @@ function formatDate(dateStr) {
  * Process a single certificate sync request from Firebase Queue
  */
 async function processQueueItem(certId, certData) {
-  if (processingQueue.has(certId)) return;
-  processingQueue.add(certId);
-
   console.log(`\n======================================================`);
-  console.log(`⚡ [FirebaseQueue] PICKED UP SYNC REQUEST for ID: ${certId}`);
+  console.log(`⚡ [FirebaseQueue] PROCESSING QUEUE ITEM for ID: ${certId}`);
   console.log(`📄 Ref No: ${certData.refNo} | Applicant: ${certData.applicantName}`);
   console.log(`======================================================`);
 
@@ -116,7 +116,6 @@ async function processQueueItem(certId, certData) {
 
     const newStatus = statusResult.status || 'INITIATED';
     const oldStatus = certData.currentStatus || 'INITIATED';
-    const isStatusChanged = Boolean(newStatus !== oldStatus);
 
     console.log(`✅ [FirebaseQueue] LIVE STATUS FOUND: ${newStatus} (Previous: ${oldStatus})`);
 
@@ -179,9 +178,44 @@ async function processQueueItem(certId, certData) {
         lastSyncedAt: new Date().toISOString()
       }, { merge: true });
     } catch (e2) {}
-  } finally {
-    processingQueue.delete(certId);
   }
+}
+
+/**
+ * Sequential FIFO Queue Worker (Guarantees NO parallel Puppeteer collisions!)
+ */
+async function processSequentialQueue() {
+  if (isWorkerRunning) return;
+  isWorkerRunning = true;
+
+  try {
+    while (pendingQueueItems.length > 0) {
+      const item = pendingQueueItems.shift();
+      if (item) {
+        try {
+          await processQueueItem(item.certId, item.certData);
+        } catch (itemErr) {
+          console.error(`💥 Queue Worker item error:`, itemErr);
+        } finally {
+          enqueuedIds.delete(item.certId);
+        }
+        // Small pause between queue items to allow Puppeteer DOM stability
+        await new Promise(r => setTimeout(r, 1500));
+      }
+    }
+  } finally {
+    isWorkerRunning = false;
+  }
+}
+
+function enqueueItem(certId, certData) {
+  if (enqueuedIds.has(certId)) return;
+  enqueuedIds.add(certId);
+  pendingQueueItems.push({ certId, certData });
+  processSequentialQueue().catch(err => {
+    console.error('💥 Error in sequential queue loop:', err);
+    isWorkerRunning = false;
+  });
 }
 
 /**
@@ -198,7 +232,7 @@ function startFirebaseQueueListener() {
     return;
   }
 
-  console.log('🚀 [FirebaseQueue] Starting Realtime Cloud Firestore Queue Listener...');
+  console.log('🚀 [FirebaseQueue] Starting Realtime Cloud Firestore Queue Listener (Sequential Mutex Enabled)...');
   isListenerActive = true;
 
   try {
@@ -211,9 +245,7 @@ function startFirebaseQueueListener() {
 
           // Check if sync was requested
           if (docData.syncRequested === true || docData.syncStatus === 'QUEUED') {
-            if (!processingQueue.has(certId)) {
-              processQueueItem(certId, docData);
-            }
+            enqueueItem(certId, docData);
           }
         }
       });
@@ -224,7 +256,7 @@ function startFirebaseQueueListener() {
       setTimeout(startFirebaseQueueListener, 10000);
     });
 
-    console.log('✅ [FirebaseQueue] LISTENING LIVE TO FIREBASE! Any sync from web/mobile will trigger immediately.');
+    console.log('✅ [FirebaseQueue] LISTENING LIVE TO FIREBASE! Sequential Queue Worker Ready.');
   } catch (err) {
     console.error('❌ [FirebaseQueue] Initialization failed:', err);
     isListenerActive = false;

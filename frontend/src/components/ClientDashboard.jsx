@@ -729,11 +729,12 @@ export default function ClientDashboard({ clientData, onLogout }) {
     showToast('info', 'Bulk Sync Queued', `Checking live status for ${toSync.length} certificate(s)...`);
 
     try {
-      await requestBulkSyncOnFirebase(toSync.map(c => c.id));
-      
-      // Also ping local engine if available for fast execution
       if (engineStatus === 'ONLINE') {
+        // Direct local engine fast-batch sync (Uses optimal 90-day window without racing Firebase Queue)
         axios.post('http://localhost:5000/api/certificates/sync-all', { certificates: toSync }).catch(() => null);
+      } else {
+        // Cloud Firestore Queue (Sequential FIFO queue processed safely by background worker)
+        await requestBulkSyncOnFirebase(toSync.map(c => c.id));
       }
     } catch (err) {
       console.error('Bulk sync queue error:', err);
