@@ -2158,26 +2158,44 @@ export default function ClientDashboard({ clientData, onLogout }) {
 
             <div className="space-y-3 text-xs text-slate-600 leading-relaxed">
               {engineStatus === 'ONLINE' ? (
-                <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-2xl text-emerald-800 space-y-1">
-                  <p className="font-bold">✅ Local Engine is Running & Ready!</p>
-                  <p className="text-[11px] text-emerald-700">Aapka computer background me Jharsewa status auto-checking aur WhatsApp auto-notifications ke liye tayar hai.</p>
+                <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl text-emerald-800 space-y-1.5">
+                  <p className="font-bold text-sm flex items-center gap-1.5 text-emerald-700">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Local Engine Active & Connected!
+                  </p>
+                  <p className="text-[11px] text-emerald-700">Aapka computer background me Jharsewa auto-sync aur WhatsApp alerts ke liye bilkul tayar hai.</p>
                 </div>
               ) : (
-                <>
+                <div className="space-y-3">
                   <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-2xl text-rose-800 space-y-1">
                     <p className="font-bold flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-rose-500"></span>
+                      <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse"></span>
                       Local Engine Offline / Not Running
                     </p>
                     <p className="text-[11px] text-rose-700">
-                      Jharsewa captcha decryption aur automatic WhatsApp background alert ke liye aapke computer me Local Engine chalna zaroori hai.
+                      Jharsewa captcha verification aur instant WhatsApp status message bhejne ke liye Local Engine zaroori hai.
                     </p>
                   </div>
-                  <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-[11px] space-y-1 text-slate-700">
-                    <p className="font-bold text-slate-900">Agar aapne pehle se download kiya hai:</p>
-                    <p>Apne PC par <code className="bg-white px-1.5 py-0.5 rounded border border-slate-300 font-mono font-bold text-blue-700">Start_App.bat</code> ko run karein.</p>
+
+                  <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-2 text-slate-700 text-xs">
+                    <p className="font-black text-slate-900 border-b border-slate-200 pb-1 flex items-center gap-1.5">
+                      📌 आसान सेटअप निर्देश (सिर्फ एक बार):
+                    </p>
+                    <ol className="list-decimal list-inside space-y-1.5 text-[11px] leading-relaxed">
+                      <li>
+                        <strong className="text-slate-900">Step 1:</strong> नीचे दिए गए बटन से ZIP फ़ाइल डाउनलोड करें और इसे <code className="bg-amber-100 text-amber-900 px-1.5 py-0.5 rounded font-mono font-bold">C:\</code> ड्राइव में <strong>Extract (Unzip)</strong> करें।
+                      </li>
+                      <li>
+                        <strong className="text-slate-900">Step 2:</strong> फ़ोल्डर के अंदर <code className="bg-indigo-100 text-indigo-900 px-1.5 py-0.5 rounded font-mono font-bold">Start_App.bat</code> पर डबल-क्लिक करें।
+                      </li>
+                      <li>
+                        <strong className="text-slate-900">Step 3:</strong> आपके <strong>Desktop</strong> पर <span className="font-bold text-blue-700">"Certificate Management"</span> नाम का ऐप शॉर्टकट बन जाएगा।
+                      </li>
+                    </ol>
+                    <p className="text-[10px] text-emerald-700 bg-emerald-50/80 p-1.5 rounded-lg border border-emerald-100 font-medium">
+                      💡 इसके बाद आपको कभी भी वेबसाइट अलग से खोलने की ज़रूरत नहीं होगी — बस डेस्कटॉप शॉर्टकट खोलें, इंजन और सॉफ़्टवेयर दोनों अपने-आप खुल जाएँगे!
+                    </p>
                   </div>
-                </>
+                </div>
               )}
             </div>
 
