@@ -362,6 +362,10 @@ export default function ClientDashboard({ clientData, onLogout }) {
       // Ping local agent helper port 5000 /api/health
       const res = await fetch('http://localhost:5000/api/health', { method: 'GET', mode: 'cors' });
       if (res.ok) {
+        const data = await res.json().catch(() => null);
+        if (data && data.hwid) {
+          localStorage.setItem('LOCAL_ENGINE_HWID', data.hwid.toUpperCase());
+        }
         setEngineStatus('ONLINE');
         return true;
       } else {
@@ -763,7 +767,8 @@ export default function ClientDashboard({ clientData, onLogout }) {
     try {
       // 100% Cloud-Driven Firebase Queue (Works seamlessly from Render HTTPS & Mobile!)
       // Background worker uses FIFO sequential queue so zero collisions happen.
-      await requestBulkSyncOnFirebase(toSync.map(c => c.id));
+      const currentHwid = clientData?.hwid || localStorage.getItem('CLIENT_SYSTEM_HWID') || null;
+      await requestBulkSyncOnFirebase(toSync.map(c => c.id), currentHwid);
     } catch (err) {
       console.error('Bulk sync queue error:', err);
       showToast('error', 'Sync Queue Error', err.message);
@@ -816,7 +821,8 @@ export default function ClientDashboard({ clientData, onLogout }) {
       });
 
       // Direct Cloud Firestore Queue Request (Works from ANY online device/mobile & local daemon)
-      await requestCertificateSyncOnFirebase(cert.id);
+      const currentHwid = clientData?.hwid || localStorage.getItem('CLIENT_SYSTEM_HWID') || null;
+      await requestCertificateSyncOnFirebase(cert.id, currentHwid);
     } catch (err) {
       console.error('Sync error:', err);
       setSyncStatusModal(prev => {

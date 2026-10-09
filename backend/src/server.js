@@ -37,8 +37,13 @@ app.use('/api/license', licenseRoutes);
 app.use('/api/plans', planRoutes);
 
 // Health check endpoint
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', app: 'Certificate Entry Management API', timestamp: new Date() });
+app.get('/api/health', async (req, res) => {
+  let hwid = null;
+  try {
+    const { getSystemHWID } = require('./engines/license.engine');
+    hwid = await getSystemHWID();
+  } catch (e) {}
+  res.json({ status: 'ok', app: 'Certificate Entry Management API', hwid, timestamp: new Date() });
 });
 
 // Serve static React frontend build (Single Server Fullstack)

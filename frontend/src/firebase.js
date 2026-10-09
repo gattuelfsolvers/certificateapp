@@ -166,15 +166,19 @@ export function subscribeCertificatesFromFirebase(onUpdate) {
 }
 
 // Request Live Jharsewa Sync for a single certificate via Firebase Queue
-export async function requestCertificateSyncOnFirebase(certId) {
+export async function requestCertificateSyncOnFirebase(certId, clientHwid = null) {
   try {
     const certRef = doc(db, "certificates", String(certId));
-    await setDoc(certRef, {
+    const payload = {
       syncRequested: true,
       syncStatus: 'QUEUED',
       syncError: null,
       syncRequestedAt: new Date().toISOString()
-    }, { merge: true });
+    };
+    if (clientHwid) {
+      payload.targetClientHwid = clientHwid.toUpperCase();
+    }
+    await setDoc(certRef, payload, { merge: true });
     return true;
   } catch (error) {
     console.error("Error requesting certificate sync on Firebase:", error);
@@ -183,16 +187,20 @@ export async function requestCertificateSyncOnFirebase(certId) {
 }
 
 // Request Live Jharsewa Sync for multiple certificates via Firebase Queue
-export async function requestBulkSyncOnFirebase(certIds) {
+export async function requestBulkSyncOnFirebase(certIds, clientHwid = null) {
   try {
     for (const certId of certIds) {
       const certRef = doc(db, "certificates", String(certId));
-      await setDoc(certRef, {
+      const payload = {
         syncRequested: true,
         syncStatus: 'QUEUED',
         syncError: null,
         syncRequestedAt: new Date().toISOString()
-      }, { merge: true });
+      };
+      if (clientHwid) {
+        payload.targetClientHwid = clientHwid.toUpperCase();
+      }
+      await setDoc(certRef, payload, { merge: true });
     }
     return true;
   } catch (error) {

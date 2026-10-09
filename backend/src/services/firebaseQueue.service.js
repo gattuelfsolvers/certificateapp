@@ -14,11 +14,16 @@
  * NO CSV files, NO Git Commits, NO Render Rebuilds required!
  */
 
-const { collection, onSnapshot, doc, setDoc } = require('firebase/firestore');
+const { collection, onSnapshot, doc, setDoc, getDocs } = require('firebase/firestore');
 const { db } = require('../config/firebase');
 const { checkJharsewaStatus } = require('./jharsewa.service');
 const { sendTestWhatsAppMessage } = require('./whatsapp.service');
+const { getSystemHWID } = require('../engines/license.engine');
 const prisma = require('../db');
+
+// Local Machine Hardware ID for targeted queue filtering & licensing
+let currentLocalHwid = null;
+let isMachineLicenseActive = false;
 
 // In-memory sequential queue & lock
 const pendingQueueItems = [];
@@ -210,6 +215,18 @@ async function processSequentialQueue() {
 
 function enqueueItem(certId, certData) {
   if (enqueuedIds.has(certId)) return;
+
+  // 🛡️ Multi-Client HWID Queue Isolation:
+  // If request specifies targetClientHwid, only the designated machine handles it!
+  if (certData.targetClientHwid && currentLocalHwid) {
+    const cleanTarget = String(certData.targetClientHwid).trim().toUpperCase();
+    const cleanCurrent = String(currentLocalHwid).trim().toUpperCase();
+    if (cleanTarget !== cleanCurrent) {
+      // Intended for another PC - do NOT touch!
+      return;
+    }
+  }
+
   enqueuedIds.add(certId);
   pendingQueueItems.push({ certId, certData });
   processSequentialQueue().catch(err => {
@@ -219,9 +236,59 @@ function enqueueItem(certId, certData) {
 }
 
 /**
+ * Verify whether this machine's HWID is whitelisted in Firebase Master DB
+ */
+async function verifyLocalMachineAuthorization() {
+  try {
+    currentLocalHwid = await getSystemHWID();
+    console.log(`🔒 [License Guard] Current Machine HWID: ${currentLocalHwid}`);
+
+    const clientsRef = collection(db, 'clients');
+    const snapshot = await getDocs(clientsRef);
+    let matchedClient = null;
+
+    snapshot.forEach(docSnap => {
+      const c = docSnap.data();
+      const hwidList = Array.isArray(c.hwids) && c.hwids.length > 0 
+        ? c.hwids.map(h => String(h).toUpperCase())
+        : [(c.hwid || '').toUpperCase()];
+
+      if (hwidList.includes(currentLocalHwid.toUpperCase())) {
+        matchedClient = c;
+      }
+    });
+
+    if (!matchedClient) {
+      console.warn(`\n======================================================`);
+      console.warn(`⛔ [LICENSE GUARD] ACCESS DENIED!`);
+      console.warn(`Machine HWID: ${currentLocalHwid} is NOT whitelisted in Master DB.`);
+      console.warn(`Background Sync Engine will remain in STANDBY mode.`);
+      console.warn(`Contact Master Admin (7781931880) to whitelist this PC.`);
+      console.warn(`======================================================\n`);
+      isMachineLicenseActive = false;
+      return false;
+    }
+
+    if (matchedClient.status !== 'ACTIVE') {
+      console.warn(`⛔ [LICENSE GUARD] Client account ${matchedClient.clientName} status is "${matchedClient.status}". Engine suspended.`);
+      isMachineLicenseActive = false;
+      return false;
+    }
+
+    isMachineLicenseActive = true;
+    console.log(`✅ [License Guard] Machine HWID Authorized for: ${matchedClient.clientName} (${matchedClient.phone})`);
+    return true;
+  } catch (err) {
+    console.error('❌ [License Guard] Error verifying machine license:', err.message);
+    // Fallback: allow if offline development or transient network glitch
+    return true;
+  }
+}
+
+/**
  * Start listening to Cloud Firestore queue in real-time
  */
-function startFirebaseQueueListener() {
+async function startFirebaseQueueListener() {
   if (!db) {
     console.warn('⚠️ [FirebaseQueue] Firebase DB not initialized. Realtime queue cannot start.');
     return;
@@ -229,6 +296,13 @@ function startFirebaseQueueListener() {
 
   if (isListenerActive) {
     console.log('⚡ [FirebaseQueue] Listener is already active.');
+    return;
+  }
+
+  // 1. Verify Machine Authorization before starting listener
+  const authorized = await verifyLocalMachineAuthorization();
+  if (!authorized) {
+    console.warn('⏸️ [FirebaseQueue] Sync listener not started: Machine not authorized.');
     return;
   }
 
@@ -264,5 +338,6 @@ function startFirebaseQueueListener() {
 }
 
 module.exports = {
-  startFirebaseQueueListener
+  startFirebaseQueueListener,
+  verifyLocalMachineAuthorization
 };
