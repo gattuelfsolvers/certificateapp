@@ -2212,7 +2212,7 @@ export default function ClientDashboard({ clientData, onLogout }) {
 
               {engineStatus !== 'ONLINE' && (
                 <a
-                  href="https://drive.google.com/uc?export=download&id=1PUhS8kvhDJgqiF78AgIl-rH9dDEfvLzb"
+                  href="https://drive.google.com/uc?export=download&id=1uCwW0U--DJ0il6TmgORoghC2NOsNThn6"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-gradient-to-r from-rose-600 to-indigo-600 hover:from-rose-500 hover:to-indigo-500 text-white font-extrabold text-xs shadow-md transition flex items-center justify-center gap-2"
