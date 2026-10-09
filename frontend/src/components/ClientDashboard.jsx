@@ -3,7 +3,8 @@ import {
   FileText, Plus, RefreshCw, MessageSquare, Search, Filter,
   CheckCircle2, Clock, AlertTriangle, XCircle, IndianRupee,
   Smartphone, ExternalLink, Printer, Edit, Trash2, Shield, Settings, Activity, Users, Send, Layers, Tag, PlusCircle, Zap, Download, Upload, X, ShieldAlert,
-  Key, User, Lock, ShieldCheck, Building2, Store, Phone, MapPin, BadgeCheck, LogOut, Eye, PanelRight, PanelRightClose, Code, LayoutDashboard, Sliders, MoreVertical, Power
+  Key, User, Lock, ShieldCheck, Building2, Store, Phone, MapPin, BadgeCheck, LogOut, Eye, PanelRight, PanelRightClose, Code, LayoutDashboard, Sliders, MoreVertical, Power,
+  PartyPopper, ArrowRight
 } from 'lucide-react';
 import { CERTIFICATE_CATEGORIES as DEFAULT_CATEGORIES } from '../constants/certificateTypes';
 import { 
@@ -208,6 +209,21 @@ export default function ClientDashboard({ clientData, onLogout }) {
   const [isCheckingEngine, setIsCheckingEngine] = useState(false);
   const [showEngineModal, setShowEngineModal] = useState(false);
 
+  // Center Popup Modal State for Live Jharsewa Status Result
+  const [syncStatusModal, setSyncStatusModal] = useState({
+    isOpen: false,
+    certId: null,
+    cert: null,
+    refNo: '',
+    applicantName: '',
+    certType: '',
+    mobile: '',
+    oldStatus: 'INITIATED',
+    newStatus: null,
+    step: 'CHECKING', // 'CHECKING' | 'SUCCESS' | 'ERROR'
+    errorReason: null
+  });
+
   useEffect(() => {
     if (engineStatus === 'OFFLINE' && !sessionStorage.getItem('SEEN_ENGINE_DOWNLOAD_PROMPT')) {
       setShowEngineModal(true);
@@ -220,6 +236,30 @@ export default function ClientDashboard({ clientData, onLogout }) {
     const unsubscribe = subscribeCertificatesFromFirebase((data) => {
       setCertificates(data || []);
       setLoading(false);
+
+      // Reactively update center status popup if open
+      setSyncStatusModal((prev) => {
+        if (!prev.isOpen || prev.step !== 'CHECKING' || !prev.certId) return prev;
+        const updated = data?.find((c) => String(c.id) === String(prev.certId));
+        if (updated) {
+          if (updated.syncStatus === 'COMPLETED' || (updated.currentStatus && updated.currentStatus !== prev.oldStatus && updated.syncStatus !== 'QUEUED' && updated.syncStatus !== 'PROCESSING')) {
+            return {
+              ...prev,
+              step: 'SUCCESS',
+              newStatus: updated.currentStatus,
+              cert: updated
+            };
+          } else if (updated.syncStatus === 'ERROR') {
+            return {
+              ...prev,
+              step: 'ERROR',
+              errorReason: updated.syncError || 'Jharsewa portal query error or timeout',
+              cert: updated
+            };
+          }
+        }
+        return prev;
+      });
     });
     checkLocalEngine();
 
@@ -605,18 +645,62 @@ export default function ClientDashboard({ clientData, onLogout }) {
   const handleSyncSingle = async (cert) => {
     try {
       setSyncingId(cert.id);
-      showToast('info', 'Sync Queued', `Checking Jharsewa for ${cert.refNo}... Result will appear live on screen.`);
       
+      // Open Nice Center Popup Modal in CHECKING state
+      setSyncStatusModal({
+        isOpen: true,
+        certId: cert.id,
+        cert,
+        refNo: cert.refNo,
+        applicantName: cert.applicantName,
+        certType: cert.certType,
+        mobile: cert.mobile,
+        oldStatus: cert.currentStatus || 'INITIATED',
+        newStatus: null,
+        step: 'CHECKING',
+        errorReason: null
+      });
+
       // 1. Direct Cloud Firestore Queue Request (Works from ANY online device/mobile)
       await requestCertificateSyncOnFirebase(cert.id);
 
       // 2. Direct local engine fast-path ping if online
       if (engineStatus === 'ONLINE') {
-        axios.post(`http://localhost:5000/api/certificates/${cert.id}/sync-jharsewa`, cert).catch(() => null);
+        const res = await axios.post(`http://localhost:5000/api/certificates/${cert.id}/sync-jharsewa`, cert);
+        if (res && res.data && res.data.success) {
+          const newStatus = res.data.statusResult?.status || res.data.newStatus;
+          if (newStatus) {
+            setSyncStatusModal(prev => (prev?.certId === cert.id ? {
+              ...prev,
+              step: 'SUCCESS',
+              newStatus,
+              cert: { ...cert, currentStatus: newStatus }
+            } : prev));
+          }
+        } else if (res && res.data && (res.data.error || res.data.statusResult?.error)) {
+          setSyncStatusModal(prev => (prev?.certId === cert.id ? {
+            ...prev,
+            step: 'ERROR',
+            errorReason: res.data.error || res.data.statusResult?.error || 'Portal query failed',
+            cert
+          } : prev));
+        }
       }
     } catch (err) {
       console.error('Sync error:', err);
-      showToast('error', 'Sync Failed', err.message);
+      // Timeout fallback for modal if network dropped
+      setTimeout(() => {
+        setSyncStatusModal(prev => {
+          if (prev?.certId === cert.id && prev?.step === 'CHECKING') {
+            return {
+              ...prev,
+              step: 'ERROR',
+              errorReason: err.response?.data?.error || err.message || 'Portal connection timed out. Please verify local engine.'
+            };
+          }
+          return prev;
+        });
+      }, 35000);
     } finally {
       setTimeout(() => setSyncingId(null), 3000);
     }
@@ -2000,6 +2084,261 @@ export default function ClientDashboard({ clientData, onLogout }) {
                 </a>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* LIVE JHARSEWA STATUS RESULT POPUP MODAL (CENTER POPUP) */}
+      {syncStatusModal.isOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-2xl space-y-6 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
+            
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 border border-blue-200 flex items-center justify-center font-black">
+                  <Activity className="w-5 h-5 text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-slate-900">
+                    Live Jharsewa Status Verification
+                  </h3>
+                  <p className="text-xs text-blue-600 font-mono font-bold">
+                    {syncStatusModal.refNo}
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setSyncStatusModal(prev => ({ ...prev, isOpen: false }))}
+                className="p-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* STEP 1: CHECKING STATE */}
+            {syncStatusModal.step === 'CHECKING' && (
+              <div className="py-8 text-center space-y-4">
+                <div className="relative w-20 h-20 mx-auto flex items-center justify-center">
+                  <div className="absolute inset-0 rounded-full border-4 border-blue-200 border-t-blue-600 animate-spin"></div>
+                  <RefreshCw className="w-8 h-8 text-blue-600 animate-pulse" />
+                </div>
+                <div>
+                  <h4 className="text-base font-extrabold text-slate-900">झारसेवा पोर्टल से स्टेटस जांच जारी है...</h4>
+                  <p className="text-xs text-slate-500 mt-1">Connecting to Jharsewa Portal, solving Captcha & querying records...</p>
+                </div>
+
+                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 text-xs text-left space-y-2 max-w-sm mx-auto">
+                  <div className="flex justify-between">
+                    <span className="text-slate-500 font-bold">Applicant:</span>
+                    <span className="font-extrabold text-slate-900">{syncStatusModal.applicantName}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500 font-bold">Reference:</span>
+                    <span className="font-mono font-bold text-blue-700">{syncStatusModal.refNo}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500 font-bold">Previous Status:</span>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${getStatusBadgeStyle(syncStatusModal.oldStatus)}`}>
+                      {syncStatusModal.oldStatus}
+                    </span>
+                  </div>
+                </div>
+
+                <p className="text-[11px] text-slate-400 font-medium animate-pulse">
+                  कृपया प्रतीक्षा करें, 5-10 सेकंड में परिणाम दिखाई देगा...
+                </p>
+              </div>
+            )}
+
+            {/* STEP 2: SUCCESS RESULT STATE */}
+            {syncStatusModal.step === 'SUCCESS' && (
+              <div className="space-y-5">
+                {/* Visual Banner based on Status */}
+                {syncStatusModal.newStatus?.includes('DELIVERED') ? (
+                  <div className="p-5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white text-center space-y-2 shadow-lg shadow-emerald-500/20">
+                    <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center mx-auto shadow-inner">
+                      <PartyPopper className="w-8 h-8 text-yellow-300 animate-bounce" />
+                    </div>
+                    <h4 className="text-lg font-black tracking-tight">🎉 बधाई हो! (Congratulations)</h4>
+                    <p className="text-xs text-emerald-100 font-medium">
+                      आपका प्रमाण पत्र सफलतापूर्वक बन चुका है और जारी (Issued & Delivered) कर दिया गया है!
+                    </p>
+                  </div>
+                ) : syncStatusModal.newStatus?.includes('REJECTED') ? (
+                  <div className="p-5 rounded-2xl bg-gradient-to-r from-rose-500 to-red-600 text-white text-center space-y-2 shadow-lg shadow-rose-500/20">
+                    <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center mx-auto shadow-inner">
+                      <XCircle className="w-8 h-8 text-white" />
+                    </div>
+                    <h4 className="text-lg font-black tracking-tight">⚠️ आवेदन अस्वीकृत (Application Rejected)</h4>
+                    <p className="text-xs text-rose-100 font-medium">
+                      सक्षम अधिकारी द्वारा यह आवेदन अस्वीकृत (Rejected) कर दिया गया है।
+                    </p>
+                  </div>
+                ) : syncStatusModal.newStatus?.includes('WAIT') ? (
+                  <div className="p-5 rounded-2xl bg-gradient-to-r from-amber-500 to-yellow-600 text-slate-950 text-center space-y-2 shadow-lg shadow-amber-500/20">
+                    <div className="w-14 h-14 rounded-2xl bg-white/30 backdrop-blur flex items-center justify-center mx-auto shadow-inner">
+                      <AlertTriangle className="w-8 h-8 text-slate-900" />
+                    </div>
+                    <h4 className="text-lg font-black tracking-tight">⏳ आपत्ति / सुधार लंबित (Waiting / Objection)</h4>
+                    <p className="text-xs text-slate-900 font-semibold">
+                      आवेदन में अधिकारी द्वारा आपत्ति दर्ज की गई है या सुधार की प्रतीक्षा है।
+                    </p>
+                  </div>
+                ) : (
+                  <div className="p-5 rounded-2xl bg-gradient-to-r from-sky-600 to-blue-700 text-white text-center space-y-2 shadow-lg shadow-blue-500/20">
+                    <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center mx-auto shadow-inner">
+                      <Clock className="w-8 h-8 text-white" />
+                    </div>
+                    <h4 className="text-lg font-black tracking-tight">🔄 आवेदन प्रक्रियाधीन है (Under Process)</h4>
+                    <p className="text-xs text-blue-100 font-medium">
+                      आवेदन संबंधित अधिकारी स्तर (CI / CO / SDO) पर सक्रिय जांच में है।
+                    </p>
+                  </div>
+                )}
+
+                {/* Status Comparison Card */}
+                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3">
+                  <div className="flex items-center justify-around gap-2 pt-1">
+                    <div className="text-center">
+                      <div className="text-[10px] text-slate-400 font-bold mb-1">Previous Status</div>
+                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase ${getStatusBadgeStyle(syncStatusModal.oldStatus)}`}>
+                        {syncStatusModal.oldStatus || 'INITIATED'}
+                      </span>
+                    </div>
+
+                    <ArrowRight className="w-5 h-5 text-slate-400 shrink-0" />
+
+                    <div className="text-center">
+                      <div className="text-[10px] text-emerald-600 font-bold mb-1">Current Live Status</div>
+                      <span className={`px-3 py-1 rounded-full text-xs font-black uppercase shadow-xs ${getStatusBadgeStyle(syncStatusModal.newStatus)}`}>
+                        {syncStatusModal.newStatus}
+                      </span>
+                    </div>
+                  </div>
+
+                  {syncStatusModal.oldStatus === syncStatusModal.newStatus ? (
+                    <p className="text-center text-[11px] text-slate-500 font-medium pt-2 border-t border-slate-200/70">
+                      ℹ️ वर्तमान स्थिति में कोई नया बदलाव नहीं हुआ है (Status Unchanged).
+                    </p>
+                  ) : (
+                    <p className="text-center text-[11px] text-emerald-700 font-bold pt-2 border-t border-slate-200/70">
+                      ✨ स्थिति सफलतापूर्वक नया अपडेट हो गई है!
+                    </p>
+                  )}
+                </div>
+
+                {/* Applicant Summary Details */}
+                <div className="space-y-2 text-xs bg-slate-50/70 p-3.5 rounded-2xl border border-slate-200/70 font-medium">
+                  <div className="flex justify-between border-b border-slate-200/60 pb-1">
+                    <span className="text-slate-500 font-bold">आवेदक का नाम:</span>
+                    <span className="font-extrabold text-slate-900">{syncStatusModal.applicantName}</span>
+                  </div>
+                  <div className="flex justify-between border-b border-slate-200/60 pb-1">
+                    <span className="text-slate-500 font-bold">प्रमाण पत्र का प्रकार:</span>
+                    <span className="font-black text-blue-700">{getCertFullDisplayName(syncStatusModal.certType)}</span>
+                  </div>
+                  <div className="flex justify-between border-b border-slate-200/60 pb-1">
+                    <span className="text-slate-500 font-bold">मोबाइल नंबर:</span>
+                    <span className="font-mono font-bold text-slate-900">{syncStatusModal.mobile || 'N/A'}</span>
+                  </div>
+                  <div className="flex justify-between pt-0.5">
+                    <span className="text-slate-500 font-bold">बकाया राशि (Dues):</span>
+                    <span className="font-extrabold text-emerald-700">₹{syncStatusModal.cert?.duesAmount || 0}</span>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-2.5 pt-2 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (syncStatusModal.cert) {
+                        setReceiptModalCert(syncStatusModal.cert);
+                      }
+                    }}
+                    className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-xs transition flex items-center justify-center gap-1.5"
+                  >
+                    <Printer className="w-4 h-4 text-slate-600" />
+                    <span>Print Receipt</span>
+                  </button>
+
+                  <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (syncStatusModal.cert) {
+                          showToast('info', 'Sending WhatsApp Alert', `Sending status update to +91 ${syncStatusModal.cert.mobile}...`);
+                          const sent = await sendStatusUpdateWhatsApp(syncStatusModal.cert, syncStatusModal.newStatus);
+                          if (sent) {
+                            showToast('success', 'WhatsApp Sent', `Status alert delivered to +91 ${syncStatusModal.cert.mobile}!`);
+                          } else {
+                            showToast('error', 'Send Failed', 'Failed to deliver WhatsApp message.');
+                          }
+                        }
+                      }}
+                      className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-xs shadow-md transition flex items-center justify-center gap-1.5"
+                    >
+                      <Send className="w-4 h-4" />
+                      <span>Send to WhatsApp</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setSyncStatusModal(prev => ({ ...prev, isOpen: false }))}
+                      className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs shadow-md transition"
+                    >
+                      ठीक है (Close)
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* STEP 3: ERROR STATE */}
+            {syncStatusModal.step === 'ERROR' && (
+              <div className="py-6 text-center space-y-4">
+                <div className="w-14 h-14 rounded-2xl bg-rose-100 text-rose-600 border border-rose-200 flex items-center justify-center mx-auto">
+                  <AlertTriangle className="w-8 h-8 text-rose-600" />
+                </div>
+                <div>
+                  <h4 className="text-base font-extrabold text-slate-900">स्टेटस सिंक असफल (Sync Failed)</h4>
+                  <p className="text-xs text-rose-600 font-bold mt-1 max-w-sm mx-auto">
+                    {syncStatusModal.errorReason || 'झारसेवा पोर्टल से स्टेटस प्राप्त नहीं हो सका।'}
+                  </p>
+                </div>
+
+                <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 text-xs text-slate-600 max-w-sm mx-auto text-left space-y-1">
+                  <p className="font-bold text-slate-800">संभावित कारण:</p>
+                  <p>• रेफरेंस नंबर सही नहीं है या पोर्टल पर उपलब्ध नहीं है।</p>
+                  <p>• झारसेवा का आधिकारिक सर्वर व्यस्त या डाउन है।</p>
+                  <p>• लोकल इंजन बैकग्राउंड में चल रहा है या नहीं, जांचें।</p>
+                </div>
+
+                <div className="flex items-center justify-center gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (syncStatusModal.cert) {
+                        handleSyncSingle(syncStatusModal.cert);
+                      }
+                    }}
+                    className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs shadow-md transition flex items-center gap-1.5"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    <span>दोबारा जांचें (Retry)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setSyncStatusModal(prev => ({ ...prev, isOpen: false }))}
+                    className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs transition"
+                  >
+                    बंद करें (Close)
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
