@@ -303,9 +303,8 @@ export default function ClientDashboard({ clientData, onLogout }) {
           } else if (liveCert.syncStatus === 'ERROR') {
             itemStatus = 'ERROR';
             errorReason = liveCert.syncError || 'Portal sync failed';
-          } else if (liveCert.syncStatus === undefined && liveCert.currentStatus) {
-            // Already synced
-            itemStatus = 'SUCCESS';
+          } else if (liveCert.syncStatus === 'QUEUED') {
+            itemStatus = 'PENDING';
           }
 
           if (itemStatus === 'SUCCESS') {
@@ -332,8 +331,10 @@ export default function ClientDashboard({ clientData, onLogout }) {
           };
         });
 
-        // If all items reached terminal state (SUCCESS or ERROR), update step to SUCCESS/SUMMARY
-        const allDone = updatedItems.every(i => i.status === 'SUCCESS' || i.status === 'ERROR');
+        // Strictly verify that ALL items have reached terminal state AND count equals total
+        const allDone = updatedItems.length > 0 && 
+                        (synced + errs >= prev.totalCount) && 
+                        updatedItems.every(i => i.status === 'SUCCESS' || i.status === 'ERROR');
 
         return {
           ...prev,
