@@ -499,14 +499,19 @@ router.post('/:id/sync-jharsewa', async (req, res) => {
   }
 });
 
-// 6. Bulk Jharsewa Status Sync
-router.post('/sync-all-jharsewa', async (req, res) => {
+// 6. Bulk Jharsewa Status Sync (Supports both /sync-all and /sync-all-jharsewa)
+router.post(['/sync-all', '/sync-all-jharsewa'], async (req, res) => {
   try {
-    const pendingCerts = await prisma.certificate.findMany({
-      where: {
-        currentStatus: { in: ['INITIATED', 'HOLD', 'UNDER_PROCESS', 'PENDING', 'WAITING', 'CI_UNDER_PROCESS', 'CI_WAITING', 'CO_UNDER_PROCESS', 'CO_WAITING', 'SDO_UNDER_PROCESS'] }
-      }
-    });
+    let pendingCerts = [];
+    if (req.body && Array.isArray(req.body.certificates) && req.body.certificates.length > 0) {
+      pendingCerts = req.body.certificates;
+    } else {
+      pendingCerts = await prisma.certificate.findMany({
+        where: {
+          currentStatus: { in: ['INITIATED', 'HOLD', 'UNDER_PROCESS', 'PENDING', 'WAITING', 'CI_UNDER_PROCESS', 'CI_WAITING', 'CO_UNDER_PROCESS', 'CO_WAITING', 'SDO_UNDER_PROCESS'] }
+        }
+      });
+    }
 
     if (pendingCerts.length === 0) {
       return res.json({ success: true, message: 'No pending certificates to sync.', syncedCount: 0 });

@@ -6,6 +6,7 @@ const fs = require('fs');
 const { processIncomeCertificate } = require('../engines/income.engine');
 const { processResidentialCertificate } = require('../engines/residential.engine');
 const { processCasteCertificate } = require('../engines/caste.engine');
+const { groupCertificatesBy90DayWindows } = require('../engines/date.engine');
 
 // Global CSC Browser Session variables for reuse & keep-alive
 let globalBrowser = null;
@@ -346,6 +347,7 @@ function formatDateDDMMYYYY(dateInput) {
  */
 function getSyncDateRange(entryDateInput) {
   const today = new Date();
+  today.setHours(23, 59, 59, 999);
   let entryDate = today;
 
   if (entryDateInput) {
@@ -355,14 +357,28 @@ function getSyncDateRange(entryDateInput) {
     }
   }
 
-  // Rule (a): Date range must be max 90 days
-  // From Date: Entry Date (or 10 days prior)
-  // To Date: From Date + 89 days (max 90 days window) or Today
+  // If entryDate is within last 89 days from today, range is: (today - 89 days) to today
+  const minCurrentWindowDate = new Date(today.getTime());
+  minCurrentWindowDate.setDate(minCurrentWindowDate.getDate() - 89);
+  minCurrentWindowDate.setHours(0, 0, 0, 0);
+
+  if (entryDate >= minCurrentWindowDate && entryDate <= today) {
+    return {
+      fromDateStr: formatDateDDMMYYYY(minCurrentWindowDate),
+      toDateStr: formatDateDDMMYYYY(today),
+      fromDateObj: minCurrentWindowDate,
+      toDateObj: today
+    };
+  }
+
+  // Otherwise, construct a strict 90-day window covering entryDate
   const fromDate = new Date(entryDate.getTime());
-  fromDate.setDate(fromDate.getDate() - 5); // 5 days margin before entry date
+  fromDate.setDate(fromDate.getDate() - 5);
+  fromDate.setHours(0, 0, 0, 0);
 
   const toDate = new Date(fromDate.getTime());
-  toDate.setDate(toDate.getDate() + 89); // Max 90 days window
+  toDate.setDate(toDate.getDate() + 89);
+  toDate.setHours(23, 59, 59, 999);
 
   const finalToDate = toDate > today ? today : toDate;
 
@@ -671,19 +687,9 @@ async function syncMultipleCertificates(certificates) {
 
   console.log(`📍 Active Portal Date Range: From ${currentPortalDates.from} To ${currentPortalDates.to}`);
 
-  // Partition certificates: In-Range vs Out-of-Range
-  const inRangeCerts = [];
-  const outRangeCerts = [];
-
-  for (const cert of certificates) {
-    if (isDateWithinPortalRange(cert.entryDate, currentPortalDates.from, currentPortalDates.to)) {
-      inRangeCerts.push(cert);
-    } else {
-      outRangeCerts.push(cert);
-    }
-  }
-
-  console.log(`📊 Partition Results: ${inRangeCerts.length} certificates in active range, ${outRangeCerts.length} out-of-range.`);
+  // 1. Group all certificates into optimal 90-day date buckets
+  const dateBatches = groupCertificatesBy90DayWindows(certificates);
+  console.log(`📊 Date Windows Calculated: Created ${dateBatches.length} 90-day window batch(es) for ${certificates.length} certificates.`);
 
   const results = [];
 
@@ -818,34 +824,35 @@ async function syncMultipleCertificates(certificates) {
     }
   };
 
-  // STEP 1: Sync In-Range certificates FIRST without touching portal date filter
-  if (inRangeCerts.length > 0) {
-    console.log(`⚡ [STEP 1] Syncing ${inRangeCerts.length} certificates within active date range...`);
-    await page.evaluate(() => {
-      const btns = Array.from(document.querySelectorAll('input[type="button"], input[type="submit"], button'));
-      const getDataBtn = btns.find(b => (b.value && b.value.toUpperCase().includes('GET DATA')) || (b.innerText && b.innerText.toUpperCase().includes('GET DATA')));
-      if (getDataBtn) getDataBtn.click();
+  // Iterate over each 90-day window batch
+  for (let bIndex = 0; bIndex < dateBatches.length; bIndex++) {
+    const batch = dateBatches[bIndex];
+    console.log(`\n------------------------------------------------------`);
+    console.log(`📦 [Batch ${bIndex + 1}/${dateBatches.length}] Window: ${batch.fromDateStr} To ${batch.toDateStr} (${batch.certificates.length} certs)`);
+    console.log(`------------------------------------------------------`);
+
+    // Check if portal already matches this window
+    const portalCurrent = await page.evaluate(() => {
+      const fromInput = document.querySelector('input[name*="from"], input[id*="from"], input[name*="From"]');
+      const toInput = document.querySelector('input[name*="to"], input[id*="to"], input[name*="To"]');
+      return {
+        from: fromInput ? fromInput.value : '',
+        to: toInput ? toInput.value : ''
+      };
     });
-    await new Promise(r => setTimeout(r, 4000));
-    await syncCertBatchOnCurrentPage(inRangeCerts);
-  }
 
-  // STEP 2: Group Out-of-Range certificates into 90-day date windows and sync
-  if (outRangeCerts.length > 0) {
-    console.log(`📅 [STEP 2] Grouping & syncing ${outRangeCerts.length} out-of-range certificates...`);
+    const isMatch = (portalCurrent.from === batch.fromDateStr && portalCurrent.to === batch.toDateStr);
 
-    const dateMap = {};
-    for (const cert of outRangeCerts) {
-      const { fromDateStr, toDateStr } = getSyncDateRange(cert.entryDate);
-      const key = `${fromDateStr}_${toDateStr}`;
-      if (!dateMap[key]) dateMap[key] = { fromDateStr, toDateStr, certs: [] };
-      dateMap[key].certs.push(cert);
-    }
-
-    for (const key of Object.keys(dateMap)) {
-      const group = dateMap[key];
-      console.log(`📅 Updating Portal Date Range for Out-of-Range Group (${group.certs.length} certs): ${group.fromDateStr} to ${group.toDateStr}...`);
-
+    if (isMatch && bIndex === 0) {
+      console.log(`⚡ Portal date filter is ALREADY set to ${batch.fromDateStr} - ${batch.toDateStr}. Reusing table view without reloading date!`);
+      await page.evaluate(() => {
+        const btns = Array.from(document.querySelectorAll('input[type="button"], input[type="submit"], button'));
+        const getDataBtn = btns.find(b => (b.value && b.value.toUpperCase().includes('GET DATA')) || (b.innerText && b.innerText.toUpperCase().includes('GET DATA')));
+        if (getDataBtn) getDataBtn.click();
+      });
+      await new Promise(r => setTimeout(r, 3500));
+    } else {
+      console.log(`📅 Setting Portal Date Range: From ${batch.fromDateStr} To ${batch.toDateStr}...`);
       await page.evaluate((fDate, tDate) => {
         const fromInput = document.querySelector('input[name*="from"], input[id*="from"], input[name*="From"]');
         if (fromInput && fDate) {
@@ -862,11 +869,13 @@ async function syncMultipleCertificates(certificates) {
         const btns = Array.from(document.querySelectorAll('input[type="button"], input[type="submit"], button'));
         const getDataBtn = btns.find(b => (b.value && b.value.toUpperCase().includes('GET DATA')) || (b.innerText && b.innerText.toUpperCase().includes('GET DATA')));
         if (getDataBtn) getDataBtn.click();
-      }, group.fromDateStr, group.toDateStr);
+      }, batch.fromDateStr, batch.toDateStr);
 
       await new Promise(r => setTimeout(r, 4500));
-      await syncCertBatchOnCurrentPage(group.certs);
     }
+
+    // Now sync all certificates within this 90-day batch without changing the date filter
+    await syncCertBatchOnCurrentPage(batch.certificates);
   }
 
   console.log(`✅ Bulk Sync Complete for ${certificates.length} certificates!`);
