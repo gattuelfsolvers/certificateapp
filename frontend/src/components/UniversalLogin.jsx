@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ShieldCheck, Lock, User, KeyRound, AlertCircle, ArrowRight, UserPlus, Sparkles, Shield, Cpu } from 'lucide-react';
+import { ShieldCheck, Lock, User, KeyRound, AlertCircle, ArrowRight, UserPlus, Sparkles, Shield, Cpu, Laptop, Smartphone } from 'lucide-react';
 import { fetchClientsFromFirebase, saveClientToFirebase, subscribePlansFromFirebase } from '../firebase';
 
 export default function UniversalLogin({ onLoginSuccess }) {
@@ -155,7 +155,9 @@ export default function UniversalLogin({ onLoginSuccess }) {
 
         setDuplicateModalData({
           isOpen: true,
+          duplicateType: 'MOBILE',
           phone: cleanPhone,
+          shopName: existingPhoneClient.clientName || 'Account',
           status: clientStatus,
           isReactivation: isReactivationNeeded,
           message: customMsg
@@ -175,11 +177,15 @@ export default function UniversalLogin({ onLoginSuccess }) {
         const clientStatus = existingHwidClient.status || 'ACTIVE';
         const isReactivationNeeded = clientStatus === 'EXPIRED' || clientStatus === 'KILLED' || clientStatus === 'INACTIVE' || clientStatus === 'DELETED';
 
-        let customMsg = `This PC / Hardware ID (${currentSystemHwid}) is already registered under account "${existingHwidClient.clientName || 'Shop'}" (${existingHwidClient.phone}) with status "${clientStatus}".`;
+        let customMsg = `Is computer / device me ek registration mobile number (${existingHwidClient.phone || 'Unknown'}) se pehle se darj hai (${existingHwidClient.clientName || 'Account'}) aur wo "${clientStatus}" status me hai.`;
 
         setDuplicateModalData({
           isOpen: true,
+          duplicateType: 'HWID',
           phone: existingHwidClient.phone || cleanPhone,
+          attemptedPhone: cleanPhone,
+          shopName: existingHwidClient.clientName || 'Account',
+          hwid: currentSystemHwid,
           status: clientStatus,
           isReactivation: isReactivationNeeded,
           message: customMsg
@@ -608,21 +614,44 @@ export default function UniversalLogin({ onLoginSuccess }) {
             </div>
 
             <div className="space-y-2">
-              <h3 className="text-xl font-black text-white tracking-tight">
-                Mobile Number Already Registered
+              <h3 className="text-xl font-black text-white tracking-tight flex items-center justify-center gap-2">
+                {duplicateModalData.duplicateType === 'HWID' ? (
+                  <>
+                    <Laptop className="w-6 h-6 text-amber-400 inline" />
+                    <span>Computer / Device Already Registered</span>
+                  </>
+                ) : (
+                  <>
+                    <Smartphone className="w-6 h-6 text-amber-400 inline" />
+                    <span>Mobile Number Already Registered</span>
+                  </>
+                )}
               </h3>
-              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 text-slate-200 text-xs font-medium leading-relaxed space-y-2 text-left">
-                <p>
-                  Your number <span className="font-mono font-bold text-amber-300">({duplicateModalData.phone})</span> is already registered with us and it is in <span className="font-extrabold uppercase text-emerald-400">"{duplicateModalData.status}"</span> status.
-                </p>
+              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 text-slate-200 text-xs font-medium leading-relaxed space-y-2.5 text-left">
+                {duplicateModalData.duplicateType === 'HWID' ? (
+                  <>
+                    <p>
+                      Aapke is <span className="font-bold text-white">Computer / Device (PC)</span> me pehle se ek registration mobile number <span className="font-mono font-bold text-amber-300">({duplicateModalData.phone})</span> - <span className="font-bold text-emerald-300">{duplicateModalData.shopName}</span> ke naam se darj hai aur wo <span className="font-extrabold uppercase text-emerald-400">"{duplicateModalData.status}"</span> status me hai.
+                    </p>
+                    <p className="text-slate-400 text-[11px] bg-slate-900/80 p-2.5 rounded-xl border border-slate-800/80">
+                      ℹ️ Ek computer par ek hi account allow hota hai. Agar aap <span className="font-mono text-amber-200">{duplicateModalData.attemptedPhone}</span> ke liye naya registration karna chahte hain, to kripya Admin se iss PC ka HWID link hatwane ke liye sampark karein ya purane account se login karein.
+                    </p>
+                  </>
+                ) : (
+                  <p>
+                    Aapka mobile number <span className="font-mono font-bold text-amber-300">({duplicateModalData.phone})</span> pehle se hamare paas registered hai aur yeh <span className="font-extrabold uppercase text-emerald-400">"{duplicateModalData.status}"</span> status me hai.
+                  </p>
+                )}
 
                 {duplicateModalData.isReactivation ? (
                   <p className="text-rose-300 font-semibold border-t border-slate-800 pt-2">
-                    Please contact the Admin at <span className="font-bold font-mono text-white select-all">7781931880</span> for reactivating your account.
+                    Kripya account reactivate karwane ke liye Admin se <span className="font-bold font-mono text-white select-all">7781931880</span> par contact karein.
                   </p>
                 ) : (
                   <p className="text-blue-300 font-semibold border-t border-slate-800 pt-2">
-                    Please login with your user ID and password. If you forgot your user ID and password, you can reset it using your mobile number.
+                    {duplicateModalData.duplicateType === 'HWID' 
+                      ? `Aap registered account (${duplicateModalData.phone}) se direct login kar sakte hain ya password reset kar sakte hain:`
+                      : `Kripya apne user ID aur password se login karein. Agar aap bhool gaye hain to mobile number se reset kar sakte hain:`}
                   </p>
                 )}
               </div>
@@ -640,7 +669,7 @@ export default function UniversalLogin({ onLoginSuccess }) {
                     }}
                     className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-xs rounded-xl shadow-md transition"
                   >
-                    Login to Account
+                    Login with ({duplicateModalData.phone})
                   </button>
                   <button
                     onClick={() => {
