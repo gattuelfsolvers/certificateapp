@@ -1342,7 +1342,14 @@ export default function AdminDashboard({ onLogout }) {
                             {isFree ? 'FREE DEMO' : requestedPlanName}
                           </span>
                         </div>
-                        <p className="text-xs text-slate-500 font-mono">{req.phone} • {req.ownerName || 'CSC Center'}</p>
+                        <p className="text-xs text-slate-500 font-mono">
+                          {req.phone} • {req.ownerName || 'CSC Center'}
+                        </p>
+                        {req.utrNumber && req.utrNumber !== 'N/A_FREE_TRIAL' && (
+                          <p className="text-[11px] font-mono font-black text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-md mt-1 inline-block">
+                            UTR: {req.utrNumber}
+                          </p>
+                        )}
                       </div>
 
                       <div className="flex items-center gap-1.5 shrink-0">
