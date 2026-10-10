@@ -149,10 +149,43 @@ async function processQueueItem(certId, certData) {
     // 5. Send automated WhatsApp message to applicant if mobile is present
     if (certData.mobile) {
       try {
-        const shop = await getShopDetails();
         const fullCertName = getCertFullDisplayName(certData.certType);
         const formattedDate = formatDate(certData.entryDate);
-        const messageText = `*APNA DIGITAL HUB*
+
+        // Map status to template key
+        let targetKey = 'STATUS_UNDER_PROCESS';
+        const s = String(newStatus).toUpperCase();
+        if (s === 'INITIATED') targetKey = 'STATUS_INITIATED';
+        else if (s.includes('DELIVERED')) targetKey = s.includes('SDO') ? 'STATUS_SDO_DELIVERED' : 'STATUS_DELIVERED';
+        else if (s.includes('REJECTED')) targetKey = 'STATUS_REJECTED';
+        else if (s.includes('CI_WAITING')) targetKey = 'STATUS_CI_WAITING';
+        else if (s.includes('CO_WAITING')) targetKey = 'STATUS_CO_WAITING';
+        else if (s.includes('CI_UNDER_PROCESS') || s.includes('CI')) targetKey = 'STATUS_CI_UNDER_PROCESS';
+        else if (s.includes('CO_UNDER_PROCESS') || s.includes('CO')) targetKey = 'STATUS_CO_UNDER_PROCESS';
+        else if (s.includes('SDO_UNDER_PROCESS') || s.includes('SDO')) targetKey = 'STATUS_SDO_UNDER_PROCESS';
+
+        let messageText = '';
+        try {
+          const { getDoc } = require('firebase/firestore');
+          const tplSnap = await getDoc(doc(db, 'whatsapp_templates', targetKey));
+          if (tplSnap.exists() && tplSnap.data().messageText) {
+            const rawTpl = tplSnap.data().messageText;
+            const duesVal = Number(dues) || 0;
+            const duesLine = duesVal > 0 ? `\nबकाया राशि (Dues): ₹${duesVal}` : '';
+            messageText = rawTpl
+              .replace(/\{applicantName\}/g, certData.applicantName || 'Applicant')
+              .replace(/\{refNo\}/g, certData.refNo || '')
+              .replace(/\{certType\}/g, fullCertName)
+              .replace(/\{entryDate\}/g, formattedDate)
+              .replace(/\{currentStatus\}/g, newStatus)
+              .replace(/\{duesLine\}/g, duesLine);
+          }
+        } catch (tplErr) {
+          console.warn(`⚠️ [FirebaseQueue] Could not load template ${targetKey}:`, tplErr.message);
+        }
+
+        if (!messageText) {
+          messageText = `*APNA DIGITAL HUB*
 (A Part of Gattu Computer Works)
 LIC Building, Khesmi, Gomoh, Dhanbad
 Contact: 7781931880
@@ -165,7 +198,7 @@ Contact: 7781931880
 💰 बकाया राशि (Dues): *₹${dues}*
 
 किसी प्रकार के अपडेट पर आपको सूचित किया जाएगा। धन्यवाद!`;
-
+        }
 
         await sendTestWhatsAppMessage(certData.mobile, messageText);
         console.log(`📲 [FirebaseQueue] WhatsApp update delivered to +91 ${certData.mobile}!`);

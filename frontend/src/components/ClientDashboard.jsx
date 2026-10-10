@@ -13,7 +13,8 @@ import {
   requestCertificateSyncOnFirebase, 
   requestBulkSyncOnFirebase, 
   saveCertificateToFirebase, 
-  deleteCertificateFromFirebase 
+  deleteCertificateFromFirebase,
+  subscribeWhatsAppTemplatesFromFirebase
 } from '../firebase';
 import CodeMasterView from './CodeMasterView';
 import ProfileSettingsView from './ProfileSettingsView';
@@ -240,6 +241,20 @@ export default function ClientDashboard({ clientData, onLogout }) {
 
   // Set of Certificate IDs that received a newly updated status exclusively via Sync All
   const [newlyUpdatedCertIds, setNewlyUpdatedCertIds] = useState(new Set());
+
+  // Real-time WhatsApp Templates from Firestore
+  const [waTemplates, setWaTemplates] = useState([]);
+
+  useEffect(() => {
+    const unsubTpl = subscribeWhatsAppTemplatesFromFirebase((tplList) => {
+      if (tplList && tplList.length > 0) {
+        setWaTemplates(tplList);
+      }
+    });
+    return () => {
+      if (typeof unsubTpl === 'function') unsubTpl();
+    };
+  }, []);
 
   useEffect(() => {
     if (engineStatus === 'OFFLINE' && !sessionStorage.getItem('SEEN_ENGINE_DOWNLOAD_PROMPT')) {
@@ -499,10 +514,39 @@ export default function ClientDashboard({ clientData, onLogout }) {
     const fullCertName = getCertFullDisplayName(cert.certType);
     const statusToUse = customStatus || cert.currentStatus || 'INITIATED';
 
-    const messageText = `*${profile.clientName}*
-📞 ${profile.phone}
-📍 ${profile.address}
------------------------
+    // Map status to template key
+    let targetKey = 'STATUS_UNDER_PROCESS';
+    const s = String(statusToUse).toUpperCase();
+    if (s === 'INITIATED') targetKey = 'STATUS_INITIATED';
+    else if (s.includes('DELIVERED')) targetKey = s.includes('SDO') ? 'STATUS_SDO_DELIVERED' : 'STATUS_DELIVERED';
+    else if (s.includes('REJECTED')) targetKey = 'STATUS_REJECTED';
+    else if (s.includes('CI_WAITING')) targetKey = 'STATUS_CI_WAITING';
+    else if (s.includes('CO_WAITING')) targetKey = 'STATUS_CO_WAITING';
+    else if (s.includes('CI_UNDER_PROCESS') || s.includes('CI')) targetKey = 'STATUS_CI_UNDER_PROCESS';
+    else if (s.includes('CO_UNDER_PROCESS') || s.includes('CO')) targetKey = 'STATUS_CO_UNDER_PROCESS';
+    else if (s.includes('SDO_UNDER_PROCESS') || s.includes('SDO')) targetKey = 'STATUS_SDO_UNDER_PROCESS';
+
+    // Find custom template configured by user in Message Master
+    const matchedTemplate = waTemplates.find(t => t.templateKey === targetKey);
+
+    let messageText = '';
+    if (matchedTemplate && matchedTemplate.messageText) {
+      const duesVal = Number(cert.duesAmount || (cert.totalFee - cert.paidAmount) || 0);
+      const duesLine = duesVal > 0 ? `\nबकाया राशि (Dues): ₹${duesVal}` : '';
+      messageText = matchedTemplate.messageText
+        .replace(/\{applicantName\}/g, cert.applicantName || 'Applicant')
+        .replace(/\{refNo\}/g, cert.refNo || '')
+        .replace(/\{certType\}/g, fullCertName)
+        .replace(/\{entryDate\}/g, formatDateDDMMYYYY(cert.entryDate))
+        .replace(/\{currentStatus\}/g, statusToUse)
+        .replace(/\{duesLine\}/g, duesLine);
+    } else {
+      // Standard 4-Line Common Header Fallback
+      messageText = `*APNA DIGITAL HUB*
+(A Part of Gattu Computer Works)
+LIC Building, Khesmi, Gomoh, Dhanbad
+Contact: 7781931880
+------------------------------------
 📄 रेफरेंस नंबर: *${cert.refNo}*
 👤 आवेदक का नाम: *${cert.applicantName}*
 📜 प्रमाण पत्र का प्रकार: *${fullCertName}*
@@ -511,6 +555,7 @@ export default function ClientDashboard({ clientData, onLogout }) {
 💰 बकाया राशि (Dues): *₹${cert.duesAmount || 0}*
 
 किसी प्रकार के अपडेट पर आपको सूचित किया जाएगा। धन्यवाद!`;
+    }
 
     try {
       let res;
