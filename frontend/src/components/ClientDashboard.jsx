@@ -608,6 +608,17 @@ export default function ClientDashboard({ clientData, onLogout }) {
 
   const handleOpenEditModal = (cert) => {
     setEditingCert(cert);
+    let initialDate = new Date().toISOString().split('T')[0];
+    if (cert.entryDate) {
+      try {
+        const d = new Date(cert.entryDate);
+        if (!isNaN(d.getTime())) {
+          initialDate = d.toISOString().split('T')[0];
+        } else if (typeof cert.entryDate === 'string' && cert.entryDate.match(/^\d{4}-\d{2}-\d{2}/)) {
+          initialDate = cert.entryDate.slice(0, 10);
+        }
+      } catch (e) {}
+    }
     setEditFormData({
       id: cert.id,
       refNo: cert.refNo || '',
@@ -615,7 +626,7 @@ export default function ClientDashboard({ clientData, onLogout }) {
       mobile: cert.mobile || '',
       address: cert.address || '',
       certType: cert.certType || 'JHIC',
-      entryDate: cert.entryDate || new Date().toISOString().split('T')[0],
+      entryDate: initialDate,
       currentStatus: cert.currentStatus || 'INITIATED',
       totalFee: cert.totalFee || 100,
       paidAmount: cert.paidAmount || 100
@@ -1968,14 +1979,27 @@ export default function ClientDashboard({ clientData, onLogout }) {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-slate-700 font-bold mb-1">Village / Address</label>
-                <input
-                  type="text"
-                  value={editFormData.address}
-                  onChange={(e) => setEditFormData(prev => ({ ...prev, address: e.target.value }))}
-                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-900"
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-700 font-bold mb-1">Application Date</label>
+                  <input
+                    type="date"
+                    value={editFormData.entryDate}
+                    onChange={(e) => setEditFormData(prev => ({ ...prev, entryDate: e.target.value }))}
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-900 font-medium"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-700 font-bold mb-1">Village / Address</label>
+                  <input
+                    type="text"
+                    value={editFormData.address}
+                    onChange={(e) => setEditFormData(prev => ({ ...prev, address: e.target.value }))}
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-900"
+                    placeholder="Enter village / address"
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-3 gap-3">
