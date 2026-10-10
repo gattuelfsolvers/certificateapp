@@ -1093,23 +1093,6 @@ Contact: 7781931880
             <div>
               <h1 className="text-xl font-extrabold tracking-tight flex items-center gap-2 text-white">
                 {clientData?.clientName || 'Apna Digital Hub - Certificate Management'}
-                {isLicenseExpired ? (
-                  <span className="px-2.5 py-0.5 rounded-full bg-rose-500 text-white text-[11px] font-black tracking-wider uppercase shadow animate-pulse flex items-center gap-1">
-                    <span>⚠️ PLAN EXPIRED</span>
-                    <span className="bg-rose-950/40 px-1.5 py-0.2 rounded-full font-mono">0 DAYS</span>
-                  </span>
-                ) : isTrialPlan ? (
-                  <span className="px-2.5 py-0.5 rounded-full bg-amber-400 text-slate-950 text-[11px] font-black tracking-wider uppercase shadow flex items-center gap-1">
-                    <span>⚡ FREE TRIAL</span>
-                    <span className="bg-slate-950/20 px-1.5 py-0.2 rounded-full font-mono">
-                      {certificates.length}/5 ENTRIES
-                    </span>
-                  </span>
-                ) : (
-                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-400 text-slate-900 text-[11px] font-black tracking-wider uppercase shadow">
-                    ✓ {clientData?.planType || 'ACTIVE PLAN'} ({expiryDaysLeft} Days)
-                  </span>
-                )}
               </h1>
               <p className="text-xs text-blue-100 font-medium flex items-center gap-2">
                 <span>Owner: {clientData?.ownerName || 'CSC Partner'}</span>
@@ -1120,6 +1103,49 @@ Contact: 7781931880
           </div>
 
           <div className="flex items-center gap-3">
+            {/* 2-LINE LICENSE PLAN & DAYS STATUS BADGE */}
+            <div 
+              onClick={() => setActiveTab('profile')}
+              title="Click to view subscription / upgrade plan"
+              className={`flex flex-col items-center justify-center px-3.5 py-1.5 rounded-xl border text-center shadow-xs cursor-pointer transition select-none ${
+                isLicenseExpired
+                  ? 'bg-rose-500/25 border-rose-400/50 text-rose-100 hover:bg-rose-500/35 animate-pulse'
+                  : isTrialPlan
+                    ? 'bg-amber-400/25 border-amber-300/50 text-amber-100 hover:bg-amber-400/35'
+                    : 'bg-emerald-400/20 border-emerald-300/40 text-emerald-100 hover:bg-emerald-400/30'
+              }`}
+            >
+              {/* Line 1: Plan Name */}
+              <div className="text-[11px] font-black tracking-wide uppercase flex items-center gap-1">
+                {isLicenseExpired ? (
+                  <span className="text-rose-200">⚠️ PLAN EXPIRED</span>
+                ) : isTrialPlan ? (
+                  <span className="text-amber-300">⚡ FREE TRIAL</span>
+                ) : (
+                  <span className="text-emerald-300">
+                    {clientData?.planType === 'MONTHLY' ? 'MONTHLY PLAN'
+                      : clientData?.planType === 'HALF_YEARLY' ? 'HALF-YEARLY PLAN'
+                      : clientData?.planType === 'YEARLY' ? 'YEARLY PLAN'
+                      : clientData?.planType === 'LIFETIME' ? 'LIFETIME PLAN'
+                      : (clientData?.planType || 'ACTIVE PLAN')}
+                  </span>
+                )}
+              </div>
+              
+              {/* Line 2: Small Text - Days Left / Entries */}
+              <div className="text-[9.5px] font-bold font-mono opacity-90 leading-tight">
+                {isLicenseExpired ? (
+                  <span className="text-rose-300">0 Days Left</span>
+                ) : isTrialPlan ? (
+                  <span className="text-amber-200">{certificates.length}/5 Entries Used</span>
+                ) : isLifetime ? (
+                  <span className="text-emerald-200">Unlimited Access</span>
+                ) : (
+                  <span className="text-emerald-200">{expiryDaysLeft} Days Left</span>
+                )}
+              </div>
+            </div>
+
             {/* COMPACT ENGINE STATUS PILL */}
             {engineStatus === 'ONLINE' ? (
               <button
