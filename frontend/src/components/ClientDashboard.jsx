@@ -247,9 +247,25 @@ export default function ClientDashboard({ clientData, onLogout }) {
   const [waTemplates, setWaTemplates] = useState([]);
   const [autoStatusWhatsApp, setAutoStatusWhatsApp] = useState(true);
 
-  // Subscription Plan & Free Trial Limit Check
+  // Subscription Plan, Expiry & Free Trial Limit Check
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [showExpiredModal, setShowExpiredModal] = useState(false);
   const isTrialPlan = (clientData?.planType === 'FREE_TRIAL') || (!clientData?.planType) || (clientData?.planType === 'TRIAL');
+  const isLifetime = String(clientData?.planType || '').toUpperCase().includes('LIFETIME');
+
+  // Strict Expiry Calculation
+  const expiryDaysLeft = (() => {
+    if (isLifetime) return 999999;
+    if (clientData?.expiresAt) {
+      const expDate = new Date(clientData.expiresAt);
+      const diffTime = expDate.getTime() - Date.now();
+      return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    }
+    return 30;
+  })();
+
+  const isLicenseExpired = !isLifetime && (expiryDaysLeft <= 0 || clientData?.status === 'EXPIRED');
+
   const maxEntriesAllowed = isTrialPlan ? 5 : 999999;
   const isTrialLimitReached = isTrialPlan && (certificates.length >= 5);
 
@@ -433,6 +449,14 @@ export default function ClientDashboard({ clientData, onLogout }) {
   };
 
   const handleOpenAddModal = (defaultType = 'JHIC') => {
+    // 1. Strict Expiry Blocking: Block new entry if license is expired
+    if (isLicenseExpired) {
+      showToast('error', 'License Expired', 'Aapka license expire ho chuka hai. Kripya license renew/upgrade karein!');
+      setShowExpiredModal(true);
+      return;
+    }
+
+    // 2. Strict Free Trial Limit Check
     if (isTrialPlan && certificates.length >= 5) {
       setShowUpgradeModal(true);
       return;
@@ -538,6 +562,12 @@ export default function ClientDashboard({ clientData, onLogout }) {
   };
 
   const sendStatusUpdateWhatsApp = async (cert, customStatus, targetTemplateKey = null) => {
+    // Strict Expiry Rule: Block all WhatsApp status update dispatches if license is expired
+    if (isLicenseExpired) {
+      console.warn('⚠️ WhatsApp dispatch skipped: Client subscription license has EXPIRED.');
+      return false;
+    }
+
     if (!cert || !cert.mobile) return false;
     const profile = getShopProfileDetails();
     const fullCertName = getCertFullDisplayName(cert.certType);
@@ -611,6 +641,13 @@ Contact: 7781931880
 
   const handleSaveCertificate = async (e) => {
     e.preventDefault();
+
+    if (isLicenseExpired) {
+      setIsEntryModalOpen(false);
+      showToast('error', 'License Expired', 'Aapka license expire ho chuka hai. Kripya license renew/upgrade karein!');
+      setShowExpiredModal(true);
+      return;
+    }
 
     if (!applicantInfo.applicantName.trim()) {
       showToast('error', 'Applicant Name Required', 'Please enter Applicant Name');
@@ -697,6 +734,11 @@ Contact: 7781931880
   };
 
   const handleOpenEditModal = (cert) => {
+    if (isLicenseExpired) {
+      showToast('error', 'License Expired', 'Aapka license expire ho chuka hai. Expired plan me edit allow nahi hai!');
+      setShowExpiredModal(true);
+      return;
+    }
     setEditingCert(cert);
     let initialDate = new Date().toISOString().split('T')[0];
     if (cert.entryDate) {
@@ -725,6 +767,12 @@ Contact: 7781931880
 
   const handleSaveEditCertificate = async (e) => {
     e.preventDefault();
+    if (isLicenseExpired) {
+      setEditingCert(null);
+      showToast('error', 'License Expired', 'Aapka license expire ho chuka hai. Expired plan me update allow nahi hai!');
+      setShowExpiredModal(true);
+      return;
+    }
     try {
       const total = parseFloat(editFormData.totalFee) || 0;
       const paid = parseFloat(editFormData.paidAmount) || 0;
@@ -945,6 +993,11 @@ Contact: 7781931880
   };
 
   const handleDeleteCertificate = async (id, refNo) => {
+    if (isLicenseExpired) {
+      showToast('error', 'License Expired', 'Aapka license expire ho chuka hai. Expired plan me delete allow nahi hai!');
+      setShowExpiredModal(true);
+      return;
+    }
     if (!window.confirm(`Are you sure you want to delete certificate ${refNo}?`)) return;
     try {
       await deleteCertificateFromFirebase(id);
@@ -1040,7 +1093,12 @@ Contact: 7781931880
             <div>
               <h1 className="text-xl font-extrabold tracking-tight flex items-center gap-2 text-white">
                 {clientData?.clientName || 'Apna Digital Hub - Certificate Management'}
-                {isTrialPlan ? (
+                {isLicenseExpired ? (
+                  <span className="px-2.5 py-0.5 rounded-full bg-rose-500 text-white text-[11px] font-black tracking-wider uppercase shadow animate-pulse flex items-center gap-1">
+                    <span>⚠️ PLAN EXPIRED</span>
+                    <span className="bg-rose-950/40 px-1.5 py-0.2 rounded-full font-mono">0 DAYS</span>
+                  </span>
+                ) : isTrialPlan ? (
                   <span className="px-2.5 py-0.5 rounded-full bg-amber-400 text-slate-950 text-[11px] font-black tracking-wider uppercase shadow flex items-center gap-1">
                     <span>⚡ FREE TRIAL</span>
                     <span className="bg-slate-950/20 px-1.5 py-0.2 rounded-full font-mono">
@@ -1049,7 +1107,7 @@ Contact: 7781931880
                   </span>
                 ) : (
                   <span className="px-2.5 py-0.5 rounded-full bg-emerald-400 text-slate-900 text-[11px] font-black tracking-wider uppercase shadow">
-                    ✓ {clientData?.planType || 'ACTIVE PLAN'}
+                    ✓ {clientData?.planType || 'ACTIVE PLAN'} ({expiryDaysLeft} Days)
                   </span>
                 )}
               </h1>
@@ -1110,6 +1168,38 @@ Contact: 7781931880
           </div>
         </div>
       </header>
+
+      {/* URGENT LICENSE EXPIRED ALERT BANNER */}
+      {isLicenseExpired && (
+        <div className="bg-gradient-to-r from-rose-600 via-red-600 to-rose-700 text-white px-6 py-3.5 shadow-lg border-b border-rose-800 flex flex-col sm:flex-row items-center justify-between gap-3 animate-in slide-in-from-top duration-300">
+          <div className="flex items-center gap-3 text-left">
+            <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center shrink-0 text-xl">
+              ⚠️
+            </div>
+            <div>
+              <div className="font-black text-sm uppercase tracking-wide flex items-center gap-2">
+                <span>आपकी सॉफ्टवेयर सदस्यता समाप्त (Expired) हो चुकी है!</span>
+              </div>
+              <p className="text-xs text-rose-100 font-medium mt-0.5">
+                नयी एंट्री (New Entry), एडिट/डिलीट एवं व्हाट्सएप अलर्ट्स बंद हैं। पुराने रिकॉर्ड्स का झारसेवा स्टेटस सिंक (Sync) चालू रहेगा।
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('profile');
+              }}
+              className="px-5 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs shadow-md transition flex items-center gap-1.5 cursor-pointer"
+            >
+              <Sparkles className="w-4 h-4 fill-slate-950" />
+              <span>Renew / Upgrade Plan</span>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* LEFT SIDE MENU DRAWER (AUTO HIDE BY DEFAULT) */}
       {isSideMenuOpen && (
@@ -3031,6 +3121,55 @@ Contact: 7781931880
               <button
                 type="button"
                 onClick={() => setShowUpgradeModal(false)}
+                className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs transition"
+              >
+                बंद करें (Close)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PLAN EXPIRED POPUP MODAL */}
+      {showExpiredModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white border border-rose-200 rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-2xl space-y-5 text-center">
+            <div className="w-16 h-16 rounded-3xl bg-rose-100 text-rose-600 border border-rose-200 flex items-center justify-center mx-auto shadow-sm text-2xl">
+              🚫
+            </div>
+
+            <div>
+              <div className="inline-block px-3 py-1 rounded-full bg-rose-100 text-rose-900 border border-rose-300 text-xs font-black uppercase tracking-wider mb-2">
+                Subscription Plan Expired
+              </div>
+              <h3 className="text-xl font-black text-slate-900">
+                सॉफ्टवेयर सदस्यता समाप्त हो चुकी है!
+              </h3>
+              <p className="text-xs text-slate-600 mt-2 leading-relaxed">
+                आपकी सॉफ्टवेयर वैधता (Validity) समाप्त हो चुकी है। इस स्थिति में <strong>नया सर्टिफिकेट जोड़ना (New Entry)</strong>, <strong>एडिट/डिलीट</strong> और <strong>व्हाट्सएप स्टेटस अलर्ट्स</strong> बंद कर दिए गए हैं।
+              </p>
+            </div>
+
+            <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-3.5 text-left text-xs text-emerald-900 font-medium">
+              ✅ <strong>पुराने डेटा का सिंक चालू है:</strong> आपके द्वारा पहले दर्ज किए गए सभी पुराने सर्टिफिकेट्स का झारसेवा लाइव स्टेटस सिंक हमेशा की तरह निर्बाध रूप से चालू रहेगा।
+            </div>
+
+            <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowExpiredModal(false);
+                  setActiveTab('profile');
+                }}
+                className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black text-xs shadow-md transition flex items-center gap-2 cursor-pointer"
+              >
+                <Sparkles className="w-4 h-4 fill-slate-950" />
+                <span>अपग्रेड / रिन्यू करें (Upgrade Plan)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowExpiredModal(false)}
                 className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs transition"
               >
                 बंद करें (Close)

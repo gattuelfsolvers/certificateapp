@@ -7,7 +7,8 @@ export default function App() {
   const [authRole, setAuthRole] = useState(null); // 'ADMIN' | 'CLIENT' | null
   const [clientData, setClientData] = useState(null);
 
-  const SESSION_MAX_AGE_MS = 8 * 60 * 60 * 1000; // 8 Hours Session Timeout
+  const SESSION_MAX_AGE_MS = 8 * 60 * 60 * 1000; // 8 Hours Hard Session Max
+  const INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000; // 15 Minutes Inactivity Auto-Logout
 
   useEffect(() => {
     const role = localStorage.getItem('AUTH_ROLE');
@@ -44,6 +45,33 @@ export default function App() {
       }
     }
   }, []);
+
+  // 3. User Inactivity Auto-Logout Mechanism (15 Minutes)
+  useEffect(() => {
+    if (!authRole) return;
+
+    let inactivityTimer;
+
+    const resetInactivityTimer = () => {
+      clearTimeout(inactivityTimer);
+      inactivityTimer = setTimeout(() => {
+        console.warn('⚠️ User inactive for 15 minutes. Automatically closing session...');
+        handleLogout();
+      }, INACTIVITY_TIMEOUT_MS);
+    };
+
+    // User activity trigger events
+    const activityEvents = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'click'];
+    activityEvents.forEach((ev) => window.addEventListener(ev, resetInactivityTimer, { passive: true }));
+
+    // Start timer on mount/login
+    resetInactivityTimer();
+
+    return () => {
+      clearTimeout(inactivityTimer);
+      activityEvents.forEach((ev) => window.removeEventListener(ev, resetInactivityTimer));
+    };
+  }, [authRole]);
 
   const handleLoginSuccess = (role, data) => {
     localStorage.setItem('LOGIN_TIMESTAMP', Date.now().toString());
