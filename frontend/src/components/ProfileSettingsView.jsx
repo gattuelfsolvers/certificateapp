@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { 
   User, Store, Phone, MapPin, Key, ShieldCheck, Cpu, Calendar, Clock, 
-  Lock, Smartphone, CheckCircle2, MessageSquare, AlertCircle, Save, Eye, EyeOff, QrCode, RefreshCw, Zap, Send, FileEdit, Plus, Trash2, Edit, Monitor
+  Lock, Smartphone, CheckCircle2, MessageSquare, AlertCircle, Save, Eye, EyeOff, QrCode, RefreshCw, Zap, Send, FileEdit, Plus, Trash2, Edit, Monitor,
+  Sparkles, ArrowRight, X, ArrowUpCircle
 } from 'lucide-react';
 
-import { updateClientHwidsOnFirebase } from '../firebase';
+import { updateClientHwidsOnFirebase, saveClientToFirebase, subscribePlansFromFirebase } from '../firebase';
 import axios from 'axios';
 
 export default function ProfileSettingsView({ clientData, showToast }) {
@@ -157,6 +158,185 @@ export default function ProfileSettingsView({ clientData, showToast }) {
       clearInterval(interval);
     };
   }, []);
+
+  // --- UPGRADE PLAN MODAL STATES ---
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
+  const [upgradeStep, setUpgradeStep] = useState(1); // 1: Choose Plan, 2: Payment QR & UTR, 3: Success Thanks
+  const [selectedUpgradePlanId, setSelectedUpgradePlanId] = useState('HALF_YEARLY');
+  const [upgradeUtr, setUpgradeUtr] = useState('');
+  const [upgradeUtrError, setUpgradeUtrError] = useState('');
+  const [isSubmittingUpgrade, setIsSubmittingUpgrade] = useState(false);
+  const [submittedUpgradeInfo, setSubmittedUpgradeInfo] = useState(null);
+
+  // Available Subscription Plans
+  const [allPlans, setAllPlans] = useState([
+    {
+      id: 'MONTHLY',
+      name: 'Monthly Plan',
+      badge: 'Starter',
+      badgeColor: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+      originalPrice: '₹149',
+      price: '₹49',
+      duration: '30 Days Validity',
+      pcs: '1 PC Allowed',
+      features: ['Upto 100 Entries', 'Jharsewa Auto Sync', 'Daily Cloud Backup', 'WhatsApp Integration'],
+      tier: 1
+    },
+    {
+      id: 'HALF_YEARLY',
+      name: 'Half-Yearly Plan',
+      badge: 'Top Selling',
+      badgeColor: 'bg-amber-500/30 text-amber-300 border-amber-500/50',
+      originalPrice: '₹699',
+      price: '₹349',
+      duration: '180 Days Validity',
+      pcs: 'Multi-PC Sync',
+      features: ['Upto 500 Entries', 'Realtime Fast Sync', 'Unlimited WhatsApp', 'Priority Server Bandwidth'],
+      tier: 2
+    },
+    {
+      id: 'YEARLY',
+      name: 'Yearly Plan',
+      badge: 'Best Value',
+      badgeColor: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
+      originalPrice: '₹1,499',
+      price: '₹599',
+      duration: '365 Days Validity',
+      pcs: '3 PCs Allowed',
+      features: ['Unlimited Entries', 'Dedicated Cloud Server', 'Auto Backup Restore', '24x7 Priority Support'],
+      tier: 3
+    }
+  ]);
+
+  // Real-time subscribe to subscription plans
+  useEffect(() => {
+    const unsubscribe = subscribePlansFromFirebase((cloudPlans) => {
+      if (cloudPlans && cloudPlans.length > 0) {
+        setAllPlans(prev => {
+          return prev.map(p => {
+            const cp = cloudPlans.find(c => c.id === p.id);
+            if (!cp) return p;
+            return {
+              ...p,
+              name: cp.name || p.name,
+              price: `₹${cp.price !== undefined ? cp.price : p.price}`,
+              originalPrice: cp.originalPrice && cp.originalPrice > 0 ? `₹${cp.originalPrice}` : null,
+              duration: cp.days >= 36500 ? 'Lifetime Validity' : `${cp.days || 30} Days Validity`,
+              pcs: cp.usersText || `${cp.allowedPcs || 1} PC Allowed`,
+              features: [
+                cp.entriesLimit || (p.id === 'YEARLY' ? 'Unlimited Entries' : 'Certificate Entries'),
+                'WhatsApp Integration',
+                cp.facilities?.jharsewaSync !== false ? 'Jharsewa Auto Sync' : 'Standard Sync',
+                cp.facilities?.backupAllowed !== false ? 'Daily Cloud Backup' : 'Local Backup'
+              ]
+            };
+          });
+        });
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Filter plans available for upgrade based on current client plan
+  const getEligibleUpgradePlans = () => {
+    const curPlan = (clientData?.planType || 'FREE_TRIAL').toUpperCase();
+    if (curPlan === 'FREE_TRIAL' || curPlan === 'DEMO' || curPlan === 'TRIAL' || !clientData?.planType) {
+      // Free trial users see all paid plans: Monthly, Half-Yearly, Yearly
+      return allPlans;
+    }
+    if (curPlan === 'MONTHLY') {
+      // Monthly users see only higher tier plans: Half-Yearly and Yearly
+      return allPlans.filter(p => p.id === 'HALF_YEARLY' || p.id === 'YEARLY');
+    }
+    if (curPlan === 'HALF_YEARLY') {
+      // Half-Yearly users see only Yearly plan
+      return allPlans.filter(p => p.id === 'YEARLY');
+    }
+    // Yearly or Lifetime users
+    return allPlans.filter(p => p.id === 'YEARLY');
+  };
+
+  const handleOpenUpgradeModal = () => {
+    const eligible = getEligibleUpgradePlans();
+    if (eligible.length > 0) {
+      setSelectedUpgradePlanId(eligible[0].id);
+    }
+    setUpgradeUtr('');
+    setUpgradeUtrError('');
+    setUpgradeStep(1);
+    setIsUpgradeModalOpen(true);
+  };
+
+  const handleProceedToUpgradePayment = () => {
+    setUpgradeUtr('');
+    setUpgradeUtrError('');
+    setUpgradeStep(2);
+  };
+
+  const handleUpgradeSubmit = async () => {
+    const cleanUtr = upgradeUtr.trim().toUpperCase();
+    if (!cleanUtr) {
+      setUpgradeUtrError('कृपया पेमेंट करने के बाद 12 अंकों का UTR / UPI Ref Number अवश्य दर्ज करें!');
+      return;
+    }
+    if (cleanUtr.length < 6) {
+      setUpgradeUtrError('कृपया वैध UTR / Transaction Reference Number दर्ज करें (कम से कम 6 अंक/अक्षर)!');
+      return;
+    }
+
+    setIsSubmittingUpgrade(true);
+    setUpgradeUtrError('');
+
+    try {
+      const selectedPlanObj = allPlans.find(p => p.id === selectedUpgradePlanId) || { name: selectedUpgradePlanId, price: '' };
+      const clientHwid = clientData?.hwid || hwidList[0] || localStorage.getItem('CLIENT_SYSTEM_HWID') || 'HWID-UNKNOWN';
+
+      // Update client doc with pending upgrade request in Firebase Firestore
+      const updatedClientPayload = {
+        ...clientData,
+        hwid: clientHwid,
+        hwids: hwidList,
+        clientName: profile.clientName || clientData?.clientName || 'Client Shop',
+        ownerName: profile.ownerName || clientData?.ownerName || '',
+        phone: profile.phone || clientData?.phone || '',
+        status: 'PENDING', // PENDING shows in Admin Dashboard access requests banner
+        requestedPlan: selectedUpgradePlanId,
+        paymentStatus: 'UPGRADE_SUBMITTED',
+        utrNumber: cleanUtr,
+        paymentAmount: selectedPlanObj.price,
+        upgradeRequestedAt: new Date().toISOString()
+      };
+
+      await saveClientToFirebase(updatedClientPayload);
+
+      // Save locally as well
+      const activeData = localStorage.getItem('ACTIVE_CLIENT_DATA');
+      if (activeData) {
+        try {
+          const parsed = JSON.parse(activeData);
+          parsed.status = 'PENDING';
+          parsed.requestedPlan = selectedUpgradePlanId;
+          parsed.utrNumber = cleanUtr;
+          localStorage.setItem('ACTIVE_CLIENT_DATA', JSON.stringify(parsed));
+        } catch (e) {}
+      }
+
+      setSubmittedUpgradeInfo({
+        planName: selectedPlanObj.name,
+        price: selectedPlanObj.price,
+        duration: selectedPlanObj.duration,
+        utrNumber: cleanUtr
+      });
+
+      setUpgradeStep(3);
+      if (showToast) showToast('success', 'Upgrade Request Submitted', 'Your plan upgrade request has been submitted to Admin!');
+    } catch (err) {
+      console.error('Plan upgrade submission error:', err);
+      setUpgradeUtrError('अपग्रेड सबमिट करने में समस्या आई। कृपया पुनः प्रयास करें या एडमिन से संपर्क करें।');
+    } finally {
+      setIsSubmittingUpgrade(false);
+    }
+  };
 
   // Save Profile to LocalStorage
   const handleSaveProfile = (e) => {
@@ -463,14 +643,26 @@ export default function ProfileSettingsView({ clientData, showToast }) {
         {/* SECTION 2: LICENSE & SUBSCRIPTION DETAILS (READ ONLY) */}
         <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-5 flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
                 <ShieldCheck className="w-5 h-5 text-emerald-600" />
-                2. System License & Subscription Details
-              </h3>
-              <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-900 border border-emerald-300 uppercase tracking-wider">
-                Active License
-              </span>
+                <h3 className="text-base font-extrabold text-slate-900">
+                  2. System License & Subscription Details
+                </h3>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleOpenUpgradeModal}
+                  className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 font-black text-xs shadow-md shadow-amber-500/20 transition flex items-center gap-1.5 active:scale-95 cursor-pointer"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-slate-950 fill-slate-950" />
+                  <span>Upgrade Plan</span>
+                </button>
+                <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-900 border border-emerald-300 uppercase tracking-wider">
+                  Active License
+                </span>
+              </div>
             </div>
 
             <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-medium">
@@ -495,12 +687,22 @@ export default function ProfileSettingsView({ clientData, showToast }) {
                 </span>
               </div>
 
-              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 space-y-1">
-                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Active Subscription Plan</span>
-                <span className="font-extrabold text-emerald-700 flex items-center gap-1.5">
-                  <Zap className="w-3.5 h-3.5 text-emerald-600" />
-                  {licenseInfo.planType}
-                </span>
+              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 flex items-center justify-between gap-2">
+                <div className="space-y-1">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Active Subscription Plan</span>
+                  <span className="font-extrabold text-emerald-700 flex items-center gap-1.5">
+                    <Zap className="w-3.5 h-3.5 text-emerald-600" />
+                    {licenseInfo.planType}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleOpenUpgradeModal}
+                  className="px-2.5 py-1 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 font-black text-[11px] transition flex items-center gap-1 cursor-pointer"
+                >
+                  <ArrowUpCircle className="w-3.5 h-3.5 text-amber-700" />
+                  Upgrade
+                </button>
               </div>
             </div>
 
@@ -1042,6 +1244,352 @@ export default function ProfileSettingsView({ clientData, showToast }) {
                   <span>Submit Request via WhatsApp</span>
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* UPGRADE PLAN MULTI-STEP MODAL */}
+      {isUpgradeModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 md:p-6 overflow-y-auto">
+          <div className={`bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-6 md:p-7 w-full shadow-2xl space-y-5 transition-all duration-300 max-h-[92vh] flex flex-col my-auto ${
+            upgradeStep === 1 ? 'max-w-5xl' : upgradeStep === 2 ? 'max-w-4xl' : 'max-w-lg'
+          }`}>
+            
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 shadow-md">
+                  <Sparkles className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black text-white tracking-tight flex items-center gap-2">
+                    Upgrade Your Subscription Plan
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold uppercase">
+                      Current: {licenseInfo.planType}
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    {upgradeStep === 1 && 'Step 1 of 2: Select your preferred upgrade plan'}
+                    {upgradeStep === 2 && 'Step 2 of 2: Scan QR Code to Pay & Enter UTR Number'}
+                    {upgradeStep === 3 && 'Upgrade Request Submitted Successfully!'}
+                  </p>
+                </div>
+              </div>
+              
+              <button 
+                type="button"
+                onClick={() => setIsUpgradeModalOpen(false)}
+                className="text-slate-400 hover:text-white text-2xl font-bold p-1 rounded-lg transition"
+              >
+                &times;
+              </button>
+            </div>
+
+            {/* Scrollable Content Body */}
+            <div className="flex-1 overflow-y-auto pr-1 space-y-4">
+
+              {/* STEP 1: CHOOSE UPGRADE PLAN */}
+              {upgradeStep === 1 && (
+                <div className="space-y-6">
+                  {(() => {
+                    const eligiblePlans = getEligibleUpgradePlans();
+
+                    if (eligiblePlans.length === 0) {
+                      return (
+                        <div className="text-center py-10 space-y-3">
+                          <div className="w-16 h-16 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto text-2xl font-black">
+                            👑
+                          </div>
+                          <h4 className="text-lg font-black text-white">You are already on the Top Plan!</h4>
+                          <p className="text-xs text-slate-400 max-w-md mx-auto">
+                            Your account is active on the highest available subscription. If you need custom multi-branch or enterprise access, please contact Admin directly.
+                          </p>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 items-stretch pt-3 pb-4">
+                        {eligiblePlans.map((plan) => {
+                          const isSelected = selectedUpgradePlanId === plan.id;
+                          return (
+                            <div
+                              key={plan.id}
+                              onClick={() => setSelectedUpgradePlanId(plan.id)}
+                              className={`relative rounded-3xl p-5 border transition-all duration-300 ease-out cursor-pointer flex flex-col justify-between ${
+                                isSelected
+                                  ? 'bg-slate-950 border-amber-500 ring-4 ring-amber-500/30 shadow-2xl shadow-amber-500/20 scale-105 -translate-y-2 z-10'
+                                  : 'bg-slate-950/60 border-slate-800 hover:border-slate-700 hover:bg-slate-950/90 scale-98 opacity-90 hover:opacity-100'
+                              }`}
+                            >
+                              {/* Plan Header & Badge */}
+                              <div className="space-y-4">
+                                <div className="flex items-center justify-between">
+                                  <span className={`text-[10px] font-black px-3 py-1 rounded-full border uppercase tracking-wider ${plan.badgeColor}`}>
+                                    {plan.badge}
+                                  </span>
+                                  {isSelected && (
+                                    <div className="w-6 h-6 rounded-full bg-amber-500 text-slate-950 flex items-center justify-center font-black text-xs shadow-lg animate-in zoom-in-50 duration-200">
+                                      ✓
+                                    </div>
+                                  )}
+                                </div>
+
+                                <div>
+                                  <h4 className="text-base font-black text-white">{plan.name}</h4>
+                                  <div className="mt-1.5 flex items-baseline gap-2">
+                                    {plan.originalPrice && (
+                                      <span className="text-xs font-bold text-slate-500 line-through">
+                                        {plan.originalPrice}
+                                      </span>
+                                    )}
+                                    <span className="text-2xl font-black text-white">{plan.price}</span>
+                                    <span className="text-[10px] text-slate-400 font-medium">/ {plan.duration}</span>
+                                  </div>
+                                  <p className="text-[11px] text-emerald-400 font-extrabold mt-1">{plan.pcs}</p>
+                                </div>
+
+                                {/* Features List */}
+                                <div className="border-t border-slate-800/80 pt-3.5 space-y-2">
+                                  {plan.features.map((feat, idx) => (
+                                    <div key={idx} className="flex items-center gap-2 text-xs text-slate-300 font-medium">
+                                      <span className="text-amber-400 font-bold">✓</span>
+                                      {feat}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+
+                              <div className="mt-5 pt-2">
+                                <button
+                                  type="button"
+                                  className={`w-full py-2.5 rounded-xl text-xs font-black transition ${
+                                    isSelected
+                                      ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 shadow-lg shadow-amber-500/30'
+                                      : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                                  }`}
+                                >
+                                  {isSelected ? 'Selected Upgrade Plan' : 'Select Plan'}
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
+
+                  {/* Footer Action Buttons */}
+                  <div className="flex items-center justify-between pt-4 border-t border-slate-800">
+                    <button
+                      type="button"
+                      onClick={() => setIsUpgradeModalOpen(false)}
+                      className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs transition"
+                    >
+                      Cancel
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleProceedToUpgradePayment}
+                      className="px-7 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 font-black text-xs shadow-lg shadow-amber-950/40 transition flex items-center gap-2 cursor-pointer active:scale-95"
+                    >
+                      <span>Proceed to Payment (क्यूआर कोड)</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* STEP 2: PAYMENT QR CODE & UTR SUBMISSION */}
+              {upgradeStep === 2 && (
+                <div className="space-y-4 py-1 animate-in fade-in">
+                  {(() => {
+                    const currentPlan = allPlans.find(p => p.id === selectedUpgradePlanId) || {
+                      name: 'Upgrade Plan',
+                      price: '₹349',
+                      duration: 'Validity'
+                    };
+
+                    return (
+                      <>
+                        {/* Top Plan Name & Rate Header Bar */}
+                        <div className="bg-gradient-to-r from-amber-950/70 via-slate-900 to-orange-950/70 border border-amber-500/30 rounded-2xl p-3.5 flex items-center justify-between gap-3 text-left shadow-md">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-400/30 flex items-center justify-center text-lg text-amber-400 font-black shrink-0">
+                              ⚡
+                            </div>
+                            <div>
+                              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">चयनित अपग्रेड प्लान (Selected Upgrade Plan)</div>
+                              <h3 className="text-sm sm:text-base font-black text-white">{currentPlan.name}</h3>
+                              <p className="text-[11px] text-amber-300 font-semibold">{currentPlan.duration} • {currentPlan.pcs || 'Multi-PC Sync'}</p>
+                            </div>
+                          </div>
+
+                          <div className="text-right shrink-0 bg-slate-950/90 px-3.5 py-1.5 rounded-xl border border-amber-500/20">
+                            <div className="text-[9px] text-slate-400 font-bold uppercase">भुगतान राशि</div>
+                            <div className="text-xl font-black text-amber-400 font-mono">{currentPlan.price}</div>
+                          </div>
+                        </div>
+
+                        {/* 2-Column Responsive Layout: Left QR Code, Right UTR & Instructions */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+                          {/* LEFT COLUMN: QR Code Box */}
+                          <div className="bg-slate-950 border border-slate-800 rounded-2xl p-4 shadow-xl text-center space-y-2.5">
+                            <div className="text-[11px] font-bold text-slate-300 flex items-center justify-center gap-2">
+                              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                              <span>PhonePe / GPay / Paytm से QR स्कैन करें</span>
+                            </div>
+
+                            <div className="p-2.5 bg-white rounded-xl shadow-inner inline-block mx-auto border border-amber-500/40">
+                              <img 
+                                src="/payment_qr.png" 
+                                alt="Payment QR Code" 
+                                className="w-40 h-40 sm:w-44 sm:h-44 object-contain rounded-lg mx-auto"
+                              />
+                            </div>
+
+                            <div className="text-[11px] font-mono text-slate-400">
+                              UPI ID: <span className="font-bold text-amber-300 select-all">7781931880@ybl</span>
+                            </div>
+                          </div>
+
+                          {/* RIGHT COLUMN: Instructions & UTR Input Field */}
+                          <div className="space-y-3.5 text-left">
+                            {/* Notice Banner */}
+                            <div className="bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-amber-500/20 border border-amber-400/50 rounded-2xl p-3.5 shadow-md">
+                              <p className="text-xs sm:text-sm font-black text-amber-300 uppercase leading-snug tracking-wide">
+                                📢 पेमेंट करने के बाद अपना UTR नंबर लिखकर सबमिट करें।
+                              </p>
+                              <p className="text-[11px] text-slate-200 font-bold mt-1.5 bg-slate-950/60 p-2 rounded-lg border border-amber-500/20">
+                                ✓ Successful payment verify hone ke baad aapka plan upgrade kar diya jayega.
+                              </p>
+                            </div>
+
+                            {/* Mandatory UTR / UPI Ref Number Input Field */}
+                            <div className="space-y-1.5">
+                              <label className="block text-xs font-black text-slate-200 uppercase tracking-wide">
+                                UTR / UPI Reference Number <span className="text-rose-500">* (अनिवार्य)</span>
+                              </label>
+                              <input
+                                type="text"
+                                value={upgradeUtr}
+                                onChange={(e) => {
+                                  setUpgradeUtr(e.target.value);
+                                  setUpgradeUtrError('');
+                                }}
+                                placeholder="e.g. 4289XXXXXXXX (12 अंकों का UTR नंबर)"
+                                className="w-full bg-slate-950 border-2 border-amber-500/50 focus:border-amber-400 rounded-xl px-3.5 py-2.5 text-white font-mono text-xs sm:text-sm tracking-wider font-bold shadow-inner placeholder-slate-600 focus:outline-none transition"
+                              />
+
+                              {upgradeUtrError && (
+                                <div className="p-2 rounded-xl bg-rose-500/20 border border-rose-500/40 text-rose-300 text-[11px] font-bold">
+                                  ⚠️ {upgradeUtrError}
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Quick Help Tip */}
+                            <div className="text-[11px] text-slate-400 bg-slate-950/60 border border-slate-800 p-2.5 rounded-xl">
+                              💡 <strong>UTR कहाँ मिलेगा?</strong> PhonePe/GPay में पेमेंट सफलता स्क्रीन के नीचे <code className="text-amber-300 font-mono">UTR / UPI Ref ID</code> लिखा होता है।
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Footer Actions */}
+                        <div className="flex items-center justify-between pt-3 border-t border-slate-800">
+                          <button
+                            type="button"
+                            onClick={() => setUpgradeStep(1)}
+                            className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs transition"
+                          >
+                            ← प्लान बदलें (Back)
+                          </button>
+
+                          <button
+                            type="button"
+                            disabled={isSubmittingUpgrade}
+                            onClick={handleUpgradeSubmit}
+                            className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 hover:from-emerald-500 hover:to-teal-400 text-white font-black text-xs sm:text-sm shadow-xl shadow-emerald-950/60 transition flex items-center gap-2 transform active:scale-95 cursor-pointer disabled:opacity-50"
+                          >
+                            {isSubmittingUpgrade ? (
+                              <span className="flex items-center gap-2">
+                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                सबमिट हो रहा है...
+                              </span>
+                            ) : (
+                              <>
+                                <span>अपग्रेड रिक्वेस्ट सबमिट करें</span>
+                                <ArrowRight className="w-4 h-4" />
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+              )}
+
+              {/* STEP 3: THANKS TO UPGRADE BEAUTIFUL POPUP */}
+              {upgradeStep === 3 && submittedUpgradeInfo && (
+                <div className="py-6 text-center space-y-6 animate-in zoom-in-95 duration-300">
+                  <div className="relative w-20 h-20 mx-auto">
+                    <div className="absolute inset-0 rounded-full bg-emerald-500/20 animate-ping"></div>
+                    <div className="w-20 h-20 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white text-3xl shadow-xl shadow-emerald-500/30">
+                      🎉
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <span className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-black uppercase tracking-wider">
+                      Request Submitted Successfully
+                    </span>
+                    <h3 className="text-2xl font-black text-white">
+                      Thanks for Upgrading! 🙏
+                    </h3>
+                    <p className="text-sm text-slate-300 max-w-md mx-auto leading-relaxed">
+                      धन्यवाद! आपकी <strong className="text-amber-300">{submittedUpgradeInfo.planName}</strong> के लिए अपग्रेड रिक्वेस्ट और UTR नंबर एडमिन को सफलतापूर्वक भेज दी गई है।
+                    </p>
+                  </div>
+
+                  {/* Submission Summary Card */}
+                  <div className="bg-slate-950 border border-slate-800 rounded-2xl p-4 max-w-md mx-auto text-left space-y-2.5 font-mono text-xs">
+                    <div className="flex justify-between items-center border-b border-slate-800 pb-2">
+                      <span className="text-slate-400">Upgrade Plan:</span>
+                      <span className="text-amber-400 font-bold">{submittedUpgradeInfo.planName}</span>
+                    </div>
+                    <div className="flex justify-between items-center border-b border-slate-800 pb-2">
+                      <span className="text-slate-400">Amount Paid:</span>
+                      <span className="text-emerald-400 font-bold">{submittedUpgradeInfo.price}</span>
+                    </div>
+                    <div className="flex justify-between items-center border-b border-slate-800 pb-2">
+                      <span className="text-slate-400">Validity:</span>
+                      <span className="text-blue-400 font-bold">{submittedUpgradeInfo.duration}</span>
+                    </div>
+                    <div className="flex justify-between items-center pt-0.5">
+                      <span className="text-slate-400">Submitted UTR:</span>
+                      <span className="text-white font-bold tracking-wider select-all">{submittedUpgradeInfo.utrNumber}</span>
+                    </div>
+                  </div>
+
+                  {/* Verification Note */}
+                  <div className="bg-blue-950/40 border border-blue-500/30 rounded-2xl p-3.5 max-w-md mx-auto text-xs text-blue-200">
+                    ℹ️ <strong>Status:</strong> Successful payment verify hone ke baad aapka plan upgrade kar diya jayega.
+                  </div>
+
+                  <div className="pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsUpgradeModalOpen(false)}
+                      className="px-8 py-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-sm shadow-xl shadow-emerald-900/40 transition active:scale-95 cursor-pointer"
+                    >
+                      Done / Close Window
+                    </button>
+                  </div>
+                </div>
+              )}
+
             </div>
           </div>
         </div>
