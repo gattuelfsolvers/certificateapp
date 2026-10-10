@@ -247,6 +247,12 @@ export default function ClientDashboard({ clientData, onLogout }) {
   const [waTemplates, setWaTemplates] = useState([]);
   const [autoStatusWhatsApp, setAutoStatusWhatsApp] = useState(true);
 
+  // Subscription Plan & Free Trial Limit Check
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const isTrialPlan = (clientData?.planType === 'FREE_TRIAL') || (!clientData?.planType) || (clientData?.planType === 'TRIAL');
+  const maxEntriesAllowed = isTrialPlan ? 5 : 999999;
+  const isTrialLimitReached = isTrialPlan && (certificates.length >= 5);
+
   useEffect(() => {
     const unsubTpl = subscribeWhatsAppTemplatesFromFirebase((tplList) => {
       if (tplList && tplList.length > 0) {
@@ -272,6 +278,8 @@ export default function ClientDashboard({ clientData, onLogout }) {
       sessionStorage.setItem('SEEN_ENGINE_DOWNLOAD_PROMPT', 'true');
     }
   }, [engineStatus]);
+
+  const currentClientId = clientData?.phone || clientData?.id || clientData?.hwid || 'DEFAULT_CLIENT';
 
   useEffect(() => {
     setLoading(true);
@@ -374,13 +382,13 @@ export default function ClientDashboard({ clientData, onLogout }) {
           step: allDone ? 'SUCCESS' : prev.step
         };
       });
-    });
+    }, currentClientId);
     checkLocalEngine();
 
     return () => {
       if (typeof unsubscribe === 'function') unsubscribe();
     };
-  }, []);
+  }, [currentClientId]);
 
   const checkLocalEngine = async () => {
     setIsCheckingEngine(true);
@@ -417,7 +425,7 @@ export default function ClientDashboard({ clientData, onLogout }) {
 
   const loadCertificates = async () => {
     try {
-      const data = await fetchCertificatesFromFirebase();
+      const data = await fetchCertificatesFromFirebase(currentClientId);
       setCertificates(data || []);
     } catch (err) {
       console.error('Error loading certificates:', err);
@@ -425,6 +433,11 @@ export default function ClientDashboard({ clientData, onLogout }) {
   };
 
   const handleOpenAddModal = (defaultType = 'JHIC') => {
+    if (isTrialPlan && certificates.length >= 5) {
+      setShowUpgradeModal(true);
+      return;
+    }
+
     const subObj = CERTIFICATE_CATEGORIES.flatMap(c => c.subServices).find(s => s.code === defaultType);
     const prefix = subObj ? subObj.prefix : 'JHIC/2026/';
     const fee = subObj ? subObj.defaultFee : 100;
@@ -455,6 +468,12 @@ export default function ClientDashboard({ clientData, onLogout }) {
   };
 
   const handleAddToList = () => {
+    if (isTrialPlan && (certificates.length + draftList.length >= 5)) {
+      showToast('error', 'Trial Limit Reached', 'Free Trial allows maximum 5 certificate entries only. Please upgrade your plan.');
+      setShowUpgradeModal(true);
+      return;
+    }
+
     if (!itemForm.refNo || !itemForm.refNo.trim()) {
       showToast('error', 'Reference Number Required', 'Please enter Reference Number before adding to list');
       return;
@@ -619,6 +638,17 @@ Contact: 7781931880
       }
     }
 
+    // Strict Free Trial Limit Check: Maximum 5 entries allowed
+    if (isTrialPlan) {
+      const currentCount = certificates.length;
+      if (currentCount >= 5 || (currentCount + itemsToSave.length > 5)) {
+        setIsEntryModalOpen(false);
+        showToast('error', 'Trial Limit Exceeded', `Free Trial allows only 5 demo entries. You have already saved ${currentCount} entries. Please upgrade!`);
+        setShowUpgradeModal(true);
+        return;
+      }
+    }
+
     try {
       const grandTotalFee = itemsToSave.reduce((sum, item) => sum + (parseFloat(item.totalFee) || 0), 0);
       const totalPaid = parseFloat(paidAmountInput) || 0;
@@ -643,6 +673,8 @@ Contact: 7781931880
           totalFee: item.totalFee,
           paidAmount: itemPaid,
           duesAmount: itemDues,
+          clientId: currentClientId,
+          clientPhone: clientData?.phone || currentClientId,
           updatedAt: new Date().toISOString()
         };
 
@@ -707,6 +739,8 @@ Contact: 7781931880
         totalFee: total,
         paidAmount: paid,
         duesAmount: dues,
+        clientId: editFormData.clientId || currentClientId,
+        clientPhone: editFormData.clientPhone || clientData?.phone || currentClientId,
         updatedAt: new Date().toISOString()
       };
 
@@ -1006,7 +1040,18 @@ Contact: 7781931880
             <div>
               <h1 className="text-xl font-extrabold tracking-tight flex items-center gap-2 text-white">
                 {clientData?.clientName || 'Apna Digital Hub - Certificate Management'}
-                <span className="px-2.5 py-0.5 rounded-full bg-emerald-400 text-slate-900 text-[11px] font-black tracking-wider uppercase shadow">ACTIVE SHOP</span>
+                {isTrialPlan ? (
+                  <span className="px-2.5 py-0.5 rounded-full bg-amber-400 text-slate-950 text-[11px] font-black tracking-wider uppercase shadow flex items-center gap-1">
+                    <span>⚡ FREE TRIAL</span>
+                    <span className="bg-slate-950/20 px-1.5 py-0.2 rounded-full font-mono">
+                      {certificates.length}/5 ENTRIES
+                    </span>
+                  </span>
+                ) : (
+                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-400 text-slate-900 text-[11px] font-black tracking-wider uppercase shadow">
+                    ✓ {clientData?.planType || 'ACTIVE PLAN'}
+                  </span>
+                )}
               </h1>
               <p className="text-xs text-blue-100 font-medium flex items-center gap-2">
                 <span>Owner: {clientData?.ownerName || 'CSC Partner'}</span>
@@ -2931,6 +2976,66 @@ Contact: 7781931880
           </>
         )}
 
+          </div>
+        </div>
+      )}
+
+      {/* FREE TRIAL 5 ENTRIES LIMIT REACHED UPGRADE MODAL */}
+      {showUpgradeModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-2xl space-y-5 text-center">
+            <div className="w-16 h-16 rounded-3xl bg-amber-100 text-amber-600 border border-amber-200 flex items-center justify-center mx-auto shadow-sm text-2xl">
+              ⚡
+            </div>
+
+            <div>
+              <div className="inline-block px-3 py-1 rounded-full bg-amber-100 text-amber-900 border border-amber-300 text-xs font-black uppercase tracking-wider mb-2">
+                Free Trial Quota Exhausted (5/5 Entries)
+              </div>
+              <h3 className="text-xl font-black text-slate-900">
+                फ़्री ट्रायल लिमिट समाप्त हो गई है!
+              </h3>
+              <p className="text-xs text-slate-600 mt-2 leading-relaxed">
+                आपके फ़्री ट्रायल अकाउंट में दी गई सभी <strong>5 मुफ़्त सर्टिफिकेट एंट्रियाँ</strong> पूरी हो चुकी हैं। आगे नए सर्टिफिकेट्स जोड़ने के लिए कृपया अपना प्लान अपग्रेड करें।
+              </p>
+            </div>
+
+            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-left space-y-2.5 text-xs text-slate-700">
+              <div className="font-extrabold text-slate-900 border-b border-slate-200 pb-1.5 flex items-center justify-between">
+                <span>सक्रिय प्लान (Current Plan):</span>
+                <span className="text-amber-700 uppercase font-black">Free Trial (5 Entries)</span>
+              </div>
+              <div className="flex justify-between items-center text-[11px]">
+                <span className="text-slate-500">कुल दर्ज एंट्रियाँ:</span>
+                <span className="font-bold text-slate-900">{certificates.length} Entries</span>
+              </div>
+              <div className="flex justify-between items-center text-[11px]">
+                <span className="text-slate-500">अधिकतम मुफ़्त सीमा:</span>
+                <span className="font-bold text-slate-900">5 Entries Max</span>
+              </div>
+              <p className="text-[11px] text-blue-700 font-bold pt-1">
+                📞 प्लान रिन्यू या अपग्रेड करने के लिए एडमिन (7781931880) से संपर्क करें।
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+              <a
+                href="https://wa.me/917781931880?text=Hello%20Admin,%20my%20Free%20Trial%20limit%20of%205%20entries%20is%20completed.%20Please%20upgrade%20my%20subscription%20plan."
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs shadow-md transition flex items-center gap-2"
+              >
+                <span>💬 WhatsApp Admin (Upgrade Plan)</span>
+              </a>
+
+              <button
+                type="button"
+                onClick={() => setShowUpgradeModal(false)}
+                className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs transition"
+              >
+                बंद करें (Close)
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, doc, setDoc, getDocs, onSnapshot, deleteDoc, query } from 'firebase/firestore';
+import { getFirestore, collection, doc, setDoc, getDocs, onSnapshot, deleteDoc, query, where, getDoc } from 'firebase/firestore';
 
 const firebaseConfig = {
   apiKey: "AIzaSyDclObUAWjLXtZY0CdeY1h0rGqsRUXnv_g",
@@ -135,11 +135,27 @@ export function subscribeClientsFromFirebase(onUpdate) {
 // JHARSEWA CERTIFICATES & MASTERS CLOUD FIREBASE FUNCTIONS
 // -------------------------------------------------------------
 
-// Fetch Certificates from Firebase Cloud
-export async function fetchCertificatesFromFirebase() {
+// Fetch Certificates from Firebase Cloud (Filtered by Client ID / Phone for Multi-Tenant Isolation)
+export async function fetchCertificatesFromFirebase(clientId = null) {
   try {
     const certsRef = collection(db, "certificates");
-    const snapshot = await getDocs(certsRef);
+    let snapshot;
+    if (clientId && String(clientId).trim()) {
+      const cleanId = String(clientId).trim();
+      const q = query(certsRef, where("clientId", "==", cleanId));
+      snapshot = await getDocs(q);
+      // Fallback: If no docs with clientId, also check legacy docs with clientPhone
+      if (snapshot.empty) {
+        const qLegacy = query(certsRef, where("clientPhone", "==", cleanId));
+        const legacySnap = await getDocs(qLegacy);
+        if (!legacySnap.empty) {
+          snapshot = legacySnap;
+        }
+      }
+    } else {
+      snapshot = await getDocs(certsRef);
+    }
+
     const certs = [];
     snapshot.forEach(docSnap => {
       certs.push({ id: docSnap.id, ...docSnap.data() });
@@ -151,9 +167,25 @@ export async function fetchCertificatesFromFirebase() {
   }
 }
 
-// Real-Time Listener for Certificates Collection (0ms Live Updates)
-export function subscribeCertificatesFromFirebase(onUpdate) {
+// Real-Time Listener for Certificates Collection (Filtered by Client ID / Phone for Multi-Tenant Isolation)
+export function subscribeCertificatesFromFirebase(onUpdate, clientId = null) {
   const certsRef = collection(db, "certificates");
+  
+  if (clientId && String(clientId).trim()) {
+    const cleanId = String(clientId).trim();
+    const q = query(certsRef, where("clientId", "==", cleanId));
+    return onSnapshot(q, (snapshot) => {
+      const certs = [];
+      snapshot.forEach(docSnap => {
+        certs.push({ id: docSnap.id, ...docSnap.data() });
+      });
+      onUpdate(certs);
+    }, (error) => {
+      console.error("Error in client certificates snapshot listener:", error);
+    });
+  }
+
+  // Admin view or full listener (no filter)
   return onSnapshot(certsRef, (snapshot) => {
     const certs = [];
     snapshot.forEach(docSnap => {
@@ -209,7 +241,7 @@ export async function requestBulkSyncOnFirebase(certIds, clientHwid = null) {
   }
 }
 
-// Save or Update Certificate in Firebase Cloud
+// Save or Update Certificate in Firebase Cloud (with Hidden Multi-Tenant Isolation Fields)
 export async function saveCertificateToFirebase(certData) {
   try {
     const certId = certData.id ? String(certData.id) : String(Date.now());
@@ -217,6 +249,9 @@ export async function saveCertificateToFirebase(certData) {
     const payload = {
       ...certData,
       id: certId,
+      // Hidden Multi-Tenant Isolation Keys:
+      clientId: certData.clientId || certData.clientPhone || 'DEFAULT_CLIENT',
+      clientPhone: certData.clientPhone || certData.clientId || '',
       updatedAt: new Date().toISOString()
     };
     await setDoc(certRef, payload, { merge: true });
