@@ -17,6 +17,7 @@ import {
 } from '../firebase';
 import CodeMasterView from './CodeMasterView';
 import ProfileSettingsView from './ProfileSettingsView';
+import MessageMasterView from './MessageMasterView';
 import LocalEngineChecker from './LocalEngineChecker';
 import axios from 'axios';
 
@@ -1196,11 +1197,15 @@ export default function ClientDashboard({ clientData, onLogout }) {
             </button>
 
             <button
-              onClick={() => handleOpenAddModal('JHIC')}
-              className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white transition shadow-sm"
+              onClick={() => setActiveTab('message_master')}
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold border transition shadow-xs hover:shadow ${
+                activeTab === 'message_master' 
+                  ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm' 
+                  : 'bg-emerald-50/80 hover:bg-emerald-100 text-emerald-900 border-emerald-200'
+              }`}
             >
-              <Plus className="w-4 h-4" />
-              <span>+ New Entry</span>
+              <MessageSquare className="w-4 h-4 text-emerald-600" />
+              <span>Message Master</span>
             </button>
           </div>
         </div>
@@ -1209,6 +1214,8 @@ export default function ClientDashboard({ clientData, onLogout }) {
           <CodeMasterView showToast={showToast} />
         ) : activeTab === 'profile' ? (
           <ProfileSettingsView clientData={clientData} showToast={showToast} />
+        ) : activeTab === 'message_master' ? (
+          <MessageMasterView showToast={showToast} onBackToDashboard={() => setActiveTab('dashboard')} />
         ) : (
           <>
             {/* Sub-Services Quick Launch Cards - FULL PAGE WIDTH IN 1 ROW */}

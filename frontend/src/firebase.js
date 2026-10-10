@@ -304,3 +304,52 @@ export async function savePlanToFirebase(planData) {
     console.error("Error saving subscription plan to Firebase:", error);
   }
 }
+
+// Fetch WhatsApp Templates from Firebase Cloud
+export async function fetchWhatsAppTemplatesFromFirebase() {
+  try {
+    const tplRef = collection(db, "whatsapp_templates");
+    const snapshot = await getDocs(tplRef);
+    const list = [];
+    snapshot.forEach(docSnap => {
+      list.push({ id: docSnap.id, ...docSnap.data() });
+    });
+    return list;
+  } catch (error) {
+    console.error("Error fetching whatsapp templates from Firebase:", error);
+    return [];
+  }
+}
+
+// Subscribe to WhatsApp Templates in real-time
+export function subscribeWhatsAppTemplatesFromFirebase(onUpdate) {
+  const tplRef = collection(db, "whatsapp_templates");
+  return onSnapshot(tplRef, (snapshot) => {
+    const list = [];
+    snapshot.forEach(docSnap => {
+      list.push({ id: docSnap.id, ...docSnap.data() });
+    });
+    onUpdate(list);
+  }, (error) => {
+    console.error("Error subscribing to whatsapp templates from Firebase:", error);
+  });
+}
+
+// Save or Update WhatsApp Template to Firebase Cloud
+export async function saveWhatsAppTemplateToFirebase(templateData) {
+  try {
+    const key = String(templateData.templateKey || templateData.id || `TPL_${Date.now()}`);
+    const tplRef = doc(db, "whatsapp_templates", key);
+    const payload = {
+      ...templateData,
+      templateKey: key,
+      updatedAt: new Date().toISOString()
+    };
+    await setDoc(tplRef, payload, { merge: true });
+    return payload;
+  } catch (error) {
+    console.error("Error saving whatsapp template to Firebase:", error);
+    throw error;
+  }
+}
+
