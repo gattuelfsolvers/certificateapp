@@ -940,23 +940,29 @@ export default function AdminDashboard({ onLogout }) {
       if (!matchesSearch) return false;
 
       const daysLeft = calculateDaysLeft(c.expiresAt);
-      const isExp = daysLeft <= 0;
+      const isExp = daysLeft <= 0 || c.status === 'EXPIRED';
       const isKilled = c.status === 'KILLED' || c.status === 'INACTIVE' || c.status === 'DELETED';
+      const isPending = c.status === 'PENDING';
 
-      // clientSubTab Filter: LIVE vs ARCHIVED
-      if (clientSubTab === 'LIVE') {
-        // Live = Only Active clients (not killed/deleted, not expired)
-        if (isKilled || (isExp && c.planType !== 'LIFETIME')) return false;
-      } else if (clientSubTab === 'ARCHIVED') {
-        // Archived = Only deleted / killed / expired members
-        if (!isKilled && (!isExp || c.planType === 'LIFETIME')) return false;
+      // If user selected a specific dropdown filter, respect that filter directly
+      if (statusFilter !== 'ALL') {
+        if (statusFilter === 'ACTIVE') return c.status === 'ACTIVE' && !isExp && !isKilled;
+        if (statusFilter === 'EXPIRED') return isExp;
+        if (statusFilter === 'KILLED') return isKilled;
+        if (statusFilter === 'PENDING') return isPending;
       }
 
-      if (statusFilter === 'ALL') return true;
-      if (statusFilter === 'ACTIVE') return c.status === 'ACTIVE' && !isExp;
-      if (statusFilter === 'EXPIRED') return isExp || c.status === 'EXPIRED';
-      if (statusFilter === 'KILLED') return isKilled;
-      if (statusFilter === 'PENDING') return c.status === 'PENDING';
+      // Default clientSubTab Filter when statusFilter is 'ALL': LIVE vs ARCHIVED
+      if (clientSubTab === 'LIVE') {
+        // Live = Only Active clients (not killed/deleted, not expired, not pending)
+        if (isKilled || isPending || (isExp && c.planType !== 'LIFETIME')) return false;
+        return true;
+      } else if (clientSubTab === 'ARCHIVED') {
+        // Archived = deleted / killed / expired / pending members
+        if (!isKilled && !isPending && (!isExp || c.planType === 'LIFETIME')) return false;
+        return true;
+      }
+
       return true;
     })
     .sort((a, b) => {
@@ -1464,9 +1470,10 @@ export default function AdminDashboard({ onLogout }) {
                     <CheckCircle2 className="w-4 h-4" />
                     Live Clients ({clients.filter(c => {
                       const d = calculateDaysLeft(c.expiresAt);
-                      const isExp = d <= 0;
+                      const isExp = d <= 0 || c.status === 'EXPIRED';
                       const isK = c.status === 'KILLED' || c.status === 'INACTIVE' || c.status === 'DELETED';
-                      return !isK && (!isExp || c.planType === 'LIFETIME');
+                      const isP = c.status === 'PENDING';
+                      return !isK && !isP && (!isExp || c.planType === 'LIFETIME');
                     }).length})
                   </button>
 
@@ -1481,9 +1488,10 @@ export default function AdminDashboard({ onLogout }) {
                     <Clock className="w-4 h-4" />
                     Archived Clients ({clients.filter(c => {
                       const d = calculateDaysLeft(c.expiresAt);
-                      const isExp = d <= 0;
+                      const isExp = d <= 0 || c.status === 'EXPIRED';
                       const isK = c.status === 'KILLED' || c.status === 'INACTIVE' || c.status === 'DELETED';
-                      return isK || (isExp && c.planType !== 'LIFETIME');
+                      const isP = c.status === 'PENDING';
+                      return isK || isP || (isExp && c.planType !== 'LIFETIME');
                     }).length})
                   </button>
                 </div>
