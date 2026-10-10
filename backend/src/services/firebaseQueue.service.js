@@ -152,12 +152,11 @@ async function processQueueItem(certId, certData) {
         const shop = await getShopDetails();
         const fullCertName = getCertFullDisplayName(certData.certType);
         const formattedDate = formatDate(certData.entryDate);
-        const dues = certData.duesAmount || 0;
-
-        const messageText = `*${shop.shopName}*
-📞 ${shop.phone}
-📍 ${shop.address}
------------------------
+        const messageText = `*APNA DIGITAL HUB*
+(A Part of Gattu Computer Works)
+LIC Building, Khesmi, Gomoh, Dhanbad
+Contact: 7781931880
+------------------------------------
 📄 रेफरेंस नंबर: *${certData.refNo}*
 👤 आवेदक का नाम: *${certData.applicantName}*
 📜 प्रमाण पत्र का प्रकार: *${fullCertName}*
@@ -166,6 +165,7 @@ async function processQueueItem(certId, certData) {
 💰 बकाया राशि (Dues): *₹${dues}*
 
 किसी प्रकार के अपडेट पर आपको सूचित किया जाएगा। धन्यवाद!`;
+
 
         await sendTestWhatsAppMessage(certData.mobile, messageText);
         console.log(`📲 [FirebaseQueue] WhatsApp update delivered to +91 ${certData.mobile}!`);

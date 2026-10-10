@@ -2,13 +2,18 @@ const express = require('express');
 const router = express.Router();
 const prisma = require('../db');
 
+const COMMON_HEADER = `*APNA DIGITAL HUB*
+(A Part of Gattu Computer Works)
+LIC Building, Khesmi, Gomoh, Dhanbad
+Contact: 7781931880
+------------------------------------`;
+
 const DEFAULT_TEMPLATES = [
   {
     templateKey: 'INITIAL_RECEIPT',
     title: 'आवेदन पंजीयन रसीद (Initial Receipt)',
     category: 'RECEIPT',
-    messageText: `📄 *अपना डिजिटल हब* 📄
-------------------------------------
+    messageText: `${COMMON_HEADER}
 *आवेदन पंजीयन रसीद*
 
 आवेदक का नाम: *{applicantName}*
@@ -25,8 +30,7 @@ const DEFAULT_TEMPLATES = [
     templateKey: 'BULK_RECEIPT',
     title: 'एक साथ multiple पंजीयन रसीद (Bulk Receipt)',
     category: 'RECEIPT',
-    messageText: `📄 *अपना डिजिटल हब* 📄
-------------------------------------
+    messageText: `${COMMON_HEADER}
 *आवेदन पंजीयन रसीद ({totalCount} प्रमाणपत्र)*
 
 आवेदक का नाम: *{applicantName}*
@@ -42,8 +46,9 @@ const DEFAULT_TEMPLATES = [
     templateKey: 'STATUS_INITIATED',
     title: 'Status Update - Initiated (सबमिट हुआ)',
     category: 'STATUS_UPDATE',
-    messageText: `📝 *अपना डिजिटल हब - स्थिति अपडेट* 📝
-------------------------------------
+    messageText: `${COMMON_HEADER}
+*स्थिति अपडेट - आवेदन दर्ज*
+
 आवेदक का नाम: *{applicantName}*
 प्रमाणपत्र प्रकार: *{certType}*
 रेफरेंस नंबर: *{refNo}*
@@ -56,8 +61,9 @@ const DEFAULT_TEMPLATES = [
     templateKey: 'STATUS_UNDER_PROCESS',
     title: 'Status Update - General Under Process (प्रक्रिया में)',
     category: 'STATUS_UPDATE',
-    messageText: `⏳ *अपना डिजिटल हब - स्थिति अपडेट* ⏳
-------------------------------------
+    messageText: `${COMMON_HEADER}
+*स्थिति अपडेट - प्रक्रिया में*
+
 आवेदक का नाम: *{applicantName}*
 प्रमाणपत्र प्रकार: *{certType}*
 रेफरेंस नंबर: *{refNo}*
@@ -70,8 +76,9 @@ const DEFAULT_TEMPLATES = [
     templateKey: 'STATUS_CI_UNDER_PROCESS',
     title: 'Status Update - Circle Inspector Under Process',
     category: 'STATUS_UPDATE',
-    messageText: `⏳ *अपना डिजिटल हब - स्थिति अपडेट* ⏳
-------------------------------------
+    messageText: `${COMMON_HEADER}
+*स्थिति अपडेट - सर्किल इंस्पेक्टर स्तर*
+
 आवेदक का नाम: *{applicantName}*
 प्रमाणपत्र प्रकार: *{certType}*
 रेफरेंस नंबर: *{refNo}*
@@ -84,8 +91,9 @@ const DEFAULT_TEMPLATES = [
     templateKey: 'STATUS_CI_WAITING',
     title: 'Status Update - Circle Inspector Waiting (दस्तावेज़ मांग)',
     category: 'STATUS_UPDATE',
-    messageText: `⚠️ *अपना डिजिटल हब - स्थिति अपडेट* ⚠️
-------------------------------------
+    messageText: `${COMMON_HEADER}
+*स्थिति अपडेट - आवश्यक दस्तावेज मांग*
+
 आवेदक का नाम: *{applicantName}*
 प्रमाणपत्र प्रकार: *{certType}*
 रेफरेंस नंबर: *{refNo}*
@@ -100,8 +108,9 @@ const DEFAULT_TEMPLATES = [
     templateKey: 'STATUS_CO_UNDER_PROCESS',
     title: 'Status Update - Circle Officer Under Process',
     category: 'STATUS_UPDATE',
-    messageText: `⏳ *अपना डिजिटल हब - स्थिति अपडेट* ⏳
-------------------------------------
+    messageText: `${COMMON_HEADER}
+*स्थिति अपडेट - अंचलाधिकारी स्तर*
+
 आवेदक का नाम: *{applicantName}*
 प्रमाणपत्र प्रकार: *{certType}*
 रेफरेंस नंबर: *{refNo}*
@@ -114,8 +123,9 @@ const DEFAULT_TEMPLATES = [
     templateKey: 'STATUS_CO_WAITING',
     title: 'Status Update - Circle Officer Waiting (दस्तावेज़ मांग)',
     category: 'STATUS_UPDATE',
-    messageText: `⚠️ *अपना डिजिटल हब - स्थिति अपडेट* ⚠️
-------------------------------------
+    messageText: `${COMMON_HEADER}
+*स्थिति अपडेट - आवश्यक दस्तावेज मांग*
+
 आवेदक का नाम: *{applicantName}*
 प्रमाणपत्र प्रकार: *{certType}*
 रेफरेंस नंबर: *{refNo}*
@@ -130,8 +140,9 @@ const DEFAULT_TEMPLATES = [
     templateKey: 'STATUS_SDO_UNDER_PROCESS',
     title: 'Status Update - SDO Under Process',
     category: 'STATUS_UPDATE',
-    messageText: `⏳ *अपना डिजिटल हब - स्थिति अपडेट* ⏳
-------------------------------------
+    messageText: `${COMMON_HEADER}
+*स्थिति अपडेट - अनुमंडल पदाधिकारी स्तर*
+
 आवेदक का नाम: *{applicantName}*
 प्रमाणपत्र प्रकार: *{certType}*
 रेफरेंस नंबर: *{refNo}*
@@ -142,17 +153,18 @@ const DEFAULT_TEMPLATES = [
   },
   {
     templateKey: 'STATUS_DELIVERED',
-    title: 'Status Update - Circle Officer Delivered (निर्गत/बन गया)',
+    title: 'Status Update - Delivered (निर्गत/बन गया)',
     category: 'STATUS_UPDATE',
-    messageText: `🎉 *अपना डिजिटल हब - स्थिति अपडेट* 🎉
-------------------------------------
+    messageText: `${COMMON_HEADER}
+*स्थिति अपडेट - बधाई हो! प्रमाणपत्र निर्गत*
+
 आवेदक का नाम: *{applicantName}*
 प्रमाणपत्र प्रकार: *{certType}*
 रेफरेंस नंबर: *{refNo}*
 
-वर्तमान स्थिति: *अंचलाधिकारी स्तर से निर्गत (Circle Officer - Delivered)*
+वर्तमान स्थिति: *निर्गत / बन चुका है (DELIVERED)*
 
-आपका प्रमाणपत्र बन चुका है, कृपया सेंटर से संपर्क करके प्राप्त करें।
+आपका प्रमाणपत्र बन चुका है, कृपया सेंटर से संपर्क करके अपनी मूल प्रति प्राप्त करें।
 
 धन्यवाद!`
   },
@@ -160,8 +172,9 @@ const DEFAULT_TEMPLATES = [
     templateKey: 'STATUS_SDO_DELIVERED',
     title: 'Status Update - SDO Delivered (निर्गत/बन गया)',
     category: 'STATUS_UPDATE',
-    messageText: `🎉 *अपना डिजिटल हब - स्थिति अपडेट* 🎉
-------------------------------------
+    messageText: `${COMMON_HEADER}
+*स्थिति अपडेट - बधाई हो! SDO प्रमाणपत्र निर्गत*
+
 आवेदक का नाम: *{applicantName}*
 प्रमाणपत्र प्रकार: *{certType}*
 रेफरेंस नंबर: *{refNo}*
@@ -176,8 +189,9 @@ const DEFAULT_TEMPLATES = [
     templateKey: 'STATUS_REJECTED',
     title: 'Status Update - Rejected (निरस्त)',
     category: 'STATUS_UPDATE',
-    messageText: `❌ *अपना डिजिटल हब - स्थिति अपडेट* ❌
-------------------------------------
+    messageText: `${COMMON_HEADER}
+*स्थिति अपडेट - आवेदन निरस्त*
+
 आवेदक का नाम: *{applicantName}*
 प्रमाणपत्र प्रकार: *{certType}*
 रेफरेंस नंबर: *{refNo}*
@@ -192,8 +206,7 @@ const DEFAULT_TEMPLATES = [
     templateKey: 'PDF_CAPTION',
     title: 'PDF Certificate Document Caption (PDF फाइल मैसेज)',
     category: 'PDF_DISPATCH',
-    messageText: `📄 *अपना डिजिटल हब* 📄
-------------------------------------
+    messageText: `${COMMON_HEADER}
 *प्रमाणपत्र (Certificate PDF)*
 
 आवेदक का नाम: *{applicantName}*
@@ -204,6 +217,7 @@ const DEFAULT_TEMPLATES = [
 धन्यवाद!`
   }
 ];
+
 
 // Helper to seed missing templates
 async function ensureTemplatesSeeded() {

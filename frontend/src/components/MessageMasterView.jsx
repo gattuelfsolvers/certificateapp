@@ -9,13 +9,18 @@ import {
   saveWhatsAppTemplateToFirebase 
 } from '../firebase';
 
+export const COMMON_HEADER = `*APNA DIGITAL HUB*
+(A Part of Gattu Computer Works)
+LIC Building, Khesmi, Gomoh, Dhanbad
+Contact: 7781931880
+------------------------------------`;
+
 export const DEFAULT_WHATSAPP_TEMPLATES = [
   {
     templateKey: 'INITIAL_RECEIPT',
     title: 'आवेदन पंजीयन रसीद (Single Entry Receipt)',
     category: 'RECEIPT',
-    messageText: `📄 *अपना डिजिटल हब* 📄
-------------------------------------
+    messageText: `${COMMON_HEADER}
 *आवेदन पंजीयन रसीद*
 
 आवेदक का नाम: *{applicantName}*
@@ -32,8 +37,7 @@ export const DEFAULT_WHATSAPP_TEMPLATES = [
     templateKey: 'BULK_RECEIPT',
     title: 'एक साथ multiple पंजीयन रसीद (Bulk Entry Receipt)',
     category: 'RECEIPT',
-    messageText: `📄 *अपना डिजिटल हब* 📄
-------------------------------------
+    messageText: `${COMMON_HEADER}
 *आवेदन पंजीयन रसीद ({totalCount} प्रमाणपत्र)*
 
 आवेदक का नाम: *{applicantName}*
@@ -49,23 +53,25 @@ export const DEFAULT_WHATSAPP_TEMPLATES = [
     templateKey: 'STATUS_DELIVERED',
     title: 'प्रमाणपत्र बन गया (Issued & Delivered Alert)',
     category: 'STATUS_UPDATE',
-    messageText: `🎉 *अपना डिजिटल हब - बधाई हो!* 🎉
-------------------------------------
+    messageText: `${COMMON_HEADER}
+*स्थिति अपडेट - बधाई हो! प्रमाणपत्र निर्गत*
+
 आवेदक का नाम: *{applicantName}*
 प्रमाणपत्र प्रकार: *{certType}*
 रेफरेंस नंबर: *{refNo}*
 
 वर्तमान स्थिति: *निर्गत / बन चुका है (DELIVERED)*
 
-आपका प्रमाणपत्र सफलतापूर्वक बन चुका है। कृपया सेंटर से संपर्क करके अपनी मूल प्रति प्राप्त करें।
+आपका प्रमाणपत्र बन चुका है, कृपया सेंटर से संपर्क करके अपनी मूल प्रति प्राप्त करें।
 धन्यवाद!`
   },
   {
     templateKey: 'STATUS_CI_UNDER_PROCESS',
     title: 'सर्किल इंस्पेक्टर स्तर पर प्रक्रिया में (CI Under Process)',
     category: 'STATUS_UPDATE',
-    messageText: `⏳ *अपना डिजिटल हब - स्थिति अपडेट* ⏳
-------------------------------------
+    messageText: `${COMMON_HEADER}
+*स्थिति अपडेट - सर्किल इंस्पेक्टर स्तर*
+
 आवेदक का नाम: *{applicantName}*
 प्रमाणपत्र प्रकार: *{certType}*
 रेफरेंस नंबर: *{refNo}*
@@ -79,8 +85,9 @@ export const DEFAULT_WHATSAPP_TEMPLATES = [
     templateKey: 'STATUS_CO_UNDER_PROCESS',
     title: 'अंचलाधिकारी स्तर पर प्रक्रिया में (CO Under Process)',
     category: 'STATUS_UPDATE',
-    messageText: `⏳ *अपना डिजिटल हब - स्थिति अपडेट* ⏳
-------------------------------------
+    messageText: `${COMMON_HEADER}
+*स्थिति अपडेट - अंचलाधिकारी स्तर*
+
 आवेदक का नाम: *{applicantName}*
 प्रमाणपत्र प्रकार: *{certType}*
 रेफरेंस नंबर: *{refNo}*
@@ -94,8 +101,9 @@ export const DEFAULT_WHATSAPP_TEMPLATES = [
     templateKey: 'STATUS_REJECTED',
     title: 'आवेदन निरस्त सूचना (Rejected Alert)',
     category: 'STATUS_UPDATE',
-    messageText: `❌ *अपना डिजिटल हब - स्थिति अपडेट* ❌
-------------------------------------
+    messageText: `${COMMON_HEADER}
+*स्थिति अपडेट - आवेदन निरस्त*
+
 आवेदक का नाम: *{applicantName}*
 प्रमाणपत्र प्रकार: *{certType}*
 रेफरेंस नंबर: *{refNo}*
@@ -109,9 +117,8 @@ export const DEFAULT_WHATSAPP_TEMPLATES = [
     templateKey: 'PDF_CAPTION',
     title: 'डिजिटल प्रमाणपत्र PDF फाइल कैप्शन (PDF Document Caption)',
     category: 'PDF_DISPATCH',
-    messageText: `📄 *अपना डिजिटल हब* 📄
-------------------------------------
-*डिजिटल प्रमाणपत्र (Certificate PDF Document)*
+    messageText: `${COMMON_HEADER}
+*प्रमाणपत्र (Certificate PDF Document)*
 
 आवेदक का नाम: *{applicantName}*
 प्रमाणपत्र प्रकार: *{certType}*
@@ -121,6 +128,7 @@ export const DEFAULT_WHATSAPP_TEMPLATES = [
 धन्यवाद!`
   }
 ];
+
 
 export default function MessageMasterView({ showToast, onBackToDashboard }) {
   const [templates, setTemplates] = useState([]);
