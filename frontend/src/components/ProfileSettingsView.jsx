@@ -102,16 +102,61 @@ export default function ProfileSettingsView({ clientData, showToast }) {
       try { return JSON.parse(saved); } catch (e) {}
     }
     return {
-      status: 'CONNECTED', // 'DISCONNECTED' | 'SCAN_QR' | 'CONNECTED'
+      status: 'DISCONNECTED', // 'DISCONNECTED' | 'SCAN_QR' | 'CONNECTED'
       connectedPhone: clientData?.phone || '8210212926',
       autoNotifyStatusChange: true,
       autoSendPdfReceipt: true
     };
   });
 
+  const [liveQrUri, setLiveQrUri] = useState(null);
   const [isQrLoading, setIsQrLoading] = useState(false);
   const [testMobileInput, setTestMobileInput] = useState(clientData?.phone || '8210212926');
   const [isSendingTestMsg, setIsSendingTestMsg] = useState(false);
+  const [pairingPhone, setPairingPhone] = useState(clientData?.phone || '');
+  const [pairingCodeResult, setPairingCodeResult] = useState('');
+  const [isGeneratingPairCode, setIsGeneratingPairCode] = useState(false);
+
+  // Poll live WhatsApp engine status from local port 5000 or cloud backend
+  useEffect(() => {
+    let isMounted = true;
+    const fetchWaStatus = async () => {
+      try {
+        let res = null;
+        try {
+          res = await fetch('http://localhost:5000/api/whatsapp/status');
+        } catch (e) {
+          res = await fetch('/api/whatsapp/status');
+        }
+
+        if (res && res.ok) {
+          const data = await res.json();
+          if (isMounted) {
+            if (data.success && data.isConnected) {
+              setWhatsappSetup(prev => ({
+                ...prev,
+                status: 'CONNECTED',
+                connectedPhone: data.connectedPhone || prev.connectedPhone
+              }));
+              setLiveQrUri(null);
+            } else if (data.qrCodeData) {
+              setLiveQrUri(data.qrCodeData);
+              setWhatsappSetup(prev => ({ ...prev, status: 'SCAN_QR' }));
+            } else {
+              setWhatsappSetup(prev => ({ ...prev, status: 'DISCONNECTED' }));
+            }
+          }
+        }
+      } catch (err) {}
+    };
+
+    fetchWaStatus();
+    const interval = setInterval(fetchWaStatus, 4000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
 
   // Save Profile to LocalStorage
   const handleSaveProfile = (e) => {
@@ -146,23 +191,86 @@ export default function ProfileSettingsView({ clientData, showToast }) {
   };
 
   // WhatsApp Connect / Disconnect Handlers
-  const handleSimulateQrScan = () => {
+  const handleRequestLiveQr = async () => {
     setIsQrLoading(true);
-    setTimeout(() => {
+    try {
+      let res;
+      try {
+        res = await fetch('http://localhost:5000/api/whatsapp/reconnect', { method: 'POST' });
+      } catch (e) {
+        res = await fetch('/api/whatsapp/reconnect', { method: 'POST' });
+      }
+      if (showToast) showToast('info', 'QR Requested', 'Generating WhatsApp QR code from Engine...');
+      // Brief pause then poll immediately
+      setTimeout(async () => {
+        try {
+          const sRes = await fetch('http://localhost:5000/api/whatsapp/status').catch(() => fetch('/api/whatsapp/status'));
+          if (sRes.ok) {
+            const sData = await sRes.json();
+            if (sData.qrCodeData) setLiveQrUri(sData.qrCodeData);
+          }
+        } catch (e) {}
+        setIsQrLoading(false);
+      }, 2000);
+    } catch (err) {
       setIsQrLoading(false);
-      const updated = { ...whatsappSetup, status: 'CONNECTED', connectedPhone: profile.phone };
-      setWhatsappSetup(updated);
-      localStorage.setItem('WHATSAPP_LINK_SETUP', JSON.stringify(updated));
-      if (showToast) showToast('success', 'WhatsApp Linked', `WhatsApp connected with +91 ${profile.phone}`);
-    }, 1500);
+      if (showToast) showToast('error', 'QR Error', 'Failed to connect with WhatsApp engine.');
+    }
   };
 
-  const handleDisconnectWhatsapp = () => {
+  const handleDisconnectWhatsapp = async () => {
     if (!window.confirm('Are you sure you want to disconnect WhatsApp integration? Auto notifications will be paused.')) return;
-    const updated = { ...whatsappSetup, status: 'DISCONNECTED' };
-    setWhatsappSetup(updated);
-    localStorage.setItem('WHATSAPP_LINK_SETUP', JSON.stringify(updated));
-    if (showToast) showToast('info', 'WhatsApp Disconnected', 'WhatsApp bot disconnected.');
+    try {
+      try {
+        await fetch('http://localhost:5000/api/whatsapp/logout', { method: 'POST' });
+      } catch (e) {
+        await fetch('/api/whatsapp/logout', { method: 'POST' });
+      }
+      const updated = { ...whatsappSetup, status: 'DISCONNECTED' };
+      setWhatsappSetup(updated);
+      setLiveQrUri(null);
+      localStorage.setItem('WHATSAPP_LINK_SETUP', JSON.stringify(updated));
+      if (showToast) showToast('info', 'WhatsApp Disconnected', 'WhatsApp bot disconnected successfully.');
+    } catch (err) {
+      if (showToast) showToast('error', 'Disconnect Failed', err.message);
+    }
+  };
+
+  const handleGeneratePairingCode = async () => {
+    if (!pairingPhone || pairingPhone.replace(/\D/g, '').length < 10) {
+      if (showToast) showToast('error', 'Phone Required', 'Enter valid 10-digit mobile number for Pairing Code.');
+      return;
+    }
+    setIsGeneratingPairCode(true);
+    setPairingCodeResult('');
+    try {
+      const clean = pairingPhone.replace(/\D/g, '');
+      let res;
+      try {
+        res = await fetch('http://localhost:5000/api/whatsapp/pair-code', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phoneNumber: clean })
+        });
+      } catch (e) {
+        res = await fetch('/api/whatsapp/pair-code', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phoneNumber: clean })
+        });
+      }
+      const data = await res.json();
+      if (data.success && data.pairingCode) {
+        setPairingCodeResult(data.pairingCode);
+        if (showToast) showToast('success', 'Pairing Code Ready', `Enter code ${data.pairingCode} in your phone.`);
+      } else {
+        if (showToast) showToast('error', 'Pair Code Failed', data.error || 'Could not generate code.');
+      }
+    } catch (err) {
+      if (showToast) showToast('error', 'Pairing Error', err.message);
+    } finally {
+      setIsGeneratingPairCode(false);
+    }
   };
 
   const handleSaveWhatsappSettings = () => {
@@ -210,6 +318,7 @@ export default function ProfileSettingsView({ clientData, showToast }) {
       setIsSendingTestMsg(false);
     }
   };
+
 
   return (
     <div className="space-y-8 w-full animate-in fade-in duration-300">
@@ -606,7 +715,7 @@ export default function ProfileSettingsView({ clientData, showToast }) {
                     <CheckCircle2 className="w-6 h-6" />
                   </div>
                   <div>
-                    <h4 className="text-xs font-black text-emerald-900">WhatsApp Bot Active</h4>
+                    <h4 className="text-xs font-black text-emerald-900">WhatsApp Bot Active & Synchronized</h4>
                     <p className="text-[11px] text-emerald-700 font-mono font-bold">+91 {whatsappSetup.connectedPhone}</p>
                   </div>
                 </div>
@@ -620,24 +729,67 @@ export default function ProfileSettingsView({ clientData, showToast }) {
               </div>
             </div>
           ) : (
-            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-center space-y-3">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto border border-emerald-200">
-                <QrCode className="w-6 h-6" />
+            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-4">
+              <div className="text-center space-y-1">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto border border-emerald-200">
+                  <QrCode className="w-6 h-6" />
+                </div>
+                <h4 className="text-xs font-extrabold text-slate-800">Link WhatsApp via Local Engine</h4>
+                <p className="text-[11px] text-slate-500">Scan QR code or use 8-Digit Pairing Code to link WhatsApp directly.</p>
               </div>
-              <div>
-                <h4 className="text-xs font-extrabold text-slate-800">Scan QR Code to Link WhatsApp</h4>
-                <p className="text-[11px] text-slate-500 mt-0.5">Link your WhatsApp Web to send automatic status updates & receipts to customers.</p>
+
+              {/* LIVE QR CODE DISPLAY */}
+              {liveQrUri ? (
+                <div className="p-3 bg-white rounded-2xl border-2 border-emerald-500/40 max-w-[220px] mx-auto shadow-sm text-center space-y-2">
+                  <img src={liveQrUri} alt="WhatsApp QR Code" className="w-full h-auto rounded-lg mx-auto" />
+                  <p className="text-[10px] text-emerald-800 font-bold animate-pulse">Scan with WhatsApp Linked Devices</p>
+                </div>
+              ) : null}
+
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-2 pt-1">
+                <button
+                  onClick={handleRequestLiveQr}
+                  disabled={isQrLoading}
+                  className="w-full sm:w-auto px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl text-xs shadow-md transition inline-flex items-center justify-center gap-2"
+                >
+                  {isQrLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <QrCode className="w-4 h-4" />}
+                  <span>{isQrLoading ? 'Requesting Live QR...' : (liveQrUri ? 'Refresh QR Code' : 'Show WhatsApp QR Code')}</span>
+                </button>
               </div>
-              <button
-                onClick={handleSimulateQrScan}
-                disabled={isQrLoading}
-                className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl text-xs shadow-md transition inline-flex items-center gap-2"
-              >
-                {isQrLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <QrCode className="w-4 h-4" />}
-                <span>{isQrLoading ? 'Generating QR Code...' : 'Generate WhatsApp QR Code'}</span>
-              </button>
+
+              {/* ALTERNATIVE: 8-DIGIT PAIRING CODE */}
+              <div className="pt-3 border-t border-slate-200 text-left space-y-2">
+                <span className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
+                  <Smartphone className="w-3.5 h-3.5 text-emerald-600" />
+                  Or Link with 8-Digit Pairing Code (No QR Needed):
+                </span>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={pairingPhone}
+                    onChange={(e) => setPairingPhone(e.target.value)}
+                    placeholder="Mobile (e.g. 8210212926)"
+                    className="flex-1 bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleGeneratePairingCode}
+                    disabled={isGeneratingPairCode}
+                    className="px-4 py-1.5 bg-slate-800 hover:bg-slate-900 text-white font-extrabold text-xs rounded-xl transition shrink-0"
+                  >
+                    {isGeneratingPairCode ? 'Generating...' : 'Get Code'}
+                  </button>
+                </div>
+                {pairingCodeResult && (
+                  <div className="p-3 bg-emerald-100/70 border border-emerald-300 rounded-xl text-center space-y-1">
+                    <span className="text-[10px] text-emerald-800 font-bold uppercase tracking-wider block">Your 8-Digit WhatsApp Code:</span>
+                    <span className="text-xl font-mono font-black text-emerald-950 tracking-widest">{pairingCodeResult}</span>
+                  </div>
+                )}
+              </div>
             </div>
           )}
+
 
           {/* Automation Checkboxes */}
           <div className="space-y-2 pt-2 border-t border-slate-100 text-xs font-medium">
