@@ -367,13 +367,8 @@ export default function UniversalLogin({ onLoginSuccess }) {
           return;
         }
 
-        // Expiry Date & Status Check
-        const daysLeft = Math.ceil((new Date(matchedClient.expiresAt) - new Date()) / (1000 * 60 * 60 * 24));
-        if ((daysLeft <= 0 || matchedClient.status === 'EXPIRED') && matchedClient.planType !== 'LIFETIME') {
-          setError('Your subscription license has EXPIRED. Please contact Admin to renew.');
-          setLoading(false);
-          return;
-        }
+        // Allow login for expired users so they can access their dashboard and sync old entries.
+        // Restrictions (add, edit, delete, whatsapp) and upgrade banner are strictly enforced inside the client dashboard.
 
         // Strict Multi-HWID Whitelisting Verification
         const whitelistedHwids = Array.isArray(matchedClient.hwids) && matchedClient.hwids.length > 0 
