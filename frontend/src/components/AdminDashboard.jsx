@@ -2314,12 +2314,16 @@ export default function AdminDashboard({ onLogout }) {
                                  (c.ownerName || '').toLowerCase().includes(q) ||
                                  (c.phone || '').includes(q);
                         }).map((client) => {
-                          // Filter certificates for this client (matched by phone or hwid/all)
-                          const clientCerts = certificates.filter(cert => 
-                            (cert.clientPhone && cert.clientPhone === client.phone) ||
-                            (cert.hwid && (client.hwids || []).includes(cert.hwid)) ||
-                            true // Cloud entries synced from client
-                          );
+                          // Filter certificates strictly for this client (matched by phone, clientId or hwid)
+                          const clientCerts = certificates.filter(cert => {
+                            const cPhone = String(client.phone || '').trim();
+                            const certPhone = String(cert.clientPhone || cert.clientId || '').trim();
+                            const matchPhone = cPhone && (certPhone === cPhone);
+                            const matchHwid = cert.hwid && (client.hwids || []).includes(cert.hwid);
+                            // Legacy entries without client info belong to the primary admin client (7781931880)
+                            const isLegacyPrimary = (!cert.clientId && !cert.clientPhone) && (cPhone === '7781931880');
+                            return matchPhone || matchHwid || isLegacyPrimary;
+                          });
 
                           const count = clientCerts.length;
                           const isOnlineActive = client.status === 'ACTIVE';
