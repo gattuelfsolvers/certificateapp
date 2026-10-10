@@ -6,7 +6,10 @@ import {
 import { 
   fetchWhatsAppTemplatesFromFirebase, 
   subscribeWhatsAppTemplatesFromFirebase, 
-  saveWhatsAppTemplateToFirebase 
+  saveWhatsAppTemplateToFirebase,
+  fetchAppSettingsFromFirebase,
+  subscribeAppSettingsFromFirebase,
+  saveAppSettingsToFirebase
 } from '../firebase';
 
 export const COMMON_HEADER = `*APNA DIGITAL HUB*
@@ -137,6 +140,8 @@ export default function MessageMasterView({ showToast, onBackToDashboard }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [testPhone, setTestPhone] = useState('');
   const [sendingTestKey, setSendingTestKey] = useState(null);
+  const [autoStatusWhatsApp, setAutoStatusWhatsApp] = useState(true);
+  const [isSavingSetting, setIsSavingSetting] = useState(false);
 
   const [formData, setFormData] = useState({
     templateKey: '',
@@ -200,11 +205,38 @@ export default function MessageMasterView({ showToast, onBackToDashboard }) {
       }
     });
 
+    // Real-time listener for app_settings
+    const unsubSettings = subscribeAppSettingsFromFirebase((settings) => {
+      if (settings && typeof settings.autoStatusWhatsApp === 'boolean') {
+        setAutoStatusWhatsApp(settings.autoStatusWhatsApp);
+      }
+    });
+
     return () => {
       isMounted = false;
       if (typeof unsub === 'function') unsub();
+      if (typeof unsubSettings === 'function') unsubSettings();
     };
   }, []);
+
+  const handleToggleAutoStatus = async (newValue) => {
+    try {
+      setIsSavingSetting(true);
+      setAutoStatusWhatsApp(newValue);
+      await saveAppSettingsToFirebase({ autoStatusWhatsApp: newValue });
+      showToast?.(
+        'success',
+        newValue ? 'Auto WhatsApp Activated' : 'Manual WhatsApp Activated',
+        newValue 
+          ? 'स्टेटस सिंक होते ही व्हाट्सएप मैसेज ऑटोमेटिक चला जाएगा।' 
+          : 'स्टेटस सिंक होने पर व्हाट्सएप मैसेज केवल मैनुअल बटन दबाने पर जाएगा।'
+      );
+    } catch (err) {
+      showToast?.('error', 'Setting Save Failed', err.message);
+    } finally {
+      setIsSavingSetting(false);
+    }
+  };
 
   const handleOpenEdit = (tpl) => {
     setEditingTemplate(tpl);
@@ -365,6 +397,79 @@ export default function MessageMasterView({ showToast, onBackToDashboard }) {
             <Plus className="w-4 h-4 stroke-[3]" />
             <span>+ Create Custom Template</span>
           </button>
+        </div>
+      </div>
+
+      {/* Auto vs Manual Status Update Message Control Card */}
+      <div className="bg-white border-2 border-slate-200/90 hover:border-emerald-500/50 rounded-3xl p-5 md:p-6 shadow-sm transition-all">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-start gap-3.5">
+            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 text-xl shadow-inner border ${
+              autoStatusWhatsApp 
+                ? 'bg-emerald-50 border-emerald-200 text-emerald-600' 
+                : 'bg-amber-50 border-amber-200 text-amber-600'
+            }`}>
+              {autoStatusWhatsApp ? '⚡' : '👆'}
+            </div>
+            <div>
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <h3 className="text-sm md:text-base font-black text-slate-900">
+                  Status Update Message Dispatch Mode
+                </h3>
+                <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-black uppercase tracking-wider border ${
+                  autoStatusWhatsApp 
+                    ? 'bg-emerald-100 text-emerald-800 border-emerald-300' 
+                    : 'bg-amber-100 text-amber-800 border-amber-300'
+                }`}>
+                  {autoStatusWhatsApp ? '✓ AUTOMATIC' : 'MANUAL MODE'}
+                </span>
+              </div>
+              <p className="text-xs text-slate-600 mt-1 max-w-2xl leading-relaxed">
+                {autoStatusWhatsApp ? (
+                  <span>
+                    <strong className="text-emerald-700">ऑटोमैटिक मोड (YES/Auto):</strong> झारसेवा पोर्टल से स्टेटस सिंक (Sync Status) होते ही आवेदक को नया स्टेटस व्हाट्सएप पर <strong>तुरंत ऑटोमेटिक</strong> चला जाएगा।
+                  </span>
+                ) : (
+                  <span>
+                    <strong className="text-amber-700">मैनुअल मोड (NO/Manual):</strong> पोर्टल से स्टेटस सिंक होने पर स्क्रीन पर नया स्टेटस अपडेट होगा, लेकिन व्हाट्सएप मैसेज <strong>सिर्फ तभी जाएगा जब आप "Send WhatsApp" बटन दबाएंगे</strong>।
+                  </span>
+                )}
+              </p>
+              <div className="mt-2 text-[11px] font-bold text-slate-500 flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                <span>नोट: नया प्रमाण पत्र दर्ज (New Entry) करते समय पंजीयन रसीद हमेशा 100% ऑटोमेटिक जाएगी।</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Toggle Control: Checkbox / Switch Yes-No */}
+          <div className="flex items-center gap-3 shrink-0 self-end md:self-center bg-slate-50 border border-slate-200 p-2 rounded-2xl">
+            <button
+              type="button"
+              disabled={isSavingSetting}
+              onClick={() => handleToggleAutoStatus(true)}
+              className={`px-4 py-2 rounded-xl text-xs font-black transition flex items-center gap-1.5 ${
+                autoStatusWhatsApp
+                  ? 'bg-emerald-600 text-white shadow-md'
+                  : 'bg-transparent text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <span>⚡ AUTO (YES)</span>
+            </button>
+
+            <button
+              type="button"
+              disabled={isSavingSetting}
+              onClick={() => handleToggleAutoStatus(false)}
+              className={`px-4 py-2 rounded-xl text-xs font-black transition flex items-center gap-1.5 ${
+                !autoStatusWhatsApp
+                  ? 'bg-amber-500 text-slate-950 shadow-md font-black'
+                  : 'bg-transparent text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <span>👆 MANUAL (NO)</span>
+            </button>
+          </div>
         </div>
       </div>
 

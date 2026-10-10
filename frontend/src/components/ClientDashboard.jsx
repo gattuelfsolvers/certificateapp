@@ -14,7 +14,8 @@ import {
   requestBulkSyncOnFirebase, 
   saveCertificateToFirebase, 
   deleteCertificateFromFirebase,
-  subscribeWhatsAppTemplatesFromFirebase
+  subscribeWhatsAppTemplatesFromFirebase,
+  subscribeAppSettingsFromFirebase
 } from '../firebase';
 import CodeMasterView from './CodeMasterView';
 import ProfileSettingsView from './ProfileSettingsView';
@@ -244,6 +245,7 @@ export default function ClientDashboard({ clientData, onLogout }) {
 
   // Real-time WhatsApp Templates from Firestore
   const [waTemplates, setWaTemplates] = useState([]);
+  const [autoStatusWhatsApp, setAutoStatusWhatsApp] = useState(true);
 
   useEffect(() => {
     const unsubTpl = subscribeWhatsAppTemplatesFromFirebase((tplList) => {
@@ -251,8 +253,16 @@ export default function ClientDashboard({ clientData, onLogout }) {
         setWaTemplates(tplList);
       }
     });
+
+    const unsubSettings = subscribeAppSettingsFromFirebase((settings) => {
+      if (settings && typeof settings.autoStatusWhatsApp === 'boolean') {
+        setAutoStatusWhatsApp(settings.autoStatusWhatsApp);
+      }
+    });
+
     return () => {
       if (typeof unsubTpl === 'function') unsubTpl();
+      if (typeof unsubSettings === 'function') unsubSettings();
     };
   }, []);
 
@@ -508,28 +518,31 @@ export default function ClientDashboard({ clientData, onLogout }) {
     };
   };
 
-  const sendStatusUpdateWhatsApp = async (cert, customStatus) => {
+  const sendStatusUpdateWhatsApp = async (cert, customStatus, targetTemplateKey = null) => {
     if (!cert || !cert.mobile) return false;
     const profile = getShopProfileDetails();
     const fullCertName = getCertFullDisplayName(cert.certType);
     const statusToUse = customStatus || cert.currentStatus || 'INITIATED';
 
     // Map status to template key
-    let targetKey = 'STATUS_UNDER_PROCESS';
-    const s = String(statusToUse).toUpperCase();
-    if (s === 'INITIATED') targetKey = 'STATUS_INITIATED';
-    else if (s.includes('DELIVERED')) targetKey = s.includes('SDO') ? 'STATUS_SDO_DELIVERED' : 'STATUS_DELIVERED';
-    else if (s.includes('REJECTED')) targetKey = 'STATUS_REJECTED';
-    else if (s.includes('CI_WAITING')) targetKey = 'STATUS_CI_WAITING';
-    else if (s.includes('CO_WAITING')) targetKey = 'STATUS_CO_WAITING';
-    else if (s.includes('CI_UNDER_PROCESS') || s.includes('CI')) targetKey = 'STATUS_CI_UNDER_PROCESS';
-    else if (s.includes('CO_UNDER_PROCESS') || s.includes('CO')) targetKey = 'STATUS_CO_UNDER_PROCESS';
-    else if (s.includes('SDO_UNDER_PROCESS') || s.includes('SDO')) targetKey = 'STATUS_SDO_UNDER_PROCESS';
+    let targetKey = targetTemplateKey || 'STATUS_UNDER_PROCESS';
+    if (!targetTemplateKey) {
+      const s = String(statusToUse).toUpperCase();
+      if (s === 'INITIATED') targetKey = 'INITIAL_RECEIPT';
+      else if (s.includes('DELIVERED')) targetKey = s.includes('SDO') ? 'STATUS_SDO_DELIVERED' : 'STATUS_DELIVERED';
+      else if (s.includes('REJECTED')) targetKey = 'STATUS_REJECTED';
+      else if (s.includes('CI_WAITING')) targetKey = 'STATUS_CI_WAITING';
+      else if (s.includes('CO_WAITING')) targetKey = 'STATUS_CO_WAITING';
+      else if (s.includes('CI_UNDER_PROCESS') || s.includes('CI')) targetKey = 'STATUS_CI_UNDER_PROCESS';
+      else if (s.includes('CO_UNDER_PROCESS') || s.includes('CO')) targetKey = 'STATUS_CO_UNDER_PROCESS';
+      else if (s.includes('SDO_UNDER_PROCESS') || s.includes('SDO')) targetKey = 'STATUS_SDO_UNDER_PROCESS';
+    }
 
     // Find custom template configured by user in Message Master
     const matchedTemplate = waTemplates.find(t => t.templateKey === targetKey);
 
     let messageText = '';
+    const formattedDate = formatDateDDMMYYYY(cert.entryDate || new Date());
     if (matchedTemplate && matchedTemplate.messageText) {
       const duesVal = Number(cert.duesAmount || (cert.totalFee - cert.paidAmount) || 0);
       const duesLine = duesVal > 0 ? `\nबकाया राशि (Dues): ₹${duesVal}` : '';
@@ -537,7 +550,7 @@ export default function ClientDashboard({ clientData, onLogout }) {
         .replace(/\{applicantName\}/g, cert.applicantName || 'Applicant')
         .replace(/\{refNo\}/g, cert.refNo || '')
         .replace(/\{certType\}/g, fullCertName)
-        .replace(/\{entryDate\}/g, formatDateDDMMYYYY(cert.entryDate))
+        .replace(/\{entryDate\}/g, formattedDate)
         .replace(/\{currentStatus\}/g, statusToUse)
         .replace(/\{duesLine\}/g, duesLine);
     } else {
@@ -550,7 +563,7 @@ Contact: 7781931880
 📄 रेफरेंस नंबर: *${cert.refNo}*
 👤 आवेदक का नाम: *${cert.applicantName}*
 📜 प्रमाण पत्र का प्रकार: *${fullCertName}*
-📅 आवेदन तिथि: *${formatDateDDMMYYYY(cert.entryDate)}*
+📅 आवेदन तिथि: *${formattedDate}*
 🔄 अद्यतन स्थिति (Status): *${statusToUse}*
 💰 बकाया राशि (Dues): *₹${cert.duesAmount || 0}*
 
@@ -635,8 +648,8 @@ Contact: 7781931880
 
         await saveCertificateToFirebase(payload);
 
-        // Automatic WhatsApp Receipt & Initial Status Alert Dispatch
-        sendStatusUpdateWhatsApp(payload);
+        // Automatic WhatsApp Receipt & Initial Status Alert Dispatch (Always automatic for new entries)
+        sendStatusUpdateWhatsApp(payload, 'INITIATED', 'INITIAL_RECEIPT');
       }
 
       setIsEntryModalOpen(false);

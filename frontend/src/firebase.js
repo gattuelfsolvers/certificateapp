@@ -353,3 +353,37 @@ export async function saveWhatsAppTemplateToFirebase(templateData) {
   }
 }
 
+// Global App Settings: Auto Status WhatsApp Dispatch
+export async function fetchAppSettingsFromFirebase() {
+  try {
+    const settingRef = doc(db, "app_settings", "general");
+    const snap = await getDoc(settingRef);
+    if (snap.exists()) return snap.data();
+    return { autoStatusWhatsApp: true };
+  } catch (e) {
+    return { autoStatusWhatsApp: true };
+  }
+}
+
+export function subscribeAppSettingsFromFirebase(onUpdate) {
+  const settingRef = doc(db, "app_settings", "general");
+  return onSnapshot(settingRef, (snap) => {
+    if (snap.exists()) {
+      onUpdate(snap.data());
+    } else {
+      onUpdate({ autoStatusWhatsApp: true });
+    }
+  }, (err) => {
+    console.warn("App settings listener error:", err.message);
+  });
+}
+
+export async function saveAppSettingsToFirebase(settings) {
+  try {
+    const settingRef = doc(db, "app_settings", "general");
+    await setDoc(settingRef, { ...settings, updatedAt: new Date().toISOString() }, { merge: true });
+  } catch (e) {
+    console.error("Error saving app settings:", e);
+  }
+}
+

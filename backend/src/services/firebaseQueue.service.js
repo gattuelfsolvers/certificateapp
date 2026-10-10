@@ -146,9 +146,26 @@ async function processQueueItem(certId, certData) {
       });
     } catch (dbErr) {}
 
-    // 5. Send automated WhatsApp message to applicant if mobile is present
+    // 5. Send automated WhatsApp message to applicant if mobile is present AND autoStatusWhatsApp is enabled
     if (certData.mobile) {
       try {
+        // Check if auto status WhatsApp dispatch is enabled in app_settings
+        let autoStatusWhatsApp = true;
+        try {
+          const { getDoc } = require('firebase/firestore');
+          const settingSnap = await getDoc(doc(db, 'app_settings', 'general'));
+          if (settingSnap.exists() && typeof settingSnap.data().autoStatusWhatsApp === 'boolean') {
+            autoStatusWhatsApp = settingSnap.data().autoStatusWhatsApp;
+          }
+        } catch (setErr) {
+          console.warn('⚠️ [FirebaseQueue] Could not read app_settings:', setErr.message);
+        }
+
+        if (!autoStatusWhatsApp) {
+          console.log(`ℹ️ [FirebaseQueue] Status WhatsApp dispatch is set to MANUAL mode. Skipping auto WhatsApp for ${certData.refNo}.`);
+          return;
+        }
+
         const fullCertName = getCertFullDisplayName(certData.certType);
         const formattedDate = formatDate(certData.entryDate);
 
