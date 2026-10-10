@@ -743,11 +743,13 @@ export default function UniversalLogin({ onLoginSuccess }) {
 
       {/* MULTI-STEP REGISTER FOR NEW USER MODAL */}
       {isRequestModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 md:p-8 overflow-y-auto">
-          <div className={`bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 w-full shadow-2xl space-y-6 transition-all duration-300 ${regStep === 2 ? 'max-w-6xl' : 'max-w-2xl'}`}>
+        <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 md:p-6 overflow-y-auto">
+          <div className={`bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-6 md:p-7 w-full shadow-2xl space-y-5 transition-all duration-300 max-h-[92vh] flex flex-col my-auto ${
+            regStep === 2 ? 'max-w-6xl' : regStep === 3 ? 'max-w-4xl' : 'max-w-2xl'
+          }`}>
             
-            {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+            {/* Modal Header (Fixed at top) */}
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3 shrink-0">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400 shadow-md">
                   <UserPlus className="w-5 h-5" />
@@ -757,9 +759,10 @@ export default function UniversalLogin({ onLoginSuccess }) {
                     Register for New Account
                   </h3>
                   <p className="text-xs text-slate-400">
-                    {regStep === 1 && 'Step 1 of 2: Enter Shop & Owner Details'}
-                    {regStep === 2 && 'Step 2 of 2: Select Your Preferred Subscription Plan'}
-                    {regStep === 3 && 'Registration Completed Successfully!'}
+                    {regStep === 1 && 'Step 1 of 3: Enter Shop & Owner Details'}
+                    {regStep === 2 && 'Step 2 of 3: Select Your Preferred Subscription Plan'}
+                    {regStep === 3 && 'Step 3 of 3: QR Code Payment & Enter UTR Number'}
+                    {regStep === 4 && 'Registration Completed Successfully!'}
                   </p>
                 </div>
               </div>
@@ -771,6 +774,9 @@ export default function UniversalLogin({ onLoginSuccess }) {
                 &times;
               </button>
             </div>
+
+            {/* Scrollable Content Body */}
+            <div className="flex-1 overflow-y-auto pr-1 space-y-4">
 
             {/* STEP 1: SHOP DETAILS FORM */}
             {regStep === 1 && (
@@ -962,7 +968,7 @@ export default function UniversalLogin({ onLoginSuccess }) {
 
             {/* STEP 3: PAYMENT QR CODE & UTR INPUT SCREEN */}
             {regStep === 3 && (
-              <div className="space-y-5 text-center py-1 animate-in fade-in">
+              <div className="space-y-4 py-1 animate-in fade-in">
                 {(() => {
                   const currentPlan = registrationPlans.find(p => p.id === selectedPlanId) || {
                     name: 'Subscription Plan',
@@ -972,85 +978,95 @@ export default function UniversalLogin({ onLoginSuccess }) {
 
                   return (
                     <>
-                      {/* Top Plan Name & Rate Header */}
-                      <div className="bg-gradient-to-r from-blue-950/60 via-slate-900 to-indigo-950/60 border border-blue-500/30 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-left shadow-lg">
+                      {/* Top Plan Name & Rate Header Bar */}
+                      <div className="bg-gradient-to-r from-blue-950/70 via-slate-900 to-indigo-950/70 border border-blue-500/30 rounded-2xl p-3.5 flex items-center justify-between gap-3 text-left shadow-md">
                         <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 rounded-xl bg-blue-500/20 border border-blue-400/30 flex items-center justify-center text-xl text-blue-400 font-black shrink-0">
+                          <div className="w-10 h-10 rounded-xl bg-blue-500/20 border border-blue-400/30 flex items-center justify-center text-lg text-blue-400 font-black shrink-0">
                             💳
                           </div>
                           <div>
-                            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">चयनित प्लान (Selected Plan)</div>
-                            <h3 className="text-base font-black text-white">{currentPlan.name}</h3>
-                            <p className="text-xs text-blue-300 font-semibold">{currentPlan.duration} • {currentPlan.pcs || 'Multi-PC Sync'}</p>
+                            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">चयनित प्लान (Selected Plan)</div>
+                            <h3 className="text-sm sm:text-base font-black text-white">{currentPlan.name}</h3>
+                            <p className="text-[11px] text-blue-300 font-semibold">{currentPlan.duration} • {currentPlan.pcs || 'Multi-PC Sync'}</p>
                           </div>
                         </div>
 
-                        <div className="text-right sm:text-right shrink-0 bg-slate-950/80 px-4 py-2 rounded-xl border border-blue-500/20">
-                          <div className="text-[10px] text-slate-400 font-bold uppercase">भुगतान राशि (Plan Rate)</div>
-                          <div className="text-2xl font-black text-emerald-400 font-mono">{currentPlan.price}</div>
+                        <div className="text-right shrink-0 bg-slate-950/90 px-3.5 py-1.5 rounded-xl border border-blue-500/20">
+                          <div className="text-[9px] text-slate-400 font-bold uppercase">भुगतान राशि</div>
+                          <div className="text-xl font-black text-emerald-400 font-mono">{currentPlan.price}</div>
                         </div>
                       </div>
 
-                      {/* Payment QR Code Box */}
-                      <div className="bg-slate-950 border border-slate-800 rounded-3xl p-5 max-w-sm mx-auto shadow-2xl space-y-4">
-                        <div className="text-xs font-bold text-slate-300 flex items-center justify-center gap-2">
-                          <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
-                          <span>PhonePe / GooglePay / Paytm से QR स्कैन करें</span>
-                        </div>
-
-                        {/* QR Image Container */}
-                        <div className="p-3 bg-white rounded-2xl shadow-inner inline-block mx-auto border-2 border-emerald-500/40">
-                          <img 
-                            src="/payment_qr.png" 
-                            alt="Payment QR Code" 
-                            className="w-56 h-56 object-contain rounded-lg mx-auto"
-                          />
-                        </div>
-
-                        <div className="text-[11px] font-mono text-slate-400">
-                          UPI ID: <span className="font-bold text-amber-300">7781931880@ybl</span>
-                        </div>
-                      </div>
-
-                      {/* Mandatory UTR / UPI Ref Number Input Field */}
-                      <div className="max-w-md mx-auto text-left space-y-2">
-                        <label className="block text-xs font-extrabold text-slate-200 uppercase tracking-wide">
-                          UTR / UPI Reference Number <span className="text-rose-500">* (अनिवार्य / Mandatory)</span>
-                        </label>
-                        <input
-                          type="text"
-                          value={utrNumber}
-                          onChange={(e) => {
-                            setUtrNumber(e.target.value);
-                            setUtrError('');
-                          }}
-                          placeholder="e.g. 4289XXXXXXXX (12 अंकों का UTR नंबर)"
-                          className="w-full bg-slate-950 border-2 border-blue-500/40 focus:border-emerald-400 rounded-2xl px-4 py-3 text-white font-mono text-sm tracking-wider font-bold shadow-inner placeholder-slate-600 focus:outline-none transition"
-                        />
-
-                        {utrError && (
-                          <div className="p-2.5 rounded-xl bg-rose-500/20 border border-rose-500/40 text-rose-300 text-xs font-bold animate-shake">
-                            ⚠️ {utrError}
+                      {/* 2-Column Responsive Layout: Left QR Code, Right UTR & Instructions */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+                        {/* LEFT COLUMN: QR Code Box */}
+                        <div className="bg-slate-950 border border-slate-800 rounded-2xl p-4 shadow-xl text-center space-y-2.5">
+                          <div className="text-[11px] font-bold text-slate-300 flex items-center justify-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                            <span>PhonePe / GPay / Paytm से QR स्कैन करें</span>
                           </div>
-                        )}
+
+                          <div className="p-2.5 bg-white rounded-xl shadow-inner inline-block mx-auto border border-emerald-500/40">
+                            <img 
+                              src="/payment_qr.png" 
+                              alt="Payment QR Code" 
+                              className="w-40 h-40 sm:w-44 sm:h-44 object-contain rounded-lg mx-auto"
+                            />
+                          </div>
+
+                          <div className="text-[11px] font-mono text-slate-400">
+                            UPI ID: <span className="font-bold text-amber-300 select-all">7781931880@ybl</span>
+                          </div>
+                        </div>
+
+                        {/* RIGHT COLUMN: Instructions & UTR Input Field */}
+                        <div className="space-y-3.5 text-left">
+                          {/* Notice Banner */}
+                          <div className="bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-amber-500/20 border border-amber-400/50 rounded-2xl p-3.5 shadow-md">
+                            <p className="text-xs sm:text-sm font-black text-amber-300 uppercase leading-snug tracking-wide">
+                              📢 पेमेंट करने के बाद अपना UTR नंबर लिखकर सबमिट करें।
+                            </p>
+                            <p className="text-[11px] text-slate-300 font-medium mt-1">
+                              पेमेंट वेरिफाई होते ही आपका अकाउंट तुरंत एक्टिवेट हो जाएगा।
+                            </p>
+                          </div>
+
+                          {/* Mandatory UTR / UPI Ref Number Input Field */}
+                          <div className="space-y-1.5">
+                            <label className="block text-xs font-black text-slate-200 uppercase tracking-wide">
+                              UTR / UPI Reference Number <span className="text-rose-500">* (अनिवार्य)</span>
+                            </label>
+                            <input
+                              type="text"
+                              value={utrNumber}
+                              onChange={(e) => {
+                                setUtrNumber(e.target.value);
+                                setUtrError('');
+                              }}
+                              placeholder="e.g. 4289XXXXXXXX (12 अंकों का UTR नंबर)"
+                              className="w-full bg-slate-950 border-2 border-blue-500/50 focus:border-emerald-400 rounded-xl px-3.5 py-2.5 text-white font-mono text-xs sm:text-sm tracking-wider font-bold shadow-inner placeholder-slate-600 focus:outline-none transition"
+                            />
+
+                            {utrError && (
+                              <div className="p-2 rounded-xl bg-rose-500/20 border border-rose-500/40 text-rose-300 text-[11px] font-bold animate-shake">
+                                ⚠️ {utrError}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Quick Help Tip */}
+                          <div className="text-[11px] text-slate-400 bg-slate-950/60 border border-slate-800 p-2.5 rounded-xl">
+                            💡 <strong>UTR कहाँ मिलेगा?</strong> PhonePe/GPay में पेमेंट सफलता स्क्रीन के नीचे <code className="text-amber-300 font-mono">UTR / UPI Ref ID</code> लिखा होता है।
+                          </div>
+                        </div>
                       </div>
 
-                      {/* Large Bold Notice Letter */}
-                      <div className="max-w-md mx-auto bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-amber-500/20 border-2 border-amber-400/50 rounded-2xl p-4 shadow-lg text-center">
-                        <p className="text-sm md:text-base font-black text-amber-300 tracking-wide uppercase leading-relaxed">
-                          📢 पेमेंट करने के बाद अपना UTR नंबर लिखकर सबमिट करें।
-                        </p>
-                        <p className="text-[11px] text-slate-300 font-medium mt-1">
-                          (UTR नंबर जांचने के बाद एडमिन द्वारा आपका अकाउंट तत्काल एक्टिवेट कर दिया जाएगा)
-                        </p>
-                      </div>
-
-                      {/* Footer Actions */}
-                      <div className="flex items-center justify-between pt-4 border-t border-slate-800 max-w-md mx-auto">
+                      {/* Footer Actions (Always visible & accessible) */}
+                      <div className="flex items-center justify-between pt-3 border-t border-slate-800">
                         <button
                           type="button"
                           onClick={() => setRegStep(2)}
-                          className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs transition"
+                          className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs transition"
                         >
                           ← प्लान बदलें (Back)
                         </button>
@@ -1059,11 +1075,11 @@ export default function UniversalLogin({ onLoginSuccess }) {
                           type="button"
                           disabled={submittingReg}
                           onClick={handleRegistrationSubmit}
-                          className="px-7 py-3 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 hover:from-emerald-500 hover:to-teal-400 text-white font-black text-xs md:text-sm shadow-xl shadow-emerald-950/60 transition flex items-center gap-2 transform active:scale-95"
+                          className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 hover:from-emerald-500 hover:to-teal-400 text-white font-black text-xs sm:text-sm shadow-xl shadow-emerald-950/60 transition flex items-center gap-2 transform active:scale-95"
                         >
                           {submittingReg ? (
                             <span className="flex items-center gap-2">
-                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                              <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                               सबमिट हो रहा है...
                             </span>
                           ) : (
@@ -1143,6 +1159,7 @@ export default function UniversalLogin({ onLoginSuccess }) {
               </div>
             )}
 
+            </div>
           </div>
         </div>
       )}
