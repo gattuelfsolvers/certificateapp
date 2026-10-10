@@ -4,7 +4,7 @@ import {
   CheckCircle2, Clock, AlertTriangle, XCircle, IndianRupee,
   Smartphone, ExternalLink, Printer, Edit, Trash2, Shield, Settings, Activity, Users, Send, Layers, Tag, PlusCircle, Zap, Download, Upload, X, ShieldAlert,
   Key, User, Lock, ShieldCheck, Building2, Store, Phone, MapPin, BadgeCheck, LogOut, Eye, PanelRight, PanelRightClose, Code, LayoutDashboard, Sliders, MoreVertical, Power,
-  PartyPopper, ArrowRight
+  PartyPopper, ArrowRight, Sparkles
 } from 'lucide-react';
 import { CERTIFICATE_CATEGORIES as DEFAULT_CATEGORIES } from '../constants/certificateTypes';
 import { 
