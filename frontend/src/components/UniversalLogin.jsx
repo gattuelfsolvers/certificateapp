@@ -367,9 +367,9 @@ export default function UniversalLogin({ onLoginSuccess }) {
           return;
         }
 
-        // Expiry Date Check
+        // Expiry Date & Status Check
         const daysLeft = Math.ceil((new Date(matchedClient.expiresAt) - new Date()) / (1000 * 60 * 60 * 24));
-        if (daysLeft <= 0 && matchedClient.planType !== 'LIFETIME') {
+        if ((daysLeft <= 0 || matchedClient.status === 'EXPIRED') && matchedClient.planType !== 'LIFETIME') {
           setError('Your subscription license has EXPIRED. Please contact Admin to renew.');
           setLoading(false);
           return;

@@ -604,9 +604,23 @@ export default function AdminDashboard({ onLogout }) {
         else if (formData.planType === 'LIFETIME') daysToAdd = 364635;
       }
 
-      // Always calculate fresh expiry from Today when saving/updating plan
-      let expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + daysToAdd);
+      let expiresAt;
+      if (formData.status === 'EXPIRED') {
+        // If explicitly set to EXPIRED, set expiry to past timestamp
+        expiresAt = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      } else if (editingClient && editingClient.planType === formData.planType && editingClient.expiresAt) {
+        // If editing existing client and plan is not changed, keep current expiry date
+        expiresAt = new Date(editingClient.expiresAt);
+        // If renewing or reactivating an expired client to ACTIVE, extend from now
+        if (editingClient.status === 'EXPIRED' && formData.status === 'ACTIVE') {
+          expiresAt = new Date();
+          expiresAt.setDate(expiresAt.getDate() + daysToAdd);
+        }
+      } else {
+        // New client or plan changed: calculate fresh expiry from Today
+        expiresAt = new Date();
+        expiresAt.setDate(expiresAt.getDate() + daysToAdd);
+      }
 
       const primaryHwid = (formData.hwids && formData.hwids.length > 0 ? formData.hwids[0] : formData.hwid).trim().toUpperCase();
       const validHwids = formData.hwids && formData.hwids.length > 0 ? formData.hwids : [primaryHwid];
@@ -1532,7 +1546,7 @@ export default function AdminDashboard({ onLogout }) {
                       ) : (
                         filteredClients.map((client) => {
                           const daysLeft = calculateDaysLeft(client.expiresAt);
-                          const isExpired = daysLeft <= 0;
+                          const isExpired = daysLeft <= 0 || client.status === 'EXPIRED';
                           const isKilled = client.status === 'KILLED' || client.status === 'INACTIVE';
                           const isPending = client.status === 'PENDING';
 
@@ -1644,7 +1658,7 @@ export default function AdminDashboard({ onLogout }) {
                     <CheckCircle2 className="w-4 h-4" />
                     Active Licenses ({clients.filter(c => {
                       const d = calculateDaysLeft(c.expiresAt);
-                      const isExp = d <= 0;
+                      const isExp = d <= 0 || c.status === 'EXPIRED';
                       const isK = c.status === 'KILLED' || c.status === 'INACTIVE';
                       return c.status === 'ACTIVE' && !isExp && !isK;
                     }).length})
@@ -1661,7 +1675,7 @@ export default function AdminDashboard({ onLogout }) {
                     <Clock className="w-4 h-4" />
                     Archived Licenses ({clients.filter(c => {
                       const d = calculateDaysLeft(c.expiresAt);
-                      const isExp = d <= 0;
+                      const isExp = d <= 0 || c.status === 'EXPIRED';
                       const isK = c.status === 'KILLED' || c.status === 'INACTIVE';
                       return c.status === 'EXPIRED' || c.status === 'PENDING' || isExp || isK;
                     }).length})
@@ -1697,7 +1711,7 @@ export default function AdminDashboard({ onLogout }) {
                       ) : (() => {
                         const filteredLicenses = clients.filter(c => {
                           const daysLeft = calculateDaysLeft(c.expiresAt);
-                          const isExpired = daysLeft <= 0;
+                          const isExpired = daysLeft <= 0 || c.status === 'EXPIRED';
                           const isKilled = c.status === 'KILLED' || c.status === 'INACTIVE';
                           const isPending = c.status === 'PENDING';
                           const isActiveOnly = c.status === 'ACTIVE' && !isExpired && !isKilled;
@@ -1722,7 +1736,7 @@ export default function AdminDashboard({ onLogout }) {
 
                         return filteredLicenses.map((client) => {
                           const daysLeft = calculateDaysLeft(client.expiresAt);
-                          const isExpired = daysLeft <= 0;
+                          const isExpired = daysLeft <= 0 || client.status === 'EXPIRED';
                           const isKilled = client.status === 'KILLED' || client.status === 'INACTIVE';
                           const isPending = client.status === 'PENDING';
                           const isLifetime = client.planType === 'LIFETIME' || daysLeft > 3000;
@@ -2719,6 +2733,14 @@ export default function AdminDashboard({ onLogout }) {
                       </button>
                     </>
                   )}
+                  <button 
+                    type="button" 
+                    onClick={() => setIsViewOnly(false)} 
+                    className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs shadow-md transition flex items-center gap-1.5"
+                  >
+                    <Edit className="w-3.5 h-3.5" />
+                    Edit Account Details
+                  </button>
                   <button type="button" onClick={() => setIsModalOpen(false)} className="px-6 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-extrabold text-xs shadow-md">Close Window</button>
                 </div>
               ) : (
