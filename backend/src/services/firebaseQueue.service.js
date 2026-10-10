@@ -24,6 +24,7 @@ const prisma = require('../db');
 // Local Machine Hardware ID for targeted queue filtering & licensing
 let currentLocalHwid = null;
 let isMachineLicenseActive = false;
+let authorizedHwidPool = new Set(); // Stores all authorized HWIDs for this client account
 
 // In-memory sequential queue & lock
 const pendingQueueItems = [];
@@ -217,12 +218,16 @@ function enqueueItem(certId, certData) {
   if (enqueuedIds.has(certId)) return;
 
   // 🛡️ Multi-Client HWID Queue Isolation:
-  // If request specifies targetClientHwid, only the designated machine handles it!
+  // If request specifies targetClientHwid, verify against this PC's HWID or client's authorized HWID pool
   if (certData.targetClientHwid && currentLocalHwid) {
     const cleanTarget = String(certData.targetClientHwid).trim().toUpperCase();
     const cleanCurrent = String(currentLocalHwid).trim().toUpperCase();
-    if (cleanTarget !== cleanCurrent) {
-      // Intended for another PC - do NOT touch!
+
+    const isMatch = (cleanTarget === cleanCurrent) || 
+                    (authorizedHwidPool.size > 0 && authorizedHwidPool.has(cleanTarget));
+
+    if (!isMatch) {
+      // Intended for an entirely different customer/account - do NOT touch!
       return;
     }
   }
@@ -247,6 +252,8 @@ async function verifyLocalMachineAuthorization() {
     const snapshot = await getDocs(clientsRef);
     let matchedClient = null;
 
+    authorizedHwidPool.clear();
+
     snapshot.forEach(docSnap => {
       const c = docSnap.data();
       const hwidList = Array.isArray(c.hwids) && c.hwids.length > 0 
@@ -255,6 +262,9 @@ async function verifyLocalMachineAuthorization() {
 
       if (hwidList.includes(currentLocalHwid.toUpperCase())) {
         matchedClient = c;
+        // Populate the client account's complete HWID pool (including primary hwid)
+        if (c.hwid) authorizedHwidPool.add(String(c.hwid).trim().toUpperCase());
+        hwidList.forEach(h => authorizedHwidPool.add(h.trim().toUpperCase()));
       }
     });
 
@@ -277,7 +287,9 @@ async function verifyLocalMachineAuthorization() {
 
     isMachineLicenseActive = true;
     console.log(`✅ [License Guard] Machine HWID Authorized for: ${matchedClient.clientName} (${matchedClient.phone})`);
+    console.log(`🛡️ [License Guard] Account Authorized HWID Pool:`, Array.from(authorizedHwidPool));
     return true;
+
   } catch (err) {
     console.error('❌ [License Guard] Error verifying machine license:', err.message);
     // Fallback: allow if offline development or transient network glitch

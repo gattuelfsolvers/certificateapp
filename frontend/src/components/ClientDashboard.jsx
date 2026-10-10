@@ -767,7 +767,7 @@ export default function ClientDashboard({ clientData, onLogout }) {
     try {
       // 100% Cloud-Driven Firebase Queue (Works seamlessly from Render HTTPS & Mobile!)
       // Background worker uses FIFO sequential queue so zero collisions happen.
-      const currentHwid = clientData?.hwid || localStorage.getItem('CLIENT_SYSTEM_HWID') || null;
+      const currentHwid = localStorage.getItem('LOCAL_ENGINE_HWID') || clientData?.hwid || localStorage.getItem('CLIENT_SYSTEM_HWID') || null;
       await requestBulkSyncOnFirebase(toSync.map(c => c.id), currentHwid);
     } catch (err) {
       console.error('Bulk sync queue error:', err);
@@ -821,7 +821,7 @@ export default function ClientDashboard({ clientData, onLogout }) {
       });
 
       // Direct Cloud Firestore Queue Request (Works from ANY online device/mobile & local daemon)
-      const currentHwid = clientData?.hwid || localStorage.getItem('CLIENT_SYSTEM_HWID') || null;
+      const currentHwid = localStorage.getItem('LOCAL_ENGINE_HWID') || clientData?.hwid || localStorage.getItem('CLIENT_SYSTEM_HWID') || null;
       await requestCertificateSyncOnFirebase(cert.id, currentHwid);
     } catch (err) {
       console.error('Sync error:', err);
