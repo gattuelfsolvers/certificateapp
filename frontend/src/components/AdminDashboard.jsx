@@ -627,6 +627,7 @@ export default function AdminDashboard({ onLogout }) {
       const finalAllowedPcs = Math.max(parseInt(formData.allowedPcs || 1), validHwids.length);
 
       const payload = {
+        id: editingClient?.id || editingClient?.hwid,
         hwid: primaryHwid,
         hwids: validHwids,
         allowedPcs: finalAllowedPcs,

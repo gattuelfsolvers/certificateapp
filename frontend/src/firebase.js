@@ -44,9 +44,16 @@ export function generateLicenseKey(hwid, planType = 'MONTHLY', customExpiryDate 
 
 // Master Admin: Save / Activate Client on Firebase Cloud
 export async function saveClientToFirebase(clientData) {
-  const { hwid, hwids, allowedPcs, clientName, ownerName, phone, planType, expiresAt, licenseKey, status } = clientData;
+  const { id, hwid, hwids, allowedPcs, clientName, ownerName, phone, planType, expiresAt, licenseKey, status } = clientData;
   const cleanHwid = (hwid || (hwids && hwids[0]) || '').trim().toUpperCase();
   const clientRef = doc(db, "clients", cleanHwid);
+
+  // If editing an existing document whose docId was different, remove old duplicate document
+  if (id && id !== cleanHwid && !cleanHwid.startsWith('REQ-')) {
+    try {
+      await deleteDoc(doc(db, "clients", id));
+    } catch (e) {}
+  }
   
   let defaultDays = 30;
   if (planType === 'FREE_TRIAL') defaultDays = 7;
