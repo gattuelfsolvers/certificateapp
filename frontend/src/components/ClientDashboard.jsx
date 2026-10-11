@@ -456,6 +456,12 @@ export default function ClientDashboard({ clientData, onLogout }) {
       return;
     }
 
+    // Guard PAN Card services: Coming soon
+    if (defaultType.startsWith('PAN')) {
+      showToast('info', 'Service Coming Soon', 'PAN Card status service will be coming soon!');
+      return;
+    }
+
     // 2. Strict Free Trial Limit Check
     if (isTrialPlan && certificates.length >= 5) {
       setShowUpgradeModal(true);
@@ -1465,20 +1471,40 @@ Contact: 7781931880
 
               return (
                 <div key={cat.id} className={`${styles.cardBg} border rounded-2xl p-2.5 shadow-xs flex flex-col justify-between h-full`}>
-                  <div className={`border-b ${styles.borderDivider} pb-1 mb-1.5 flex items-center justify-center text-center`}>
+                  <div className={`border-b ${styles.borderDivider} pb-1 mb-1.5 flex items-center justify-center gap-1 text-center`}>
                     <span className={`text-[11px] font-black uppercase tracking-tight text-center truncate ${styles.titleText}`}>{cat.name}</span>
+                    {cat.id === 'pancard' && (
+                      <span className="inline-flex items-center gap-0.5 px-1 py-0.2 rounded bg-amber-200/80 text-amber-950 text-[9px] font-black" title="Coming Soon">
+                        <Lock className="w-2.5 h-2.5" />
+                        <span>SOON</span>
+                      </span>
+                    )}
                   </div>
                   <div className="flex-1 flex flex-col justify-center w-full">
                     <div className={`grid gap-1 ${cat.subServices.length > 2 ? 'grid-cols-2' : 'grid-cols-1'}`}>
-                      {cat.subServices.map((sub) => (
-                        <button
-                          key={sub.code}
-                          onClick={() => handleOpenAddModal(sub.code)}
-                          className={`flex items-center justify-center px-2 py-1.5 rounded-xl ${styles.btnBg} text-[11px] font-extrabold transition shadow-xs hover:shadow text-center`}
-                        >
-                          <span className="truncate">{sub.code}</span>
-                        </button>
-                      ))}
+                      {cat.subServices.map((sub) => {
+                        const isPanLocked = cat.id === 'pancard' || sub.code.startsWith('PAN');
+                        return (
+                          <button
+                            key={sub.code}
+                            onClick={() => {
+                              if (isPanLocked) {
+                                showToast('info', 'Service Coming Soon', 'PAN Card status service will be coming soon!');
+                                return;
+                              }
+                              handleOpenAddModal(sub.code);
+                            }}
+                            className={`flex items-center justify-center gap-1 px-2 py-1.5 rounded-xl ${
+                              isPanLocked 
+                                ? 'bg-amber-600/75 hover:bg-amber-600 text-white cursor-pointer opacity-95' 
+                                : styles.btnBg
+                            } text-[11px] font-extrabold transition shadow-xs hover:shadow text-center relative group`}
+                          >
+                            <span className="truncate">{sub.code}</span>
+                            {isPanLocked && <Lock className="w-3 h-3 text-amber-100 shrink-0" />}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
