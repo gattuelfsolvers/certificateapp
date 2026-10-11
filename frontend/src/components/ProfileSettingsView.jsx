@@ -43,7 +43,7 @@ export default function ProfileSettingsView({ clientData, showToast }) {
   const allowedPcs = clientData?.allowedPcs || 2;
   const [hwidList, setHwidList] = useState(() => {
     const initialHwids = clientData?.hwids || [
-      clientData?.hwid || localStorage.getItem('CLIENT_SYSTEM_HWID') || 'HWID-WIN-24E6-3A85'
+      clientData?.hwid || localStorage.getItem('CLIENT_SYSTEM_HWID') || 'UUID-B17BDA5C-DAA4-11E9-80D8-98FA9BD6B941'
     ];
     return Array.from(new Set(initialHwids.filter(Boolean)));
   });

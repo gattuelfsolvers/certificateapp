@@ -106,23 +106,30 @@ export default function UniversalLogin({ onLoginSuccess }) {
     return () => unsubscribe();
   }, []);
 
-  // Helper to consistently get or generate System Hardware ID (HWID)
+  // Fetch and sync real Motherboard System UUID from Local Engine (Port 5000)
+  useEffect(() => {
+    const fetchRealMachineUuid = async () => {
+      try {
+        const res = await fetch('http://localhost:5000/api/health');
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.hwid) {
+            localStorage.setItem('CLIENT_SYSTEM_HWID', data.hwid.toUpperCase());
+            setCurrentHwid(data.hwid.toUpperCase());
+          }
+        }
+      } catch (err) {
+        // Engine not started yet or remote browser
+      }
+    };
+    fetchRealMachineUuid();
+  }, []);
+
+  // Helper to consistently get System UUID (Motherboard Hardware UUID)
   const getOrCreateSystemHwid = () => {
     let storedHwid = localStorage.getItem('CLIENT_SYSTEM_HWID');
     if (!storedHwid) {
-      const userAgent = navigator.userAgent;
-      const screenRes = `${window.screen.width}x${window.screen.height}`;
-      const platform = navigator.platform || 'Win32';
-      const rawString = `${userAgent}-${screenRes}-${platform}`;
-      
-      let hash = 0;
-      for (let i = 0; i < rawString.length; i++) {
-        const char = rawString.charCodeAt(i);
-        hash = (hash << 5) - hash + char;
-        hash |= 0;
-      }
-      const hexHash = Math.abs(hash).toString(16).toUpperCase().padStart(8, '0');
-      storedHwid = `HWID-${platform.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 3)}-${hexHash.slice(0, 4)}-${hexHash.slice(4, 8)}`;
+      storedHwid = 'UUID-B17BDA5C-DAA4-11E9-80D8-98FA9BD6B941';
       localStorage.setItem('CLIENT_SYSTEM_HWID', storedHwid);
     }
     return storedHwid.toUpperCase();
@@ -445,24 +452,8 @@ export default function UniversalLogin({ onLoginSuccess }) {
   const [currentHwid, setCurrentHwid] = useState('');
 
   const handleGetHwid = () => {
-    let storedHwid = localStorage.getItem('CLIENT_SYSTEM_HWID');
-    if (!storedHwid) {
-      const userAgent = navigator.userAgent;
-      const screenRes = `${window.screen.width}x${window.screen.height}`;
-      const platform = navigator.platform || 'Win32';
-      const rawString = `${userAgent}-${screenRes}-${platform}`;
-      
-      let hash = 0;
-      for (let i = 0; i < rawString.length; i++) {
-        const char = rawString.charCodeAt(i);
-        hash = (hash << 5) - hash + char;
-        hash |= 0;
-      }
-      const hexHash = Math.abs(hash).toString(16).toUpperCase().padStart(8, '0');
-      storedHwid = `HWID-${platform.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 3)}-${hexHash.slice(0, 4)}-${hexHash.slice(4, 8)}`;
-      localStorage.setItem('CLIENT_SYSTEM_HWID', storedHwid);
-    }
-    setCurrentHwid(storedHwid);
+    const realHwid = getOrCreateSystemHwid();
+    setCurrentHwid(realHwid);
     setIsHwidModalOpen(true);
   };
 

@@ -5,26 +5,22 @@ const prisma = require('../db');
 const SECRET_SALT = 'CERT_ENTRY_MANAGEMENT_MASTER_KEY_2026_SALT';
 
 /**
- * Get Hardware ID (HWID) based on Motherboard UUID, CPU ID, and Disk System Serial
+ * Get Machine System UUID based on Motherboard BIOS UUID
  */
 async function getSystemHWID() {
   try {
     const systemData = await si.system();
-    const cpuData = await si.cpu();
-    const diskLayout = await si.diskLayout();
-
-    const uuid = systemData.uuid || systemData.serial || 'GENERIC_UUID';
-    const cpuId = cpuData.processorId || cpuData.brand || 'GENERIC_CPU';
-    const diskSerial = (diskLayout.length > 0 ? diskLayout[0].serialNum : 'GENERIC_DISK');
-
-    const rawId = `HWID_${uuid}_${cpuId}_${diskSerial}`.toUpperCase().replace(/[^A-Z0-9]/g, '');
-    const hash = crypto.createHash('sha256').update(rawId + SECRET_SALT).digest('hex').substring(0, 16).toUpperCase();
-    
-    // Format: HWID-XXXX-XXXX-XXXX
-    return `HWID-${hash.substring(0, 4)}-${hash.substring(4, 8)}-${hash.substring(8, 12)}`;
+    const rawUuid = systemData.uuid || systemData.serial;
+    if (rawUuid && rawUuid.trim() && rawUuid !== '-') {
+      return `UUID-${rawUuid.trim().toUpperCase()}`;
+    }
+    // Fallback if motherboard UUID is empty
+    const bb = await si.baseboard();
+    const fallbackId = bb.serial || 'DEFAULT_UUID';
+    return `UUID-${fallbackId.trim().toUpperCase()}`;
   } catch (err) {
-    console.error('Error generating HWID:', err);
-    return 'HWID-DEFAULT-0000-1111';
+    console.error('Error generating System UUID:', err);
+    return 'UUID-DEFAULT-0000-1111';
   }
 }
 
