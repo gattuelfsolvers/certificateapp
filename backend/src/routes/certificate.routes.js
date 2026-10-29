@@ -232,7 +232,7 @@ router.post('/', async (req, res) => {
               certificateId: cert.id,
               mobile: cert.mobile,
               messageType: 'INITIAL_RECEIPT',
-              status: waResult.success ? 'SENT' : 'FAILED',
+              status: waResult.queued ? 'QUEUED' : (waResult.success ? 'SENT' : 'FAILED'),
               error: waResult.error || waResult.reason || null
             }
           });
@@ -296,7 +296,7 @@ router.post('/', async (req, res) => {
           certificateId: certificate.id,
           mobile: certificate.mobile,
           messageType: 'INITIAL_RECEIPT',
-          status: waResult.success ? 'SENT' : 'FAILED',
+          status: waResult.queued ? 'QUEUED' : (waResult.success ? 'SENT' : 'FAILED'),
           error: waResult.error || waResult.reason || null
         }
       });
@@ -368,7 +368,7 @@ router.put('/:id', async (req, res) => {
             certificateId: id,
             mobile: updated.mobile,
             messageType: 'STATUS_UPDATE',
-            status: waRes.success ? 'SENT' : 'FAILED',
+            status: waRes.queued ? 'QUEUED' : (waRes.success ? 'SENT' : 'FAILED'),
             error: waRes.error || waRes.reason || null
           }
         });
@@ -629,10 +629,10 @@ router.post('/:id/resend-receipt', async (req, res) => {
           certificateId: cert.id,
           mobile: cert.mobile,
           messageType: 'INITIAL_RECEIPT_RESEND',
-          status: 'SENT',
+          status: waResult.queued ? 'QUEUED' : 'SENT',
         }
       });
-      res.json({ success: true, message: `WhatsApp Receipt resent to ${cert.mobile}!` });
+      res.json({ success: true, message: waResult.queued ? `WhatsApp Receipt queued for dispatch to ${cert.mobile}!` : `WhatsApp Receipt resent to ${cert.mobile}!` });
     } else {
       res.status(400).json({ success: false, error: waResult.reason || waResult.error || 'Failed to send WhatsApp message' });
     }

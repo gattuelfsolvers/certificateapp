@@ -93,25 +93,61 @@ function getRandomDelay(min = 3500, max = 7500) {
 
 /**
  * Enqueue message to Anti-Spam rate-limited queue
+ * Returns immediately with queue confirmation so HTTP callers don't hang or timeout.
+ * The task will be processed sequentially in background with anti-spam random delay.
  */
-function enqueueMessage(taskFn) {
-  return new Promise((resolve, reject) => {
-    messageQueue.push({ taskFn, resolve, reject });
+function enqueueMessage(taskFn, meta = {}) {
+  const queueItem = {
+    id: `wa_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+    taskFn,
+    meta,
+    enqueuedAt: Date.now()
+  };
+
+  messageQueue.push(queueItem);
+  const position = messageQueue.length;
+  console.log(`📥 [WhatsAppQueue] Task enqueued [${queueItem.id}] for ${meta.mobile || meta.desc || 'dispatch'}. Current Queue Size: ${position}`);
+
+  // Trigger processor asynchronously without waiting
+  setImmediate(() => {
     processQueue();
   });
+
+  return {
+    success: true,
+    queued: true,
+    queueId: queueItem.id,
+    queuePosition: position,
+    message: position === 1 ? 'Message dispatching now...' : `Message queued at position #${position}. Will send with anti-spam delay.`
+  };
 }
 
 async function processQueue() {
-  if (isProcessingQueue || messageQueue.length === 0) return;
-  isProcessingQueue = true;
+  if (isProcessingQueue) return;
+  if (messageQueue.length === 0) return;
 
-  const { taskFn, resolve, reject } = messageQueue.shift();
+  isProcessingQueue = true;
+  const currentItem = messageQueue.shift();
 
   try {
-    const result = await taskFn();
-    resolve(result);
+    console.log(`🚀 [WhatsAppQueue] Processing message [${currentItem.id}] (${messageQueue.length} remaining in queue)...`);
+    
+    // Check if socket is ready before running task
+    if (!sock || !isConnected) {
+      console.warn(`⚠️ [WhatsAppQueue] Socket not connected. Waiting 5s before processing [${currentItem.id}]...`);
+      // Re-insert at the front and wait for socket reconnection
+      messageQueue.unshift(currentItem);
+      setTimeout(() => {
+        isProcessingQueue = false;
+        processQueue();
+      }, 5000);
+      return;
+    }
+
+    await currentItem.taskFn();
+    console.log(`✅ [WhatsAppQueue] Finished message [${currentItem.id}] successfully.`);
   } catch (err) {
-    reject(err);
+    console.error(`❌ [WhatsAppQueue] Error processing message [${currentItem.id}]:`, err.message || err);
   } finally {
     const delay = getRandomDelay();
     console.log(`⏳ Anti-Spam Protection: Waiting ${Math.round(delay / 1000)} seconds before next WhatsApp dispatch...`);
@@ -529,10 +565,12 @@ async function sendTestWhatsAppMessage(mobile, messageText) {
     .replace(/\{certListLines\}/g, '1. *Income Certificate (JHIC)*\n   - रेफरेंस नंबर: *JHIC/2026/999999*\n\n2. *Caste Certificate (JHCBC)*\n   - रेफरेंस नंबर: *JHCBC/2026/888888*');
 
   try {
-    const res = await enqueueMessage(() => sock.sendMessage(jid, { text: testContent }));
-    return { success: true, messageId: res?.key?.id || 'SENT' };
+    const queueRes = enqueueMessage(async () => {
+      await sock.sendMessage(jid, { text: testContent });
+    }, { mobile, desc: 'Test / Status Message' });
+    return queueRes;
   } catch (err) {
-    console.error('Failed to send test WhatsApp message:', err);
+    console.error('Failed to enqueue test WhatsApp message:', err);
     return { success: false, error: err.message };
   }
 }
@@ -665,9 +703,11 @@ ${extraInfo.newStatus === 'ACTIVE' ? 'आपका सॉफ़्टवेय�
   if (!messageText) return { success: false, reason: 'Unknown event type' };
 
   try {
-    const res = await enqueueMessage(() => sock.sendMessage(jid, { text: messageText }));
-    console.log(`🚀 CLIENT NOTIFICATION WHATSAPP SENT to ${client.phone} for event [${eventType}]`);
-    return { success: true, messageId: res?.key?.id || 'SENT' };
+    const queueRes = enqueueMessage(async () => {
+      await sock.sendMessage(jid, { text: messageText });
+      console.log(`🚀 CLIENT NOTIFICATION WHATSAPP SENT to ${client.phone} for event [${eventType}]`);
+    }, { mobile: client.phone, desc: `Client Notification: ${eventType}` });
+    return queueRes;
   } catch (err) {
     console.error(`Failed to send client notification [${eventType}]:`, err);
     return { success: false, error: err.message };
@@ -678,10 +718,10 @@ module.exports = {
   initWhatsApp,
   logoutWhatsApp,
   requestPairingCode,
-  sendAutomaticReceipt: (cert) => enqueueMessage(() => sendAutomaticReceipt(cert)),
-  sendBulkAutomaticReceipt: (certList) => enqueueMessage(() => sendBulkAutomaticReceipt(certList)),
-  sendStatusUpdateNotification: (cert, oldStatus, newStatus) => enqueueMessage(() => sendStatusUpdateNotification(cert, oldStatus, newStatus)),
-  sendPDFDocument: (mobile, pdfFilePath, cert) => enqueueMessage(() => sendPDFDocument(mobile, pdfFilePath, cert)),
+  sendAutomaticReceipt: (cert) => enqueueMessage(() => sendAutomaticReceipt(cert), { mobile: cert?.mobile, desc: 'Automatic Receipt' }),
+  sendBulkAutomaticReceipt: (certList) => enqueueMessage(() => sendBulkAutomaticReceipt(certList), { mobile: certList?.[0]?.mobile, desc: 'Bulk Receipt' }),
+  sendStatusUpdateNotification: (cert, oldStatus, newStatus) => enqueueMessage(() => sendStatusUpdateNotification(cert, oldStatus, newStatus), { mobile: cert?.mobile, desc: `Status Update: ${newStatus}` }),
+  sendPDFDocument: (mobile, pdfFilePath, cert) => enqueueMessage(() => sendPDFDocument(mobile, pdfFilePath, cert), { mobile, desc: 'PDF Document' }),
   getWhatsAppStatus,
   sendTestWhatsAppMessage,
   sendClientNotification,

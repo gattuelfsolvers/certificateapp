@@ -2405,7 +2405,7 @@ Contact: 7781931880
                   try {
                     const success = await sendStatusUpdateWhatsApp(receiptModalCert);
                     if (success) {
-                      showToast('success', 'WhatsApp Alert Sent', `Status update text successfully sent to +91 ${receiptModalCert.mobile}!`);
+                      showToast('success', 'WhatsApp Alert Queued', `Status update queue me lag gaya hai, kuch hi der me +91 ${receiptModalCert.mobile} ko deliver ho jayega!`);
                     } else {
                       showToast('error', 'Send Failed', 'Failed to send WhatsApp status alert.');
                     }
@@ -2706,7 +2706,7 @@ Contact: 7781931880
                           showToast('info', 'Sending WhatsApp Alert', `Sending status update to +91 ${syncStatusModal.cert.mobile}...`);
                           const sent = await sendStatusUpdateWhatsApp(syncStatusModal.cert, syncStatusModal.newStatus);
                           if (sent) {
-                            showToast('success', 'WhatsApp Sent', `Status alert delivered to +91 ${syncStatusModal.cert.mobile}!`);
+                            showToast('success', 'WhatsApp Queued', `Status alert queue me jud gaya hai, anti-spam delay ke baad +91 ${syncStatusModal.cert.mobile} par deliver ho jayega!`);
                           } else {
                             showToast('error', 'Send Failed', 'Failed to deliver WhatsApp message.');
                           }
@@ -3079,7 +3079,7 @@ Contact: 7781931880
                           showToast('info', 'Sending WhatsApp Alert', `Sending status update to +91 ${item.mobile}...`);
                           const sent = await sendStatusUpdateWhatsApp(item.cert || item, item.newStatus);
                           if (sent) {
-                            showToast('success', 'WhatsApp Sent', `Status alert delivered to +91 ${item.mobile}!`);
+                            showToast('success', 'WhatsApp Queued', `Status alert queue me lag gaya hai (+91 ${item.mobile})!`);
                           } else {
                             showToast('error', 'Send Failed', 'Failed to deliver WhatsApp message.');
                           }
