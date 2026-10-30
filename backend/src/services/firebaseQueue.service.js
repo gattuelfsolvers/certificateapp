@@ -293,6 +293,20 @@ async function processSequentialQueue() {
   }
 }
 
+/**
+ * Stop and flush all in-memory queued tasks & kill browser session
+ */
+async function stopAndFlushQueue() {
+  console.log('🛑 [FirebaseQueue] Stopping queue & flushing memory queue...');
+  pendingQueueItems.length = 0;
+  enqueuedIds.clear();
+  isWorkerRunning = false;
+
+  const { killRunningBrowserSession } = require('./jharsewa.service');
+  await killRunningBrowserSession();
+  console.log('✨ [FirebaseQueue] Queue stopped & browser terminated. Ready for fresh sync!');
+}
+
 function enqueueItem(certId, certData) {
   if (enqueuedIds.has(certId)) return;
 
@@ -430,5 +444,6 @@ async function startFirebaseQueueListener() {
 
 module.exports = {
   startFirebaseQueueListener,
-  verifyLocalMachineAuthorization
+  verifyLocalMachineAuthorization,
+  stopAndFlushQueue
 };

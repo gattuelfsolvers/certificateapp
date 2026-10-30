@@ -254,17 +254,16 @@ export async function stopAllCertificateSyncOnFirebase(certIds) {
     const list = Array.isArray(certIds) ? certIds : [];
     if (list.length === 0) return true;
 
-    // Use batch for fast, atomic cancel
+    // Use batch for fast, atomic clean reset so status is ready for fresh sync
     const batch = writeBatch(db);
     let count = 0;
     for (const cId of list) {
       const certRef = doc(db, "certificates", String(cId));
-      batch.set(certRef, {
+      batch.update(certRef, {
         syncRequested: false,
-        syncStatus: 'STOPPED',
-        syncError: 'Sync stopped by user',
-        syncStoppedAt: new Date().toISOString()
-      }, { merge: true });
+        syncStatus: null,
+        syncError: null
+      });
       count++;
       // Firestore batches have limit of 500 writes
       if (count >= 400) break;
@@ -272,21 +271,20 @@ export async function stopAllCertificateSyncOnFirebase(certIds) {
     await batch.commit();
     return true;
   } catch (error) {
-    console.error("Error stopping certificate sync on Firebase:", error);
+    console.error("Error resetting certificate sync on Firebase:", error);
     // Fallback one-by-one if batch fails
     try {
-      for (const cId of certIds) {
+      for (const cId of list) {
         const certRef = doc(db, "certificates", String(cId));
         await setDoc(certRef, {
           syncRequested: false,
-          syncStatus: 'STOPPED',
-          syncError: 'Sync stopped by user',
-          syncStoppedAt: new Date().toISOString()
+          syncStatus: null,
+          syncError: null
         }, { merge: true });
       }
       return true;
     } catch (e2) {
-      console.error("Fallback stop sync error:", e2);
+      console.error("Fallback sync reset error:", e2);
       return false;
     }
   }

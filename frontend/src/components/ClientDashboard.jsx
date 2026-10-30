@@ -349,12 +349,12 @@ export default function ClientDashboard({ clientData, onLogout }) {
 
           if (liveCert.syncStatus === 'PROCESSING') {
             itemStatus = 'PROCESSING';
-          } else if (liveCert.syncStatus === 'COMPLETED' || (!liveCert.syncRequested && liveCert.syncStatus !== 'QUEUED' && liveCert.syncStatus !== 'PROCESSING' && liveCert.syncStatus !== 'ERROR' && liveCert.syncStatus !== 'STOPPED')) {
+          } else if (liveCert.syncStatus === 'COMPLETED' || (!liveCert.syncRequested && !liveCert.syncStatus)) {
             itemStatus = 'SUCCESS';
             newStatus = liveCert.currentStatus || liveCert.status || newStatus;
-          } else if (liveCert.syncStatus === 'ERROR' || liveCert.syncStatus === 'STOPPED') {
+          } else if (liveCert.syncStatus === 'ERROR') {
             itemStatus = 'ERROR';
-            errorReason = liveCert.syncError || (liveCert.syncStatus === 'STOPPED' ? 'Sync stopped by user' : 'Portal sync failed');
+            errorReason = liveCert.syncError || 'Portal sync failed';
           } else if (liveCert.syncStatus === 'QUEUED') {
             itemStatus = 'PENDING';
           }
@@ -1103,20 +1103,29 @@ Contact: 7781931880
 
   // Stop All Running Syncs Handler
   const handleStopAllSync = async () => {
-    const activeSyncingCerts = certificates.filter(c => c.syncRequested || c.syncStatus === 'QUEUED' || c.syncStatus === 'PROCESSING');
+    // Collect all certificates currently queued, processing, or in error/stuck state
+    const activeSyncingCerts = certificates.filter(c => c.syncRequested || c.syncStatus === 'QUEUED' || c.syncStatus === 'PROCESSING' || c.syncStatus === 'STOPPED' || c.syncStatus === 'ERROR');
     const idsToStop = activeSyncingCerts.map(c => c.id);
 
-    // Immediate UI local reset
+    // 1. Immediate UI local reset (Closes all modals & stops loading spinners)
     setSyncingId(null);
     setIsSyncingAll(false);
     setSyncStatusModal(prev => ({ ...prev, isOpen: false }));
     setBulkSyncModal(prev => ({ ...prev, isOpen: false }));
 
-    // Stop on Firebase Cloud
+    // 2. Kill local engine browser & flush background queue
+    try {
+      fetch('http://localhost:5000/api/certificates/stop-sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      }).catch(() => null);
+    } catch (eKill) {}
+
+    // 3. Clean Reset on Firebase Cloud (Clears syncStatus & syncRequested so next sync is 100% fresh)
     if (idsToStop.length > 0) {
-      showToast('info', 'Stopping Sync...', `Abhi chal rahe ${idsToStop.length} certificate(s) ka sync process roka ja raha hai...`);
+      showToast('info', 'Stopping Sync...', `Running sync process kill karke ${idsToStop.length} certificate(s) ka rasta clear kiya ja raha hai...`);
       await stopAllCertificateSyncOnFirebase(idsToStop);
-      showToast('success', 'Sync Stopped', 'Sabhi running sync processes safaltapoorvak stop kar diye gaye!');
+      showToast('success', 'Sync Process Killed', 'Sync process kill ho gaya aur rasta clear ho gaya! Ab aap naya sync shuru kar sakte hain.');
     } else {
       showToast('info', 'Sync Reset', 'Koi running sync active nahi tha. Status fresh reset kar diya gaya.');
     }
@@ -2680,12 +2689,25 @@ Contact: 7781931880
                   </p>
                 </div>
               </div>
-              <button 
-                onClick={() => setSyncStatusModal(prev => ({ ...prev, isOpen: false }))}
-                className="p-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 transition"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex items-center gap-2">
+                {syncStatusModal.step === 'CHECKING' && (
+                  <button
+                    type="button"
+                    onClick={handleStopAllSync}
+                    className="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-black transition flex items-center gap-1.5 shadow-xs"
+                    title="Running sync process ko rokein aur rasta clear karein"
+                  >
+                    <StopCircle className="w-3.5 h-3.5 text-rose-600" />
+                    <span>Stop Sync</span>
+                  </button>
+                )}
+                <button 
+                  onClick={() => setSyncStatusModal(prev => ({ ...prev, isOpen: false }))}
+                  className="p-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 transition"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
             {/* STEP 1: CHECKING STATE */}
@@ -3002,12 +3024,23 @@ Contact: 7781931880
                   </p>
                 </div>
               </div>
-              <button 
-                onClick={() => setBulkSyncModal(prev => ({ ...prev, isOpen: false }))}
-                className="p-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 transition"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleStopAllSync}
+                  className="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-black transition flex items-center gap-1.5 shadow-xs"
+                  title="Running sync process ko rokein aur rasta clear karein"
+                >
+                  <StopCircle className="w-3.5 h-3.5 text-rose-600" />
+                  <span>Stop Sync (रद्द करें)</span>
+                </button>
+                <button 
+                  onClick={() => setBulkSyncModal(prev => ({ ...prev, isOpen: false }))}
+                  className="p-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 transition"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
             {/* IF ENGINE IS OFFLINE */}

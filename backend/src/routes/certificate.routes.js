@@ -4,6 +4,18 @@ const prisma = require('../db');
 const { sendAutomaticReceipt, sendBulkAutomaticReceipt, sendStatusUpdateNotification } = require('../services/whatsapp.service');
 const { checkJharsewaStatus, syncMultipleCertificates } = require('../services/jharsewa.service');
 
+// Stop and Clean All Running Sync Processes
+router.post('/stop-sync', async (req, res) => {
+  try {
+    const { stopAndFlushQueue } = require('../services/firebaseQueue.service');
+    await stopAndFlushQueue();
+    res.json({ success: true, message: 'All running sync processes killed and queue flushed cleanly.' });
+  } catch (error) {
+    console.error('Error stopping sync:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // 0. Export Certificates Report (CSV Download)
 router.get('/export-csv', async (req, res) => {
   try {

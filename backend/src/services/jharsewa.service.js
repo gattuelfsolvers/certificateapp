@@ -1065,11 +1065,28 @@ async function forceCSCRelogin() {
   return await getOrCreateCSCSession(true);
 }
 
+/**
+ * Force kill running browser & clean up session for clean restarts
+ */
+async function killRunningBrowserSession() {
+  console.log('🛑 [Jharsewa] Force killing Puppeteer browser session...');
+  if (globalBrowser) {
+    try {
+      await globalBrowser.close().catch(() => null);
+    } catch (e) {}
+    globalBrowser = null;
+    globalPage = null;
+  }
+  lastSessionTime = 0;
+  console.log('✨ [Jharsewa] Browser session killed and reset completely.');
+}
+
 module.exports = {
   checkJharsewaStatus,
   syncMultipleCertificates,
   getOrCreateCSCSession,
   forceCSCRelogin,
+  killRunningBrowserSession,
   downloadAndSendCertificatePDF
 };
 
