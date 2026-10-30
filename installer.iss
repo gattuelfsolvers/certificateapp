@@ -4,7 +4,8 @@
 ; Developed and Managed by : Gattu Computer Works
 ; -------------------------------------------------------------
 
-#define MyAppName "Certificate Management Software"
+#define MyAppName "CMS"
+#define MyAppFullName "Certificate Management Software"
 #define MyAppVersion "2.0.0"
 #define MyAppPublisher "Gattu Computer Works"
 #define MyAppURL "https://certificateapp.onrender.com"
@@ -12,7 +13,7 @@
 
 [Setup]
 AppId={{5F792A61-4B96-41B0-9A74-CC291C7924F0}
-AppName={#MyAppName}
+AppName={#MyAppFullName}
 AppVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}
 AppPublisherURL={#MyAppURL}
@@ -25,6 +26,7 @@ DisableProgramGroupPage=yes
 OutputDir=E:\SOFTWARE\Certificate Entry Management_NEW\installer_output
 OutputBaseFilename=Certificate-Management-Setup-v2.0
 SetupIconFile=E:\SOFTWARE\Certificate Entry Management_NEW\app_icon.ico
+UninstallDisplayIcon={app}\app_icon.ico
 Compression=lzma2/ultra64
 SolidCompression=yes
 WizardStyle=modern
