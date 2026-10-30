@@ -2765,23 +2765,23 @@ Contact: 7781931880
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 shrink-0">
                 {syncStatusModal.step === 'CHECKING' && (
                   <button
                     type="button"
                     onClick={handleStopAllSync}
-                    className="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-black transition flex items-center gap-1.5 shadow-xs"
+                    className="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-black transition flex items-center gap-1.5 shadow-xs whitespace-nowrap shrink-0"
                     title="Running sync process ko rokein aur rasta clear karein"
                   >
-                    <StopCircle className="w-3.5 h-3.5 text-rose-600" />
-                    <span>Stop Sync</span>
+                    <StopCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                    <span className="whitespace-nowrap">Stop Sync</span>
                   </button>
                 )}
                 <button 
                   onClick={() => setSyncStatusModal(prev => ({ ...prev, isOpen: false }))}
-                  className="p-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 transition"
+                  className="p-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 transition shrink-0"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-5 h-5 shrink-0" />
                 </button>
               </div>
             </div>
@@ -3100,21 +3100,21 @@ Contact: 7781931880
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 shrink-0">
                 <button
                   type="button"
                   onClick={handleStopAllSync}
-                  className="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-black transition flex items-center gap-1.5 shadow-xs"
+                  className="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-black transition flex items-center gap-1.5 shadow-xs whitespace-nowrap shrink-0"
                   title="Running sync process ko rokein aur rasta clear karein"
                 >
-                  <StopCircle className="w-3.5 h-3.5 text-rose-600" />
-                  <span>Stop Sync (रद्द करें)</span>
+                  <StopCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                  <span className="whitespace-nowrap">Stop Sync</span>
                 </button>
                 <button 
                   onClick={() => setBulkSyncModal(prev => ({ ...prev, isOpen: false }))}
-                  className="p-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 transition"
+                  className="p-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 transition shrink-0"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-5 h-5 shrink-0" />
                 </button>
               </div>
             </div>
