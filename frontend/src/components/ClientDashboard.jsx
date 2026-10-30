@@ -916,6 +916,81 @@ Contact: 7781931880
     }
   };
 
+  // Sync Current Filtered List Handler
+  const handleSyncFilteredList = async () => {
+    // 0. Verify Jharsewa Credentials in Profile
+    const savedCreds = localStorage.getItem('JHARSEWA_CLIENT_CREDS');
+    let hasCreds = false;
+    if (savedCreds) {
+      try {
+        const parsed = JSON.parse(savedCreds);
+        if (parsed?.userId?.trim() && parsed?.password?.trim()) {
+          hasCreds = true;
+        }
+      } catch (e) {}
+    }
+    if (!hasCreds) {
+      showToast('error', 'Jharsewa Login Missing', 'Jharsewa Login User ID aur Password missing hai! Kripya Profile Settings me credentials save karein.');
+      return;
+    }
+
+    // 1. Verify Engine Connection First
+    const isOnline = await checkLocalEngine();
+    if (!isOnline) {
+      showToast('error', 'Sync Engine Offline', 'Sync Engine Server Down / Not Connected! Local Engine port 5000 offline hai ya server down hai. Kripya Local Engine chalu karein.');
+      return;
+    }
+
+    // Filter certificates visible in the current table/list that are pending
+    const toSync = filteredCertificates.filter(c => !c.currentStatus || (!c.currentStatus.includes('DELIVERED') && !c.currentStatus.includes('REJECTED')));
+    if (toSync.length === 0) {
+      showToast('info', 'Nothing to Sync', 'Selected list me koi pending certificate nahi hai (sab deliver ya reject ho chuke hain).');
+      return;
+    }
+
+    // Open Center Popup Modal for Sync List
+    setBulkSyncModal({
+      isOpen: true,
+      step: 'CHECKING',
+      totalCount: toSync.length,
+      items: toSync.map(c => ({
+        id: c.id,
+        refNo: c.refNo,
+        applicantName: c.applicantName,
+        certType: c.certType,
+        mobile: c.mobile,
+        oldStatus: c.currentStatus || 'INITIATED',
+        newStatus: null,
+        status: 'PENDING',
+        errorReason: null,
+        cert: c
+      })),
+      syncedCount: 0,
+      deliveredCount: 0,
+      rejectedCount: 0,
+      unchangedCount: 0,
+      errorCount: 0
+    });
+
+    setIsSyncingAll(true);
+    showToast('info', 'List Sync Queued', `Checking live status for ${toSync.length} certificate(s) from current list...`);
+
+    try {
+      const currentHwid = localStorage.getItem('LOCAL_ENGINE_HWID') || clientData?.hwid || localStorage.getItem('CLIENT_SYSTEM_HWID') || null;
+      await requestBulkSyncOnFirebase(toSync.map(c => c.id), currentHwid);
+    } catch (err) {
+      console.error('List sync queue error:', err);
+      showToast('error', 'Sync Queue Error', err.message);
+      setBulkSyncModal(prev => ({
+        ...prev,
+        step: 'ERROR',
+        errorReason: err.message
+      }));
+    } finally {
+      setIsSyncingAll(false);
+    }
+  };
+
   const handleSyncAll = async () => {
     // 0. Verify Jharsewa Credentials in Profile
     const savedCreds = localStorage.getItem('JHARSEWA_CLIENT_CREDS');
@@ -1735,13 +1810,14 @@ Contact: 7781931880
                 <option value="CO_WAITING">Waiting (Objection)</option>
               </select>
 
-              {/* 2. Sync List / Refresh List Button */}
+              {/* 2. Sync List Button (Live Jharsewa Sync for Current Filtered List) */}
               <button 
-                onClick={loadCertificates}
-                title="Refresh Records List"
-                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-cyan-50 hover:bg-cyan-100 text-cyan-800 border border-cyan-200 text-xs font-extrabold transition shadow-xs"
+                onClick={handleSyncFilteredList}
+                disabled={isSyncingAll}
+                title="Sync live status for currently filtered certificates list"
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-cyan-50 hover:bg-cyan-100 text-cyan-800 border border-cyan-200 text-xs font-extrabold transition shadow-xs disabled:opacity-50"
               >
-                <RefreshCw className={`w-4 h-4 text-cyan-600 ${loading ? 'animate-spin' : ''}`} />
+                <RefreshCw className={`w-4 h-4 text-cyan-600 ${isSyncingAll ? 'animate-spin' : ''}`} />
                 <span>Sync List</span>
               </button>
 
