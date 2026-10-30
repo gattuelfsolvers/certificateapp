@@ -978,14 +978,17 @@ export default function AdminDashboard({ onLogout }) {
 
   return (
     <div className="min-h-screen bg-slate-100 text-slate-800 flex font-sans w-full">
-      {/* Toast Notification */}
+      {/* Toast Notification - Highest z-index (z-[99999]) and placed at TOP-CENTER so it never hides behind modals */}
       {toast && (
-        <div className={`fixed bottom-6 right-6 z-50 p-4 rounded-2xl border shadow-2xl flex items-center gap-3 max-w-md animate-bounce ${
-          toast.type === 'error' ? 'bg-rose-50 border-rose-300 text-rose-800' :
-          toast.type === 'info' ? 'bg-sky-50 border-sky-300 text-sky-800' :
-          'bg-emerald-50 border-emerald-300 text-emerald-800'
+        <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-[99999] p-4 rounded-2xl border-2 shadow-2xl flex items-center gap-3 max-w-lg animate-in fade-in slide-in-from-top-4 duration-300 pointer-events-auto backdrop-blur-md ${
+          toast.type === 'error' ? 'bg-rose-50/95 border-rose-400 text-rose-900 shadow-rose-500/20' :
+          toast.type === 'info' ? 'bg-sky-50/95 border-sky-400 text-sky-900 shadow-sky-500/20' :
+          'bg-emerald-50/95 border-emerald-400 text-emerald-900 shadow-emerald-500/20'
         }`}>
-          <div className="font-bold text-sm">{toast.title}: <span className="font-normal text-xs">{toast.message}</span></div>
+          <div className="font-extrabold text-sm flex items-center gap-2">
+            <span>{toast.title}:</span>
+            <span className="font-semibold text-xs leading-relaxed">{toast.message}</span>
+          </div>
         </div>
       )}
 
