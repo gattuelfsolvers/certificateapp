@@ -211,12 +211,12 @@ async function processQueueItem(certId, certData) {
         else if (s.includes('SDO_UNDER_PROCESS') || s.includes('SDO')) targetKey = 'STATUS_SDO_UNDER_PROCESS';
 
         let messageText = '';
+        const duesVal = Number(certData.duesAmount) || 0;
         try {
           const { getDoc } = require('firebase/firestore');
           const tplSnap = await getDoc(doc(db, 'whatsapp_templates', targetKey));
           if (tplSnap.exists() && tplSnap.data().messageText) {
             const rawTpl = tplSnap.data().messageText;
-            const duesVal = Number(dues) || 0;
             const duesLine = duesVal > 0 ? `\nबकाया राशि (Dues): ₹${duesVal}` : '';
             messageText = rawTpl
               .replace(/\{applicantName\}/g, certData.applicantName || 'Applicant')
@@ -241,7 +241,7 @@ Contact: 7781931880
 📜 प्रमाण पत्र का प्रकार: *${fullCertName}*
 📅 आवेदन तिथि: *${formattedDate}*
 🔄 अद्यतन स्थिति (Status): *${newStatus}*
-💰 बकाया राशि (Dues): *₹${dues}*
+💰 बकाया राशि (Dues): *₹${duesVal}*
 
 किसी प्रकार के अपडेट पर आपको सूचित किया जाएगा। धन्यवाद!`;
         }
