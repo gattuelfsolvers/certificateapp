@@ -95,6 +95,10 @@ export default function ProfileSettingsView({ clientData, showToast }) {
   });
 
   const [showJharsewaPass, setShowJharsewaPass] = useState(false);
+  const [isVerifyingJharsewa, setIsVerifyingJharsewa] = useState(false);
+  const [verifiedOperatorName, setVerifiedOperatorName] = useState(() => {
+    return localStorage.getItem('JHARSEWA_OPERATOR_NAME') || '';
+  });
 
   // 4. WhatsApp Automation & Bot Setup State
   const [whatsappSetup, setWhatsappSetup] = useState(() => {
@@ -359,33 +363,57 @@ export default function ProfileSettingsView({ clientData, showToast }) {
     if (showToast) showToast('success', 'Profile Updated', 'Shop and owner details updated successfully!');
   };
 
-  // Save Jharsewa Creds to LocalStorage and Local Engine SQLite DB
+  // Save & Verify Jharsewa Creds Live (Login -> Extract Operator Name)
   const handleSaveJharsewaCreds = async (e) => {
     e.preventDefault();
     if (!jharsewaCreds.userId.trim()) {
       if (showToast) showToast('error', 'User ID Required', 'Please enter Jharsewa Login User ID');
       return;
     }
-    localStorage.setItem('JHARSEWA_CLIENT_CREDS', JSON.stringify(jharsewaCreds));
+    if (!jharsewaCreds.password.trim()) {
+      if (showToast) showToast('error', 'Password Required', 'Please enter Jharsewa Password');
+      return;
+    }
 
-    // Also sync directly to local engine /api/settings/jharsewa-credentials so Puppeteer gets it instantly
+    setIsVerifyingJharsewa(true);
+    if (showToast) {
+      showToast('info', 'Checking Credentials...', 'Please wait, we are checking your Jharsewa credentials and fetching profile details...');
+    }
+
     try {
-      let syncRes;
+      let res;
       try {
-        syncRes = await axios.post('http://localhost:5000/api/settings/jharsewa-credentials', {
+        res = await axios.post('http://localhost:5000/api/settings/validate-jharsewa', {
           username: jharsewaCreds.userId.trim(),
           password: jharsewaCreds.password.trim()
-        });
+        }, { timeout: 120000 }); // 2 minutes timeout
       } catch (errLocal) {
-        syncRes = await axios.post('/api/settings/jharsewa-credentials', {
+        res = await axios.post('/api/settings/validate-jharsewa', {
           username: jharsewaCreds.userId.trim(),
           password: jharsewaCreds.password.trim()
-        });
+        }, { timeout: 120000 });
       }
-      if (showToast) showToast('success', 'Jharsewa Linked', 'Jharsewa portal credentials saved & synced with Local Engine!');
-    } catch (apiErr) {
-      console.warn('Backend settings sync notice:', apiErr.message);
-      if (showToast) showToast('success', 'Jharsewa Linked', 'Jharsewa portal credentials saved for automated status checking.');
+
+      if (res.data && res.data.success) {
+        const opName = res.data.operatorName || 'Authorized VLE Operator';
+        setVerifiedOperatorName(opName);
+        localStorage.setItem('JHARSEWA_OPERATOR_NAME', opName);
+        localStorage.setItem('JHARSEWA_CLIENT_CREDS', JSON.stringify(jharsewaCreds));
+        
+        if (showToast) {
+          showToast('success', 'Jharsewa Verified 🎉', `Login safal! Operator Profile Name: "${opName}". Live sync ab ready hai!`);
+        }
+      } else {
+        throw new Error(res.data?.error || 'Validation failed');
+      }
+    } catch (err) {
+      console.error('Jharsewa validation error:', err);
+      const errText = err.response?.data?.error || err.message || 'Jharsewa Login Failed! Galat User ID/Password ya Local Engine offline hai.';
+      if (showToast) {
+        showToast('error', 'Verification Failed', errText);
+      }
+    } finally {
+      setIsVerifyingJharsewa(false);
     }
   };
 
@@ -899,13 +927,45 @@ export default function ProfileSettingsView({ clientData, showToast }) {
               </label>
             </div>
 
-            <div className="flex justify-end pt-2">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+              <div className="w-full sm:w-auto">
+                {isVerifyingJharsewa ? (
+                  <div className="flex items-center gap-2.5 text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200 px-3.5 py-2 rounded-xl animate-pulse">
+                    <RefreshCw className="w-4 h-4 animate-spin text-amber-600" />
+                    <span>Please wait, we are checking your Jharsewa credentials...</span>
+                  </div>
+                ) : verifiedOperatorName ? (
+                  <div className="flex items-center gap-2 text-xs font-extrabold text-emerald-800 bg-emerald-50 border border-emerald-300 px-3.5 py-2 rounded-xl">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    <span>Connected Operator: <strong className="text-emerald-950 font-black">{verifiedOperatorName}</strong></span>
+                  </div>
+                ) : (
+                  <span className="text-[11px] text-slate-400 font-medium">
+                    Credentials save karne par automatic portal login verify hoga.
+                  </span>
+                )}
+              </div>
+
               <button
                 type="submit"
-                className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold rounded-xl shadow-md transition"
+                disabled={isVerifyingJharsewa}
+                className={`flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl font-extrabold shadow-md transition w-full sm:w-auto ${
+                  isVerifyingJharsewa 
+                    ? 'bg-slate-400 text-white cursor-not-allowed'
+                    : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-500/20'
+                }`}
               >
-                <Save className="w-4 h-4" />
-                <span>Save Jharsewa Credentials</span>
+                {isVerifyingJharsewa ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <span>Verifying Portal...</span>
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4" />
+                    <span>Save Jharsewa Credentials</span>
+                  </>
+                )}
               </button>
             </div>
           </form>

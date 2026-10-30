@@ -19,6 +19,93 @@ router.get('/jharsewa-credentials', async (req, res) => {
   }
 });
 
+// Validate and Test Jharsewa Credentials Live
+router.post('/validate-jharsewa', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+
+    if (!username || !password) {
+      return res.status(400).json({ success: false, error: 'User ID aur Password dono anivarya hain!' });
+    }
+
+    // Save temporarily to SQLite
+    await prisma.setting.upsert({
+      where: { key: 'JHARSEWA_USERNAME' },
+      update: { value: username.trim() },
+      create: { key: 'JHARSEWA_USERNAME', value: username.trim() }
+    });
+
+    await prisma.setting.upsert({
+      where: { key: 'JHARSEWA_PASSWORD' },
+      update: { value: password.trim() },
+      create: { key: 'JHARSEWA_PASSWORD', value: password.trim() }
+    });
+
+    // Run live test login via Puppeteer
+    const { getOrCreateCSCSession } = require('../services/jharsewa.service');
+    const { page } = await getOrCreateCSCSession(true); // force fresh login
+
+    // Extract logged in user profile name from page DOM
+    const profileData = await page.evaluate(() => {
+      const text = document.body ? document.body.innerText : '';
+      const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+      
+      let foundName = null;
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        if (line.includes('Manage Profile') || line.includes('Apply for services') || line.includes('Welcome')) {
+          for (let j = Math.max(0, i - 3); j < i; j++) {
+            const candidate = lines[j];
+            if (candidate && candidate.length >= 3 && candidate.length <= 40 && !candidate.includes(':') && !candidate.includes('Menu') && !candidate.includes('Toggle') && !candidate.includes('Language') && !candidate.includes('Theme')) {
+              foundName = candidate;
+              break;
+            }
+          }
+          if (foundName) break;
+        }
+      }
+
+      if (!foundName) {
+        const nameEl = document.querySelector('.user-profile, .username, #username, .welcome, span.name');
+        if (nameEl) foundName = nameEl.innerText.trim();
+      }
+
+      return {
+        isLoggedIn: text.includes('LOGOUT') || text.includes('Logout') || text.includes('Manage Profile') || text.includes('Apply for services'),
+        operatorName: foundName || 'Authorized VLE Operator'
+      };
+    });
+
+    if (!profileData.isLoggedIn) {
+      return res.status(401).json({
+        success: false,
+        error: 'Jharsewa Login Viphal! Kripya sahi User ID aur Password daalein.'
+      });
+    }
+
+    // Save profile name
+    await prisma.setting.upsert({
+      where: { key: 'JHARSEWA_OPERATOR_NAME' },
+      update: { value: profileData.operatorName },
+      create: { key: 'JHARSEWA_OPERATOR_NAME', value: profileData.operatorName }
+    });
+
+    res.json({
+      success: true,
+      operatorName: profileData.operatorName,
+      message: Jharsewa portal successfully verified! Connected as: 
+    });
+
+  } catch (err) {
+    console.error('Validation error:', err.message);
+    let errMsg = err.message || 'Jharsewa Login Timeout / Error';
+    if (errMsg.includes('Login failed after 5 attempts')) {
+      errMsg = 'Jharsewa Portal Login Failed! Galat User ID / Password ya Portal down hai.';
+    }
+    res.status(500).json({ success: false, error: errMsg });
+  }
+});
+
 // Update Jharsewa Credentials
 router.post('/jharsewa-credentials', async (req, res) => {
   try {
