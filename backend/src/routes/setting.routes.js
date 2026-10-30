@@ -93,7 +93,7 @@ router.post('/validate-jharsewa', async (req, res) => {
     res.json({
       success: true,
       operatorName: profileData.operatorName,
-      message: Jharsewa portal successfully verified! Connected as: 
+      message: 'Jharsewa portal successfully verified!'
     });
 
   } catch (err) {
