@@ -4,7 +4,7 @@ import {
   CheckCircle2, Clock, AlertTriangle, XCircle, IndianRupee,
   Smartphone, ExternalLink, Printer, Edit, Trash2, Shield, Settings, Activity, Users, Send, Layers, Tag, PlusCircle, Zap, Download, Upload, X, ShieldAlert,
   Key, User, Lock, ShieldCheck, Building2, Store, Phone, MapPin, BadgeCheck, LogOut, Eye, PanelRight, PanelRightClose, Code, LayoutDashboard, Sliders, MoreVertical, Power,
-  PartyPopper, ArrowRight, Sparkles
+  PartyPopper, ArrowRight, Sparkles, StopCircle
 } from 'lucide-react';
 import { CERTIFICATE_CATEGORIES as DEFAULT_CATEGORIES } from '../constants/certificateTypes';
 import { 
@@ -12,6 +12,7 @@ import {
   subscribeCertificatesFromFirebase, 
   requestCertificateSyncOnFirebase, 
   requestBulkSyncOnFirebase, 
+  stopAllCertificateSyncOnFirebase,
   saveCertificateToFirebase, 
   deleteCertificateFromFirebase,
   subscribeWhatsAppTemplatesFromFirebase,
@@ -309,18 +310,18 @@ export default function ClientDashboard({ clientData, onLogout }) {
         const updated = data?.find((c) => String(c.id) === String(prev.certId));
         if (updated) {
           const liveStatus = updated.currentStatus || updated.status;
-          if (updated.syncStatus === 'COMPLETED' || (!updated.syncRequested && updated.syncStatus !== 'QUEUED' && updated.syncStatus !== 'PROCESSING' && updated.syncStatus !== 'ERROR' && liveStatus)) {
+          if (updated.syncStatus === 'COMPLETED' || (!updated.syncRequested && updated.syncStatus !== 'QUEUED' && updated.syncStatus !== 'PROCESSING' && updated.syncStatus !== 'ERROR' && updated.syncStatus !== 'STOPPED' && liveStatus)) {
             return {
               ...prev,
               step: 'SUCCESS',
               newStatus: liveStatus,
               cert: updated
             };
-          } else if (updated.syncStatus === 'ERROR') {
+          } else if (updated.syncStatus === 'ERROR' || updated.syncStatus === 'STOPPED') {
             return {
               ...prev,
               step: 'ERROR',
-              errorReason: updated.syncError || 'Jharsewa portal query error or timeout',
+              errorReason: updated.syncError || (updated.syncStatus === 'STOPPED' ? 'Sync process stopped by user' : 'Jharsewa portal query error or timeout'),
               cert: updated
             };
           }
@@ -348,12 +349,12 @@ export default function ClientDashboard({ clientData, onLogout }) {
 
           if (liveCert.syncStatus === 'PROCESSING') {
             itemStatus = 'PROCESSING';
-          } else if (liveCert.syncStatus === 'COMPLETED' || (!liveCert.syncRequested && liveCert.syncStatus !== 'QUEUED' && liveCert.syncStatus !== 'PROCESSING' && liveCert.syncStatus !== 'ERROR')) {
+          } else if (liveCert.syncStatus === 'COMPLETED' || (!liveCert.syncRequested && liveCert.syncStatus !== 'QUEUED' && liveCert.syncStatus !== 'PROCESSING' && liveCert.syncStatus !== 'ERROR' && liveCert.syncStatus !== 'STOPPED')) {
             itemStatus = 'SUCCESS';
             newStatus = liveCert.currentStatus || liveCert.status || newStatus;
-          } else if (liveCert.syncStatus === 'ERROR') {
+          } else if (liveCert.syncStatus === 'ERROR' || liveCert.syncStatus === 'STOPPED') {
             itemStatus = 'ERROR';
-            errorReason = liveCert.syncError || 'Portal sync failed';
+            errorReason = liveCert.syncError || (liveCert.syncStatus === 'STOPPED' ? 'Sync stopped by user' : 'Portal sync failed');
           } else if (liveCert.syncStatus === 'QUEUED') {
             itemStatus = 'PENDING';
           }
@@ -401,22 +402,67 @@ export default function ClientDashboard({ clientData, onLogout }) {
     }, currentClientId);
     checkLocalEngine();
 
+    // Auto-Safety Watchdog: If any certificate has been stuck in QUEUED or PROCESSING for > 60s, auto-cancel them
+    const watchdogInterval = setInterval(() => {
+      const now = Date.now();
+      setCertificates(prevCerts => {
+        const stuckList = prevCerts.filter(c => {
+          if (c.syncStatus !== 'QUEUED' && c.syncStatus !== 'PROCESSING') return false;
+          const reqTime = c.syncRequestedAt || c.syncStartedAt;
+          if (!reqTime) return false;
+          const diffMs = now - new Date(reqTime).getTime();
+          return diffMs > 60000; // 60 seconds timeout
+        });
+
+        if (stuckList.length > 0) {
+          console.warn(`⏱️ [Watchdog] Detected ${stuckList.length} stuck sync request(s) exceeding 60s timeout. Auto-resolving...`);
+          stopAllCertificateSyncOnFirebase(stuckList.map(s => s.id)).catch(() => null);
+        }
+        return prevCerts;
+      });
+    }, 15000);
+
     return () => {
       if (typeof unsubscribe === 'function') unsubscribe();
+      clearInterval(watchdogInterval);
     };
   }, [currentClientId]);
 
   const checkLocalEngine = async () => {
     setIsCheckingEngine(true);
     try {
-      // Ping local agent helper port 5000 /api/health
-      const res = await fetch('http://localhost:5000/api/health', { method: 'GET', mode: 'cors' });
+      // Ping local agent helper port 5000 /api/health with a quick 4-second timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 4000);
+      const res = await fetch('http://localhost:5000/api/health', {
+        method: 'GET',
+        mode: 'cors',
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+
       if (res.ok) {
         const data = await res.json().catch(() => null);
         if (data && data.hwid) {
           localStorage.setItem('LOCAL_ENGINE_HWID', data.hwid.toUpperCase());
         }
         setEngineStatus('ONLINE');
+
+        // Auto-sync Jharsewa credentials to local engine SQLite DB if saved in browser localStorage
+        try {
+          const savedCreds = localStorage.getItem('JHARSEWA_CLIENT_CREDS');
+          if (savedCreds) {
+            const parsed = JSON.parse(savedCreds);
+            if (parsed?.userId && parsed?.password) {
+              fetch('http://localhost:5000/api/settings/jharsewa-credentials', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: parsed.userId.trim(), password: parsed.password.trim() })
+              }).catch(() => null);
+            }
+          }
+        } catch (eSync) {}
+
         return true;
       } else {
         setEngineStatus('OFFLINE');
@@ -871,6 +917,34 @@ Contact: 7781931880
   };
 
   const handleSyncAll = async () => {
+    // 0. Verify Jharsewa Credentials in Profile
+    const savedCreds = localStorage.getItem('JHARSEWA_CLIENT_CREDS');
+    let hasCreds = false;
+    if (savedCreds) {
+      try {
+        const parsed = JSON.parse(savedCreds);
+        if (parsed?.userId?.trim() && parsed?.password?.trim()) {
+          hasCreds = true;
+        }
+      } catch (e) {}
+    }
+    if (!hasCreds) {
+      showToast('error', 'Jharsewa Login Missing', 'Jharsewa Login User ID aur Password missing hai! Kripya Profile Settings me credentials save karein.');
+      setBulkSyncModal({
+        isOpen: true,
+        step: 'ERROR',
+        totalCount: 0,
+        items: [],
+        syncedCount: 0,
+        deliveredCount: 0,
+        rejectedCount: 0,
+        unchangedCount: 0,
+        errorCount: 0,
+        errorReason: 'Jharsewa Login User ID aur Password missing hai! Kripya Profile Settings me credentials enter karein.'
+      });
+      return;
+    }
+
     // 1. Verify Engine Connection First
     const isOnline = await checkLocalEngine();
     if (!isOnline) {
@@ -884,7 +958,7 @@ Contact: 7781931880
         rejectedCount: 0,
         unchangedCount: 0,
         errorCount: 0,
-        errorReason: 'Sync Engine Not Connected! Please ensure that Local Engine is downloaded, extracted in C: drive and running.'
+        errorReason: 'Sync Engine Server Down / Not Connected! Local Engine port 5000 offline hai ya server down hai. Kripya Local Engine chalu karein.'
       });
       return;
     }
@@ -941,6 +1015,35 @@ Contact: 7781931880
   };
 
   const handleSyncSingle = async (cert) => {
+    // 0. Verify Jharsewa Credentials in Profile
+    const savedCreds = localStorage.getItem('JHARSEWA_CLIENT_CREDS');
+    let hasCreds = false;
+    if (savedCreds) {
+      try {
+        const parsed = JSON.parse(savedCreds);
+        if (parsed?.userId?.trim() && parsed?.password?.trim()) {
+          hasCreds = true;
+        }
+      } catch (e) {}
+    }
+    if (!hasCreds) {
+      showToast('error', 'Jharsewa Login Missing', 'Jharsewa Login User ID aur Password missing hai! Kripya Profile Settings me credentials save karein.');
+      setSyncStatusModal({
+        isOpen: true,
+        certId: cert.id,
+        cert,
+        refNo: cert.refNo,
+        applicantName: cert.applicantName,
+        certType: cert.certType,
+        mobile: cert.mobile,
+        oldStatus: cert.currentStatus || 'INITIATED',
+        newStatus: null,
+        step: 'ERROR',
+        errorReason: 'Jharsewa Login User ID aur Password missing hai! Kripya Profile Settings me credentials enter karein.'
+      });
+      return;
+    }
+
     // 1. Verify Engine Connection First
     const isOnline = await checkLocalEngine();
     if (!isOnline) {
@@ -955,7 +1058,7 @@ Contact: 7781931880
         oldStatus: cert.currentStatus || 'INITIATED',
         newStatus: null,
         step: 'ENGINE_OFFLINE',
-        errorReason: 'Sync Engine Not Connected! Please ensure that Local Engine is downloaded, extracted in C: drive and running.'
+        errorReason: 'Sync Engine Server Down / Not Connected! Local Engine port 5000 offline hai ya server down hai. Kripya Local Engine chalu karein.'
       });
       return;
     }
@@ -995,6 +1098,27 @@ Contact: 7781931880
       });
     } finally {
       setTimeout(() => setSyncingId(null), 3000);
+    }
+  };
+
+  // Stop All Running Syncs Handler
+  const handleStopAllSync = async () => {
+    const activeSyncingCerts = certificates.filter(c => c.syncRequested || c.syncStatus === 'QUEUED' || c.syncStatus === 'PROCESSING');
+    const idsToStop = activeSyncingCerts.map(c => c.id);
+
+    // Immediate UI local reset
+    setSyncingId(null);
+    setIsSyncingAll(false);
+    setSyncStatusModal(prev => ({ ...prev, isOpen: false }));
+    setBulkSyncModal(prev => ({ ...prev, isOpen: false }));
+
+    // Stop on Firebase Cloud
+    if (idsToStop.length > 0) {
+      showToast('info', 'Stopping Sync...', `Abhi chal rahe ${idsToStop.length} certificate(s) ka sync process roka ja raha hai...`);
+      await stopAllCertificateSyncOnFirebase(idsToStop);
+      showToast('success', 'Sync Stopped', 'Sabhi running sync processes safaltapoorvak stop kar diye gaye!');
+    } else {
+      showToast('info', 'Sync Reset', 'Koi running sync active nahi tha. Status fresh reset kar diya gaya.');
     }
   };
 
@@ -1618,6 +1742,16 @@ Contact: 7781931880
               >
                 <Zap className={`w-4 h-4 ${isSyncingAll ? 'animate-spin' : ''}`} />
                 <span>{isSyncingAll ? 'Syncing All...' : 'Sync All'}</span>
+              </button>
+
+              {/* 3.5 Stop Sync Button (Resets running syncs) */}
+              <button
+                onClick={handleStopAllSync}
+                title="Stop all running sync processes & reset"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-extrabold transition shadow-xs"
+              >
+                <StopCircle className="w-4 h-4 text-rose-600" />
+                <span>Stop Sync</span>
               </button>
 
               {/* 4. Download Data Button */}

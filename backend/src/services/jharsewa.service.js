@@ -157,14 +157,20 @@ async function getOrCreateCSCSession(forceFresh = false) {
 
     // Fetch dynamic Jharsewa Credentials from DB or environment
     const prisma = require('../db');
-    let jUsername = 'cscgunghasa@gmail.com';
-    let jPassword = 'Gattu@1994#';
+    let jUsername = '';
+    let jPassword = '';
     try {
       const uRec = await prisma.setting.findUnique({ where: { key: 'JHARSEWA_USERNAME' } });
       const pRec = await prisma.setting.findUnique({ where: { key: 'JHARSEWA_PASSWORD' } });
       if (uRec && uRec.value) jUsername = uRec.value.trim();
       if (pRec && pRec.value) jPassword = pRec.value.trim();
     } catch (e) {}
+
+    // Strict validation: Check if user credentials are provided
+    if (!jUsername || !jPassword) {
+      console.error('❌ [Jharsewa] Credentials missing in Settings! Please configure User ID and Password in Profile Settings.');
+      throw new Error('Jharsewa Login ID or Password missing! Please enter credentials in Profile Settings.');
+    }
 
     await globalPage.evaluate((uVal, pVal) => {
       const u = document.querySelector('input[name="username"], #username, input[id*="user"]');

@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, doc, setDoc, getDocs, onSnapshot, deleteDoc, query, where, getDoc } from 'firebase/firestore';
+import { getFirestore, collection, doc, setDoc, getDocs, onSnapshot, deleteDoc, query, where, getDoc, writeBatch } from 'firebase/firestore';
 
 const firebaseConfig = {
   apiKey: "AIzaSyDclObUAWjLXtZY0CdeY1h0rGqsRUXnv_g",
@@ -245,6 +245,50 @@ export async function requestBulkSyncOnFirebase(certIds, clientHwid = null) {
   } catch (error) {
     console.error("Error requesting bulk certificate sync on Firebase:", error);
     return false;
+  }
+}
+
+// Immediately Cancel / Stop active Jharsewa Sync for all certificates
+export async function stopAllCertificateSyncOnFirebase(certIds) {
+  try {
+    const list = Array.isArray(certIds) ? certIds : [];
+    if (list.length === 0) return true;
+
+    // Use batch for fast, atomic cancel
+    const batch = writeBatch(db);
+    let count = 0;
+    for (const cId of list) {
+      const certRef = doc(db, "certificates", String(cId));
+      batch.set(certRef, {
+        syncRequested: false,
+        syncStatus: 'STOPPED',
+        syncError: 'Sync stopped by user',
+        syncStoppedAt: new Date().toISOString()
+      }, { merge: true });
+      count++;
+      // Firestore batches have limit of 500 writes
+      if (count >= 400) break;
+    }
+    await batch.commit();
+    return true;
+  } catch (error) {
+    console.error("Error stopping certificate sync on Firebase:", error);
+    // Fallback one-by-one if batch fails
+    try {
+      for (const cId of certIds) {
+        const certRef = doc(db, "certificates", String(cId));
+        await setDoc(certRef, {
+          syncRequested: false,
+          syncStatus: 'STOPPED',
+          syncError: 'Sync stopped by user',
+          syncStoppedAt: new Date().toISOString()
+        }, { merge: true });
+      }
+      return true;
+    } catch (e2) {
+      console.error("Fallback stop sync error:", e2);
+      return false;
+    }
   }
 }
 

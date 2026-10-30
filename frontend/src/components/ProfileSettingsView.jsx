@@ -359,15 +359,34 @@ export default function ProfileSettingsView({ clientData, showToast }) {
     if (showToast) showToast('success', 'Profile Updated', 'Shop and owner details updated successfully!');
   };
 
-  // Save Jharsewa Creds to LocalStorage
-  const handleSaveJharsewaCreds = (e) => {
+  // Save Jharsewa Creds to LocalStorage and Local Engine SQLite DB
+  const handleSaveJharsewaCreds = async (e) => {
     e.preventDefault();
     if (!jharsewaCreds.userId.trim()) {
       if (showToast) showToast('error', 'User ID Required', 'Please enter Jharsewa Login User ID');
       return;
     }
     localStorage.setItem('JHARSEWA_CLIENT_CREDS', JSON.stringify(jharsewaCreds));
-    if (showToast) showToast('success', 'Jharsewa Linked', 'Jharsewa portal credentials saved for automated status checking.');
+
+    // Also sync directly to local engine /api/settings/jharsewa-credentials so Puppeteer gets it instantly
+    try {
+      let syncRes;
+      try {
+        syncRes = await axios.post('http://localhost:5000/api/settings/jharsewa-credentials', {
+          username: jharsewaCreds.userId.trim(),
+          password: jharsewaCreds.password.trim()
+        });
+      } catch (errLocal) {
+        syncRes = await axios.post('/api/settings/jharsewa-credentials', {
+          username: jharsewaCreds.userId.trim(),
+          password: jharsewaCreds.password.trim()
+        });
+      }
+      if (showToast) showToast('success', 'Jharsewa Linked', 'Jharsewa portal credentials saved & synced with Local Engine!');
+    } catch (apiErr) {
+      console.warn('Backend settings sync notice:', apiErr.message);
+      if (showToast) showToast('success', 'Jharsewa Linked', 'Jharsewa portal credentials saved for automated status checking.');
+    }
   };
 
   // WhatsApp Connect / Disconnect Handlers

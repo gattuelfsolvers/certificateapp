@@ -100,14 +100,43 @@ async function processQueueItem(certId, certData) {
   const certRef = doc(db, 'certificates', String(certId));
 
   try {
+    // 0. Verify Jharsewa Credentials before attempting heavy browser automation
+    const prisma = require('../db');
+    let jUser = '';
+    let jPass = '';
+    try {
+      const uRec = await prisma.setting.findUnique({ where: { key: 'JHARSEWA_USERNAME' } });
+      const pRec = await prisma.setting.findUnique({ where: { key: 'JHARSEWA_PASSWORD' } });
+      if (uRec && uRec.value) jUser = uRec.value.trim();
+      if (pRec && pRec.value) jPass = pRec.value.trim();
+    } catch (e) {}
+
+    if (!jUser || !jPass) {
+      const credErr = 'Jharsewa Login ID / Password missing! Please configure credentials in Profile Settings.';
+      console.error(`❌ [FirebaseQueue] ${credErr}`);
+      await setDoc(certRef, {
+        syncRequested: false,
+        syncStatus: 'ERROR',
+        syncError: credErr,
+        lastSyncedAt: new Date().toISOString()
+      }, { merge: true });
+      return;
+    }
+
     // 1. Mark as PROCESSING in Firebase so UI immediately shows loading indicator
     await setDoc(certRef, {
       syncStatus: 'PROCESSING',
       syncStartedAt: new Date().toISOString()
     }, { merge: true });
 
-    // 2. Query Jharsewa via local Puppeteer engine
-    const statusResult = await checkJharsewaStatus(certData.refNo, certData.entryDate);
+    // 2. Query Jharsewa via local Puppeteer engine with a strict timeout wrapper (45 seconds)
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Jharsewa portal query timeout (Server down or slow response).')), 45000)
+    );
+    const statusResult = await Promise.race([
+      checkJharsewaStatus(certData.refNo, certData.entryDate),
+      timeoutPromise
+    ]);
 
     if (statusResult.error) {
       console.error(`❌ [FirebaseQueue] Jharsewa Query Failed for ${certData.refNo}:`, statusResult.error);
