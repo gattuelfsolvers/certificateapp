@@ -8,7 +8,7 @@ router.get('/stats', async (req, res) => {
     const totalEntries = await prisma.certificate.count();
     const underProcessCount = await prisma.certificate.count({
       where: {
-        currentStatus: { in: ['UNDER_PROCESS', 'CI_UNDER_PROCESS', 'CI_WAITING', 'CO_UNDER_PROCESS', 'CO_WAITING', 'SDO_UNDER_PROCESS', 'WAITING'] }
+        currentStatus: { in: ['UNDER_PROCESS', 'CI_UNDER_PROCESS', 'RK_WAITING', 'CI_WAITING', 'CO_UNDER_PROCESS', 'CO_WAITING', 'SDO_UNDER_PROCESS', 'SDO_WAITING', 'WAITING'] }
       }
     });
     const deliveredCount = await prisma.certificate.count({
@@ -17,7 +17,7 @@ router.get('/stats', async (req, res) => {
       }
     });
     const rejectedCount = await prisma.certificate.count({ where: { currentStatus: 'REJECTED' } });
-    const waitingCount = await prisma.certificate.count({ where: { currentStatus: 'WAITING' } });
+    const waitingCount = await prisma.certificate.count({ where: { currentStatus: { in: ['WAITING', 'RK_WAITING', 'CI_WAITING', 'CO_WAITING', 'SDO_WAITING'] } } });
 
     // Financial calculations
     const totals = await prisma.certificate.aggregate({

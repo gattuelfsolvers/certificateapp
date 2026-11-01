@@ -204,6 +204,8 @@ async function processQueueItem(certId, certData) {
         if (s === 'INITIATED') targetKey = 'STATUS_INITIATED';
         else if (s.includes('DELIVERED')) targetKey = s.includes('SDO') ? 'STATUS_SDO_DELIVERED' : 'STATUS_DELIVERED';
         else if (s.includes('REJECTED')) targetKey = 'STATUS_REJECTED';
+        else if (s.includes('RK_WAITING') || s.includes('RK')) targetKey = 'STATUS_RK_WAITING';
+        else if (s.includes('SDO_WAITING')) targetKey = 'STATUS_SDO_WAITING';
         else if (s.includes('CI_WAITING')) targetKey = 'STATUS_CI_WAITING';
         else if (s.includes('CO_WAITING')) targetKey = 'STATUS_CO_WAITING';
         else if (s.includes('CI_UNDER_PROCESS') || s.includes('CI')) targetKey = 'STATUS_CI_UNDER_PROCESS';

@@ -422,7 +422,10 @@ async function sendStatusUpdateNotification(cert, oldStatus, newStatus) {
   if (!messageText) {
     let statusText = newStatus;
     let emoji = '⏳';
-    if (newStatus === 'CI_UNDER_PROCESS') {
+    if (newStatus === 'RK_WAITING') {
+      emoji = '⚠️';
+      statusText = 'राजस्व कर्मचारी - आवेदक की प्रतिक्रिया की प्रतीक्षा में (Revenue Karmachari - Waiting for Applicant Response)';
+    } else if (newStatus === 'CI_UNDER_PROCESS') {
       emoji = '⏳';
       statusText = 'सर्किल इंस्पेक्टर स्तर पर प्रक्रिया में (CI - Under Process)';
     } else if (newStatus === 'CI_WAITING') {
@@ -440,6 +443,9 @@ async function sendStatusUpdateNotification(cert, oldStatus, newStatus) {
     } else if (newStatus === 'SDO_UNDER_PROCESS') {
       emoji = '⏳';
       statusText = 'अनुमंडल पदाधिकारी स्तर पर प्रक्रिया में (SDO - Under Process)';
+    } else if (newStatus === 'SDO_WAITING') {
+      emoji = '⚠️';
+      statusText = 'अनुमंडल पदाधिकारी - आवेदक की प्रतिक्रिया की प्रतीक्षा में (SDO - Waiting for Applicant Response)';
     } else if (newStatus === 'SDO_DELIVERED') {
       emoji = '🎉';
       statusText = 'अनुमंडल पदाधिकारी स्तर से निर्गत (SDO - Delivered)';
@@ -456,7 +462,7 @@ async function sendStatusUpdateNotification(cert, oldStatus, newStatus) {
 
     const isDelivered = newStatus === 'DELIVERED' || newStatus === 'CO_DELIVERED' || newStatus === 'SDO_DELIVERED';
     const isRejected = newStatus === 'REJECTED';
-    const isWaiting = newStatus === 'CI_WAITING' || newStatus === 'CO_WAITING';
+    const isWaiting = newStatus === 'RK_WAITING' || newStatus === 'CI_WAITING' || newStatus === 'CO_WAITING' || newStatus === 'SDO_WAITING' || newStatus.includes('WAITING');
 
     messageText = `${emoji} *अपना डिजिटल हब - स्थिति अपडेट* ${emoji}
 ------------------------------------

@@ -16,9 +16,31 @@ function mapCSCStatusToInternal(rawStatus, prefixUpper = '', taskNameLevel = '')
     };
   }
   if (statusUpper.includes('WAITING') || statusUpper.includes('APPLICANT')) {
+    // 1. SDO / DC Priority Check for Waiting
+    if (taskUpper.includes('SDO') || taskUpper.includes('SUB DIVISIONAL') || taskUpper.includes('APPROVAL-SDO') || taskUpper.includes('APPROVAL - SDO') || taskUpper.includes('VERIFICATION-SDO') || taskUpper.includes('DC') || taskUpper.includes('DEPUTY COMMISSIONER')) {
+      return { 
+        status: 'SDO_WAITING', 
+        details: `Application status verified: SDO / DC Level - Waiting for Applicant Response` 
+      };
+    }
+    // 2. CI Priority Check for Waiting
+    if (taskUpper.includes('CIRCLE INSPECTOR') || taskUpper.includes('VERIFICATION-CI') || taskUpper.includes('APPROVAL-CI') || taskUpper.includes('INSPECTOR') || taskUpper.includes(' CI') || taskUpper.endsWith('-CI') || taskUpper.startsWith('CI-')) {
+      return { 
+        status: 'CI_WAITING', 
+        details: `Application status verified: Circle Inspector - Waiting for Applicant Response` 
+      };
+    }
+    // 3. RK / Revenue Karmachari Check for Waiting
+    if (taskUpper.includes('RK') || taskUpper.includes('REVENUE KARMACHARI') || taskUpper.includes('KARMACHARI') || taskUpper.includes('RAJSWA') || taskUpper.includes('REVENUE')) {
+      return { 
+        status: 'RK_WAITING', 
+        details: `Application status verified: Revenue Karmachari - Waiting for Applicant Response` 
+      };
+    }
+    // 4. Default CO Waiting
     return { 
       status: 'CO_WAITING', 
-      details: `Application status verified: Waiting for Applicant Response` 
+      details: `Application status verified: Circle Officer - Waiting for Applicant Response` 
     };
   }
   if (statusUpper.includes('INITIAT')) {
@@ -58,4 +80,3 @@ function mapCSCStatusToInternal(rawStatus, prefixUpper = '', taskNameLevel = '')
 module.exports = {
   mapCSCStatusToInternal
 };
-

@@ -25,7 +25,7 @@ router.get('/export-csv', async (req, res) => {
 
     if (status && status !== 'ALL') {
       if (status === 'WAITING') {
-        where.currentStatus = { in: ['WAITING', 'CI_WAITING', 'CO_WAITING'] };
+        where.currentStatus = { in: ['WAITING', 'RK_WAITING', 'CI_WAITING', 'CO_WAITING', 'SDO_WAITING'] };
       } else if (status === 'UNDER_PROCESS') {
         where.currentStatus = { in: ['UNDER_PROCESS', 'CI_UNDER_PROCESS', 'CO_UNDER_PROCESS', 'SDO_UNDER_PROCESS'] };
       } else if (status === 'DELIVERED') {
@@ -108,7 +108,7 @@ router.get('/', async (req, res) => {
 
     if (status && status !== 'ALL') {
       if (status === 'WAITING') {
-        where.currentStatus = { in: ['WAITING', 'CI_WAITING', 'CO_WAITING'] };
+        where.currentStatus = { in: ['WAITING', 'RK_WAITING', 'CI_WAITING', 'CO_WAITING', 'SDO_WAITING'] };
       } else if (status === 'UNDER_PROCESS') {
         where.currentStatus = { in: ['UNDER_PROCESS', 'CI_UNDER_PROCESS', 'CO_UNDER_PROCESS', 'SDO_UNDER_PROCESS'] };
       } else if (status === 'DELIVERED') {
@@ -520,7 +520,7 @@ router.post(['/sync-all', '/sync-all-jharsewa'], async (req, res) => {
     } else {
       pendingCerts = await prisma.certificate.findMany({
         where: {
-          currentStatus: { in: ['INITIATED', 'HOLD', 'UNDER_PROCESS', 'PENDING', 'WAITING', 'CI_UNDER_PROCESS', 'CI_WAITING', 'CO_UNDER_PROCESS', 'CO_WAITING', 'SDO_UNDER_PROCESS'] }
+          currentStatus: { in: ['INITIATED', 'HOLD', 'UNDER_PROCESS', 'PENDING', 'WAITING', 'RK_WAITING', 'CI_UNDER_PROCESS', 'CI_WAITING', 'CO_UNDER_PROCESS', 'CO_WAITING', 'SDO_UNDER_PROCESS', 'SDO_WAITING'] }
         }
       });
     }

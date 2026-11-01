@@ -632,6 +632,8 @@ export default function ClientDashboard({ clientData, onLogout }) {
       if (s === 'INITIATED') targetKey = 'INITIAL_RECEIPT';
       else if (s.includes('DELIVERED')) targetKey = s.includes('SDO') ? 'STATUS_SDO_DELIVERED' : 'STATUS_DELIVERED';
       else if (s.includes('REJECTED')) targetKey = 'STATUS_REJECTED';
+      else if (s.includes('RK_WAITING') || s.includes('RK')) targetKey = 'STATUS_RK_WAITING';
+      else if (s.includes('SDO_WAITING')) targetKey = 'STATUS_SDO_WAITING';
       else if (s.includes('CI_WAITING')) targetKey = 'STATUS_CI_WAITING';
       else if (s.includes('CO_WAITING')) targetKey = 'STATUS_CO_WAITING';
       else if (s.includes('CI_UNDER_PROCESS') || s.includes('CI')) targetKey = 'STATUS_CI_UNDER_PROCESS';
@@ -1807,7 +1809,11 @@ Contact: 7781931880
                 <option value="SDO_UNDER_PROCESS">SDO / DC Under Process</option>
                 <option value="DELIVERED">Delivered (Issued)</option>
                 <option value="REJECTED">Rejected</option>
-                <option value="CO_WAITING">Waiting (Objection)</option>
+                <option value="WAITING">All Waiting (Objections)</option>
+                <option value="RK_WAITING">RK Waiting (Karmachari)</option>
+                <option value="CI_WAITING">CI Waiting (Inspector)</option>
+                <option value="CO_WAITING">CO Waiting (Circle Officer)</option>
+                <option value="SDO_WAITING">SDO Waiting (SDO / DC)</option>
               </select>
 
               {/* 2. Sync List Button (Live Jharsewa Sync for Current Filtered List) */}
@@ -2503,7 +2509,10 @@ Contact: 7781931880
                     <option value="SDO_UNDER_PROCESS">SDO UNDER PROCESS (SDO / DC Level)</option>
                     <option value="DELIVERED">DELIVERED (Issued)</option>
                     <option value="REJECTED">REJECTED</option>
-                    <option value="CO_WAITING">CO WAITING (Applicant Objection)</option>
+                    <option value="RK_WAITING">RK WAITING (Karmachari Objection)</option>
+                    <option value="CI_WAITING">CI WAITING (Inspector Objection)</option>
+                    <option value="CO_WAITING">CO WAITING (Circle Officer Objection)</option>
+                    <option value="SDO_WAITING">SDO WAITING (SDO Objection)</option>
                   </select>
                 </div>
               </div>

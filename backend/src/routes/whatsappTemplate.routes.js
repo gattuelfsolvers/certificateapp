@@ -88,6 +88,23 @@ const DEFAULT_TEMPLATES = [
 धन्यवाद!`
   },
   {
+    templateKey: 'STATUS_RK_WAITING',
+    title: 'Status Update - Revenue Karmachari Waiting (राजस्व कर्मचारी दस्तावेज़ मांग)',
+    category: 'STATUS_UPDATE',
+    messageText: `${COMMON_HEADER}
+*स्थिति अपडेट - आवश्यक दस्तावेज मांग*
+
+आवेदक का नाम: *{applicantName}*
+प्रमाणपत्र प्रकार: *{certType}*
+रेफरेंस नंबर: *{refNo}*
+
+वर्तमान स्थिति: *राजस्व कर्मचारी - आवेदक की प्रतिक्रिया की प्रतीक्षा में (Revenue Karmachari - Waiting for Applicant Response)*
+
+आपके आवेदन पर अधिकारी द्वारा जानकारी/दस्तावेज़ की मांग की गई है। कृपया सेंटर से संपर्क करें।
+
+धन्यवाद!`
+  },
+  {
     templateKey: 'STATUS_CI_WAITING',
     title: 'Status Update - Circle Inspector Waiting (दस्तावेज़ मांग)',
     category: 'STATUS_UPDATE',
@@ -151,6 +168,24 @@ const DEFAULT_TEMPLATES = [
 
 धन्यवाद!`
   },
+  {
+    templateKey: 'STATUS_SDO_WAITING',
+    title: 'Status Update - SDO Waiting (अनुमंडल पदाधिकारी दस्तावेज़ मांग)',
+    category: 'STATUS_UPDATE',
+    messageText: `${COMMON_HEADER}
+*स्थिति अपडेट - आवश्यक दस्तावेज मांग*
+
+आवेदक का नाम: *{applicantName}*
+प्रमाणपत्र प्रकार: *{certType}*
+रेफरेंस नंबर: *{refNo}*
+
+वर्तमान स्थिति: *अनुमंडल पदाधिकारी - आवेदक की प्रतिक्रिया की प्रतीक्षा में (SDO - Waiting for Applicant Response)*
+
+आपके आवेदन पर अधिकारी द्वारा जानकारी/दस्तावेज़ की मांग की गई है। कृपया सेंटर से संपर्क करें।
+
+धन्यवाद!`
+  },
+
   {
     templateKey: 'STATUS_DELIVERED',
     title: 'Status Update - Delivered (निर्गत/बन गया)',
