@@ -113,7 +113,7 @@ async function processCasteCertificate(refNo, entryDateInput, getCSCSession) {
   }
 
   let taskNameLevel = '';
-  const isMainUnderProcess = itemResult.rawStatus.toUpperCase().includes('UNDER PROCESS');
+  const isMainUnderProcess = itemResult.rawStatus.toUpperCase().includes('UNDER PROCESS') || itemResult.rawStatus.toUpperCase().includes('WAITING') || itemResult.rawStatus.toUpperCase().includes('APPLICANT');
   if (isMainUnderProcess) {
     try {
       await page.evaluate((fullRef, searchNum) => {
@@ -128,27 +128,43 @@ async function processCasteCertificate(refNo, entryDateInput, getCSCSession) {
       await new Promise(r => setTimeout(r, 3500));
 
       // Extract active task level strictly from the row where Status column is Under Process / Waiting
-      const extractTask = () => {
-        const rows = Array.from(document.querySelectorAll('table tbody tr, .modal table tbody tr, iframe table tbody tr'));
+      const extractTaskFromDoc = () => {
+        const rows = Array.from(document.querySelectorAll('table tbody tr'));
+        let lastTask = '';
+        let underProcessOrWaiting = '';
+        let lastNonCompleted = '';
         for (const tr of rows) {
           const tds = Array.from(tr.querySelectorAll('td'));
           if (tds.length >= 5) {
             const taskName = tds[1]?.innerText.replace(/\s+/g, ' ').trim() || '';
             const statusCell = tds[4]?.innerText.replace(/\s+/g, ' ').trim() || '';
-            if (statusCell.toUpperCase().includes('UNDER PROCESS') || statusCell.toUpperCase().includes('WAITING')) {
-              return taskName;
+            if (taskName) {
+              lastTask = taskName;
+              if (statusCell.toUpperCase().includes('UNDER PROCESS') || statusCell.toUpperCase().includes('WAITING')) {
+                underProcessOrWaiting = taskName;
+              }
+              if (!statusCell.toUpperCase().includes('COMPLETED')) {
+                lastNonCompleted = taskName;
+              }
             }
           }
         }
-        return '';
+        return underProcessOrWaiting || lastNonCompleted || lastTask || '';
       };
 
-      let foundTask = await page.evaluate(extractTask);
+      // Specifically prioritize trackFrame iframe where workflow table lives
+      let foundTask = '';
+      const targetFrame = page.frames().find(f => f.name() === 'trackFrame') || page.frames().find(f => f !== page.mainFrame());
+      if (targetFrame && !targetFrame.isDetached()) {
+        try {
+          foundTask = await targetFrame.evaluate(extractTaskFromDoc);
+        } catch (e) {}
+      }
       if (!foundTask) {
         for (const frame of page.frames()) {
           if (frame.isDetached()) continue;
           try {
-            foundTask = await frame.evaluate(extractTask);
+            foundTask = await frame.evaluate(extractTaskFromDoc);
             if (foundTask) break;
           } catch (e) {}
         }

@@ -631,7 +631,7 @@ async function checkJharsewaStatus(refNo, entryDateInput) {
     let taskNameLevel = '';
 
     // ONLY click modal if main table status strictly contains "UNDER PROCESS"
-    const isMainUnderProcess = itemResult.rawStatus.toUpperCase().includes('UNDER PROCESS');
+    const isMainUnderProcess = itemResult.rawStatus.toUpperCase().includes('UNDER PROCESS') || itemResult.rawStatus.toUpperCase().includes('WAITING') || itemResult.rawStatus.toUpperCase().includes('APPLICANT');
     if (isMainUnderProcess) {
       try {
         console.log(`🔍 Inspecting Modal Task Level for ${refNo}...`);
@@ -646,24 +646,37 @@ async function checkJharsewaStatus(refNo, entryDateInput) {
 
         await new Promise(r => setTimeout(r, 3500));
 
-        // Structured extraction: Find exact row where Status column (4th column) is 'Under Process' or 'Waiting'
+        // Structured extraction: Target trackFrame iframe directly
         let extractedTaskName = '';
-        for (const frame of page.frames()) {
+        const targetFrame = page.frames().find(f => f.name() === 'trackFrame') || page.frames().find(f => f !== page.mainFrame());
+        const framesToInspect = targetFrame ? [targetFrame] : page.frames();
+
+        for (const frame of framesToInspect) {
           if (frame.isDetached()) continue;
           try {
             const foundTask = await frame.evaluate(() => {
               const rows = Array.from(document.querySelectorAll('table tbody tr'));
+              let lastNonCompletedTask = '';
+              let lastTask = '';
+              let underProcessOrWaitingTask = '';
+
               for (const tr of rows) {
                 const tds = Array.from(tr.querySelectorAll('td'));
                 if (tds.length >= 5) {
                   const taskName = tds[1]?.innerText.replace(/\s+/g, ' ').trim() || '';
                   const statusCell = tds[4]?.innerText.replace(/\s+/g, ' ').trim() || '';
-                  if (statusCell.toUpperCase().includes('UNDER PROCESS') || statusCell.toUpperCase().includes('WAITING')) {
-                    return taskName;
+                  if (taskName) {
+                    lastTask = taskName;
+                    if (statusCell.toUpperCase().includes('UNDER PROCESS') || statusCell.toUpperCase().includes('WAITING')) {
+                      underProcessOrWaitingTask = taskName;
+                    }
+                    if (!statusCell.toUpperCase().includes('COMPLETED')) {
+                      lastNonCompletedTask = taskName;
+                    }
                   }
                 }
               }
-              return '';
+              return underProcessOrWaitingTask || lastNonCompletedTask || lastTask || '';
             });
             if (foundTask) {
               extractedTaskName = foundTask;
@@ -808,22 +821,35 @@ async function syncMultipleCertificates(certificates) {
 
               await new Promise(r => setTimeout(r, 3500));
 
-              for (const frame of page.frames()) {
+              const targetFrame = page.frames().find(f => f.name() === 'trackFrame') || page.frames().find(f => f !== page.mainFrame());
+              const framesToInspect = targetFrame ? [targetFrame] : page.frames();
+
+              for (const frame of framesToInspect) {
                 if (frame.isDetached()) continue;
                 try {
                   const foundTask = await frame.evaluate(() => {
                     const rows = Array.from(document.querySelectorAll('table tbody tr'));
+                    let lastNonCompletedTask = '';
+                    let lastTask = '';
+                    let underProcessOrWaitingTask = '';
+
                     for (const tr of rows) {
                       const tds = Array.from(tr.querySelectorAll('td'));
                       if (tds.length >= 5) {
                         const taskName = tds[1]?.innerText.replace(/\s+/g, ' ').trim() || '';
                         const statusCell = tds[4]?.innerText.replace(/\s+/g, ' ').trim() || '';
-                        if (statusCell.toUpperCase().includes('UNDER PROCESS') || statusCell.toUpperCase().includes('WAITING')) {
-                          return taskName;
+                        if (taskName) {
+                          lastTask = taskName;
+                          if (statusCell.toUpperCase().includes('UNDER PROCESS') || statusCell.toUpperCase().includes('WAITING')) {
+                            underProcessOrWaitingTask = taskName;
+                          }
+                          if (!statusCell.toUpperCase().includes('COMPLETED')) {
+                            lastNonCompletedTask = taskName;
+                          }
                         }
                       }
                     }
-                    return '';
+                    return underProcessOrWaitingTask || lastNonCompletedTask || lastTask || '';
                   });
                   if (foundTask) {
                     taskNameLevel = foundTask;
